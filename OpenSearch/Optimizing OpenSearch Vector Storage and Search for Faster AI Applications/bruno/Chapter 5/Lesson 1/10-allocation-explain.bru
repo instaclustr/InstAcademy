@@ -1,0 +1,20 @@
+meta {
+  name: Explain shard allocation
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/_cluster/allocation/explain
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{"index": "my-index", "shard": 1, "primary": true}
+}

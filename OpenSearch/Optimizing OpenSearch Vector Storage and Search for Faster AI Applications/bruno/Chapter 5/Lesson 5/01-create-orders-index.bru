@@ -1,0 +1,16 @@
+meta {
+  name: Create orders index
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/orders
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

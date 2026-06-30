@@ -1,0 +1,20 @@
+meta {
+  name: Deploy model
+  type: http
+  seq: 6
+}
+
+docs {
+Poll again if deploy returns task_id.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/models/{{modelId}}/_deploy
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

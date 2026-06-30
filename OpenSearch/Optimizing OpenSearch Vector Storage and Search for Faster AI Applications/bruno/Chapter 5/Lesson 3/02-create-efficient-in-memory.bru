@@ -1,0 +1,32 @@
+meta {
+  name: Create book-embeddings-efficient (in_memory)
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/book-embeddings-efficient
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index.knn": true },
+  "mappings": {
+    "properties": {
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "mode": "in_memory",
+        "data_type": "float"
+      }
+    }
+  }
+}
+}

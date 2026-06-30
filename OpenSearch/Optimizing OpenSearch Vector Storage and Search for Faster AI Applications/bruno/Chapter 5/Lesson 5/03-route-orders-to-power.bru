@@ -1,0 +1,20 @@
+meta {
+  name: Route orders to power tier
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/orders/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{"index.routing.allocation.require.node_type": "power"}
+}

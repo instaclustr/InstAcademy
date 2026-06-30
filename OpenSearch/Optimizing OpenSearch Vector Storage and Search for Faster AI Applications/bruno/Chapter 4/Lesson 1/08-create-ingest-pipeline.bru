@@ -1,0 +1,28 @@
+meta {
+  name: Create bookstore-rag-ingest-pipeline
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/_ingest/pipeline/bookstore-rag-ingest-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "description": "Pipeline for processing OpenSearch index data",
+  "processors": [{
+    "text_embedding": {
+      "model_id": "{{modelId}}",
+      "field_map": { "passage_text": "passage_embedding" }
+    }
+  }]
+}
+}

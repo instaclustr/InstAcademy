@@ -1,0 +1,25 @@
+meta {
+  name: Shrink step 5: alias swap
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/_aliases
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "actions": [
+    { "remove": { "index": "bookstore-rag-all-together", "alias": "bookstore-rag-all-together-alias" } },
+    { "add": { "index": "bookstore-rag-all-together-shrunk", "alias": "bookstore-rag-all-together-alias" } }
+  ]
+}
+}

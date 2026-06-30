@@ -1,0 +1,43 @@
+meta {
+  name: Hybrid BM25 + neural_sparse search
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/my-sparse-neural-index/_search?search_pipeline=nlp-search-normalization-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "_source": { "excludes": ["passage_embedding"] },
+  "query": {
+    "hybrid": {
+      "queries": [
+        { "match": { "passage_text": { "query": "a hero" } } },
+        {
+          "nested": {
+            "path": "passage_embedding",
+            "score_mode": "max",
+            "query": {
+              "neural_sparse": {
+                "passage_embedding.sparse_encoding": {
+                  "query_text": "a hero",
+                  "model_id": "{{sparseModelId}}"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+}

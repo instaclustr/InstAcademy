@@ -1,0 +1,16 @@
+meta {
+  name: Refresh my-vector-index
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/my-vector-index/_refresh
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

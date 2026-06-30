@@ -1,0 +1,25 @@
+meta {
+  name: Shrink step 1: pin shards and block writes
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/bookstore-rag-all-together/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.routing.allocation.require._name": "node-1",
+    "index.blocks.write": true
+  }
+}
+}

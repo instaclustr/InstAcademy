@@ -1,0 +1,16 @@
+meta {
+  name: Delete ML model
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/_plugins/_ml/models/{{modelId}}
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

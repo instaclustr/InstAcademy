@@ -1,0 +1,35 @@
+meta {
+  name: Create books-unoptimized index
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/books-unoptimized
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index": { "number_of_shards": 2, "number_of_replicas": 1 } },
+  "mappings": {
+    "properties": {
+      "book_id": { "type": "text" },
+      "title": { "type": "text" },
+      "author": { "type": "text" },
+      "isbn": { "type": "text" },
+      "genre": { "type": "text" },
+      "published_year": { "type": "integer" },
+      "price": { "type": "float" },
+      "rating": { "type": "integer" },
+      "content": { "type": "text" }
+    }
+  }
+}
+}

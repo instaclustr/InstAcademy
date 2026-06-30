@@ -1,0 +1,45 @@
+meta {
+  name: Create vector-search-index
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/vector-search-index
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.knn": true,
+    "default_pipeline": "vector-search-embeddings-pipeline"
+  },
+  "mappings": {
+    "properties": {
+      "id": { "type": "text" },
+      "passage_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "method": {
+          "engine": "lucene",
+          "space_type": "l2",
+          "name": "hnsw",
+          "parameters": {}
+        }
+      },
+      "passage_text": { "type": "text" },
+      "title": { "type": "text" },
+      "authors": { "type": "object", "enabled": false },
+      "subjects": { "type": "keyword" },
+      "bookshelves": { "type": "keyword" }
+    }
+  }
+}
+}

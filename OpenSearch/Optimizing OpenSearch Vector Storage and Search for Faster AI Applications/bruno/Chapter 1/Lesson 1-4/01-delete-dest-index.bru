@@ -1,0 +1,16 @@
+meta {
+  name: Delete my-optimized-vector-index
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/my-optimized-vector-index
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

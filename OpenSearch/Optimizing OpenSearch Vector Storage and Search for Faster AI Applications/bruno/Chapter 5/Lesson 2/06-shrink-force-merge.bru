@@ -1,0 +1,16 @@
+meta {
+  name: Shrink step 4: force merge shrunk index
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/bookstore-rag-all-together-shrunk/_forcemerge?max_num_segments=1
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

@@ -1,0 +1,11 @@
+bin/
+target/
+*.log
+node_modules/
+.DS_Store
+.idea/
+.vscode/
+venv/
+.env
+site/
+site-docs/

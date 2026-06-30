@@ -1,0 +1,6 @@
+{"index": {"_index": "keyword-index", "_id": "978-0143127740"}}
+{"isbn": "978-0143127740", "title": "The Martian", "author": "Andy Weir", "genre": "Science Fiction", "publisher": "Crown Publishing", "description": "An astronaut stranded on Mars fights to survive until rescue is possible.", "price": 16.99, "in_stock": true, "published_year": 2014}
+{"index": {"_index": "keyword-index", "_id": "978-0307277677"}}
+{"isbn": "978-0307277677", "title": "The Road", "author": "Cormac McCarthy", "genre": "Fiction", "publisher": "Vintage", "description": "A father and son journey through a post-apocalyptic landscape.", "price": 15.95, "in_stock": true, "published_year": 2006}
+{"index": {"_index": "keyword-index", "_id": "978-0061120084"}}
+{"isbn": "978-0061120084", "title": "To Kill a Mockingbird", "author": "Harper Lee", "genre": "Classic", "publisher": "Harper Perennial", "description": "A coming-of-age story set in the American South.", "price": 12.99, "in_stock": false, "published_year": 1960}

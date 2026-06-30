@@ -1,0 +1,16 @@
+meta {
+  name: Delete keyword-index if exists
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/keyword-index
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

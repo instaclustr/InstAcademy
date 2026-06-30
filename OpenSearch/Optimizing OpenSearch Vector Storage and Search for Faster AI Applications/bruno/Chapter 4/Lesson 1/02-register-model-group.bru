@@ -1,0 +1,27 @@
+meta {
+  name: Register model group
+  type: http
+  seq: 2
+}
+
+docs {
+Save model_group_id into modelGroupId.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/model_groups/_register
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "name": "huggingface-models",
+  "description": "A group for Hugging Face transformer models"
+}
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Shrink step 6: delete old index
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/bookstore-rag-all-together
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

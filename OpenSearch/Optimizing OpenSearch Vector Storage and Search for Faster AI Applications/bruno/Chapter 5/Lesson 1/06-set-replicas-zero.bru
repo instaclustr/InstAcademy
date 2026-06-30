@@ -1,0 +1,20 @@
+meta {
+  name: Set my-index replicas to 0
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/my-index/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{"number_of_replicas": 0}
+}

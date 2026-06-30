@@ -1,0 +1,48 @@
+meta {
+  name: Create bookstore-rag-index
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/bookstore-rag-index
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.knn": true,
+    "index": { "number_of_shards": 2, "number_of_replicas": 1 },
+    "default_pipeline": "bookstore-rag-ingest-pipeline"
+  },
+  "mappings": {
+    "properties": {
+      "book_id": { "type": "keyword" },
+      "title": { "type": "text" },
+      "author": { "type": "text" },
+      "isbn": { "type": "keyword" },
+      "genre": { "type": "keyword" },
+      "published_year": { "type": "integer" },
+      "chunk_index": { "type": "integer" },
+      "passage_text": { "type": "text" },
+      "passage_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "method": {
+          "engine": "lucene",
+          "space_type": "l2",
+          "name": "hnsw",
+          "parameters": {}
+        }
+      }
+    }
+  }
+}
+}
