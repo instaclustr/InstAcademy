@@ -1,8 +1,8 @@
 # Chapter 5 · Lesson 3 — Vector storage modes
 
-**Chapter 5 · Lesson 3** · [Voice script](../../../voice-script.docx) — k-NN **vector storage modes** and the latency vs memory trade-off.
+**Chapter 5 · Lesson 3** — k-NN **vector storage modes** and the latency vs memory trade-off.
 
-← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -130,7 +130,7 @@ GET book-embeddings-efficient/_mapping
 
 ## Next lesson
 
-- **Course lesson 5-4:** secure, resilient AI apps — **mostly video**; no dedicated lab folder ([Chapter 5 overview](../README.md)).
+- **Chapter 5 · Lesson 4 (theory only):** secure, resilient AI apps — no dedicated lab folder ([Chapter 5 overview](../README.md)).
 - **Hands-on:** [Chapter 5 · Lesson 5](../Lesson%205/README.md) — priority index routing and search backpressure.
 
 ## Reference scripts

@@ -2,7 +2,7 @@
 
 **Chapter 4** · [Vector Storage & Search for AI](../../README.md)
 
-← [Chapter 3](../Chapter%203/README.md) · [How to run labs](../../docs/HANDS-ON-GUIDE.md) · **Next:** [Chapter 5](../Chapter%205/README.md)
+← [Chapter 3](../Chapter%203/README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 5](../Chapter%205/README.md)
 
 Bookstore RAG end to end: `all-mpnet-base-v2`, ingest embeddings, k-NN and hybrid search, then index tuning and query optimization.
 
@@ -13,11 +13,11 @@ Bookstore RAG end to end: `all-mpnet-base-v2`, ingest embeddings, k-NN and hybri
 
 ## Lessons
 
-| Lab folder | Video script | Topic |
-|------------|--------------|--------|
-| [Lesson 1](Lesson%201/README.md) | 4-1 | RAG pipeline, hybrid search, warmup |
-| [Lesson 2](Lesson%202/README.md) | 4-2 | Chunking, bulk tuning, shards, preload |
-| [Lesson 3](Lesson%203/README.md) | 4-3 | Explain, rank_eval, search pipelines |
-| *(video only)* | 4-4 | OpenSearch MCP server |
+| Lab folder | Topic |
+|------------|--------|
+| [Lesson 1](Lesson%201/README.md) | RAG pipeline, hybrid search, warmup |
+| [Lesson 2](Lesson%202/README.md) | Chunking, bulk tuning, shards, preload |
+| [Lesson 3](Lesson%203/README.md) | Explain, rank_eval, search pipelines |
+| *(theory only — no lab)* | OpenSearch MCP server |
 
-Labs: **Dev Tools** ([guide](../../docs/HANDS-ON-GUIDE.md)) or [Bruno `Chapter 4`](../../bruno/Chapter%204/).
+Labs: **Dev Tools** ([guide](../../HANDS-ON-GUIDE.md)) or [Bruno `Chapter 4`](../../bruno/Chapter%204/).

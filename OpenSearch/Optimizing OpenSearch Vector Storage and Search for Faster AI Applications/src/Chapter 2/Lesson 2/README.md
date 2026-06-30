@@ -1,8 +1,8 @@
 # Chapter 2 · Lesson 2 — Ingesting data and running queries
 
-**Chapter 2 · Lesson 2** · [Voice script](../../../voice-script.docx) — ingest pipeline embeddings, bulk-load the Gutendex dataset, and run hybrid neural + keyword search on **`vector-search-index`**.
+**Chapter 2 · Lesson 2** — ingest pipeline embeddings, bulk-load the Gutendex dataset, and run hybrid neural + keyword search on **`vector-search-index`**.
 
-← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -250,7 +250,7 @@ GET vector-search-index/_search
 
 ## Next lesson
 
-- **Chapter 2 · Lesson 3 (video only):** choosing embedding processors — see [video-only segments](../../../docs/HANDS-ON-GUIDE.md#video-only-segments-no-lab-folder).
+- **Chapter 2 · Lesson 3 (theory only)** — choosing embedding processors — see [lessons without a lab folder](../../../HANDS-ON-GUIDE.md#lessons-without-a-lab-folder).
 - **Hands-on cleanup:** [Lesson 4](../Lesson%204/README.md) — tear down **`vector-search-index`**, the pipeline, and optionally undeploy/delete the model.
 
 ## Reference scripts

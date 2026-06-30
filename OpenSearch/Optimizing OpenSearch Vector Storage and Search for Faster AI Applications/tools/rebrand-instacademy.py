@@ -20,14 +20,11 @@ NEW_LINK_TEXT = COURSE_TITLE
 
 GLOBS = [
     REPO / "README.md",
-    REPO / "mkdocs.yml",
+    REPO / "HANDS-ON-GUIDE.md",
     REPO / "bruno" / "bruno.json",
     REPO / "bruno" / "README.md",
-    REPO / "docs" / "HANDS-ON-GUIDE.md",
-    REPO / "docs" / "PUBLISHING.md",
     REPO / "CREATE_CLUSTER.md",
     REPO / "tools" / "generate-bruno-requests.py",
-    REPO / "tools" / "sync-mkdocs-content.py",
     *REPO.glob("src/**/README.md"),
 ]
 
@@ -51,31 +48,11 @@ def rebrand_text(text: str) -> str:
         text,
     )
     # Intro paragraphs
-    text = text.replace(
-        "Hands-on labs for the **OpenSearch Learning Path 1** video course.",
-        f"Hands-on labs for **InstAcademy → OpenSearch → {COURSE_TITLE}**.",
-    )
-    text = text.replace(
-        "The voice script is [`OpenSearch Learning Path 1.docx`]",
-        f"The voice script is [`{COURSE_TITLE} (script).docx`]",
-    )
-    text = text.replace(
-        "The voice script is [OpenSearch Learning Path 1.docx]",
-        f"The voice script is [{COURSE_TITLE} (script).docx]",
-    )
     text = re.sub(
         r"\*\*Optimizing OpenSearch vector storage and search for faster AI applications\*\* \(Learning Path 1\)",
         f"**{COURSE_TITLE}**",
         text,
         flags=re.IGNORECASE,
-    )
-    text = text.replace(
-        "(Learning Path 1). The voice script",
-        ". The voice script",
-    )
-    text = text.replace(
-        "site_description: Dev Tools lab guide for Optimizing OpenSearch vector storage and search for faster AI applications",
-        f"site_description: InstAcademy OpenSearch hands-on labs — {COURSE_TITLE}",
     )
     if "# Creating a NetApp Instaclustr Cluster for this Course" in text:
         text = text.replace(

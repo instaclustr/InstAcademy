@@ -1,8 +1,8 @@
 # Chapter 1 · Lesson 1 — Vector search fundamentals and configuration
 
-**Chapter 1 · Lesson 1** · [Voice script](../../../voice-script.docx) — connectivity and shared sample data for later labs.
+**Chapter 1 · Lesson 1** — connectivity and shared sample data for later labs.
 
-← [Chapter 1 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 1 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -13,7 +13,7 @@ By the end of this lesson you will:
 1. Confirm your **Instaclustr OpenSearch cluster** is reachable from your browser and from REST.
 2. Download the **Gutendex book dataset** used throughout the course (`src/sample-data.json`).
 
-The video lesson covers vector settings conceptually; this lab focuses on **getting your environment ready** before Chapter 2's neural pipeline.
+This lab focuses on **getting your environment ready** before Chapter 2's neural pipeline.
 
 ### Prerequisites
 

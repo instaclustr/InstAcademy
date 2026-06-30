@@ -1,8 +1,8 @@
 # Chapter 5 · Lesson 1 — Shards, allocation, and cluster health
 
-**Chapter 5 · Lesson 1** · [Voice script](../../../voice-script.docx) — routing awareness, shard visibility, force merge, oversharding, replicas, and disk watermarks.
+**Chapter 5 · Lesson 1** — routing awareness, shard visibility, force merge, oversharding, replicas, and disk watermarks.
 
-← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -22,7 +22,7 @@ By the end of this lesson you will:
 - Complete [Chapter 1 · Lesson 1](../../Chapter%201/Lesson%201/README.md) (cluster connectivity).
 - Run [Chapter 4 · Lesson 2](../../Chapter%204/Lesson%202/README.md) **`06-put-it-all-together.py`** (or equivalent) so **`bookstore-rag-all-together`** exists before **Step 3**.
 - Open **OpenSearch Dashboards → Dev Tools** (or Bruno fast mode: [`bruno/Chapter 5/Lesson 1/`](../../../bruno/Chapter%205/Lesson%201/)).
-- Use your **3-node Instaclustr trial cluster**. Routing-awareness settings in Step 1 only take effect when nodes advertise matching `node.attr.zone` values (see course video); on managed trials you can still run the API calls and observe behavior.
+- Use your **3-node Instaclustr trial cluster**. Routing-awareness settings in Step 1 only take effect when nodes advertise matching `node.attr.zone` values; on managed trials you can still run the API calls and observe behavior.
 
 **Save values as you go:**
 

@@ -16,17 +16,7 @@ Start here: **[OpenSearch/](OpenSearch/)** — lists all OpenSearch hands-on cou
 
 Currently available:
 
-Currently available:
-
-- [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/) — **Vector Storage & Search for AI** — Chapters 1–5 with Instaclustr trial cluster setup
-
-## Formatted lab guide (web)
-
-The OpenSearch course above includes an MkDocs site published to GitHub Pages:
-
-**https://instaclustr.github.io/InstAcademy/**
-
-(Search, chapter tabs, copy buttons on REST examples.)
+- [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](OpenSearch/Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/) — **Vector Storage & Search for AI** — Chapters 1–5 with Instaclustr trial cluster setup
 
 ## Support
 

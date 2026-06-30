@@ -1,8 +1,8 @@
 # Chapter 1 · Lesson 4 — Vector storage and search optimizations
 
-**Chapter 1 · Lesson 4** · [Voice script](../../../voice-script.docx) — `knn_vector` indexes, HNSW, and reducing dimensions with `_reindex`.
+**Chapter 1 · Lesson 4** — `knn_vector` indexes, HNSW, and reducing dimensions with `_reindex`.
 
-← [Chapter 1 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 1 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 

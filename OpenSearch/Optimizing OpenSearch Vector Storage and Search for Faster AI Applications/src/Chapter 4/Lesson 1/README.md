@@ -1,8 +1,8 @@
 # Chapter 4 · Lesson 1 — Optimizing RAG pipelines in OpenSearch
 
-**Chapter 4 · Lesson 1** · [Voice script](../../../voice-script.docx) — RAG performance and accuracy levers: stronger embeddings, ingest pipelines, k-NN retrieval, hybrid normalization, and k-NN cache warmup.
+**Chapter 4 · Lesson 1** — RAG performance and accuracy levers: stronger embeddings, ingest pipelines, k-NN retrieval, hybrid normalization, and k-NN cache warmup.
 
-← [Chapter 4 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 4 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 

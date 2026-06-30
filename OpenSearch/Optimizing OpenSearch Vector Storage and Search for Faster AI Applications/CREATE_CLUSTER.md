@@ -1,6 +1,6 @@
 # Creating a NetApp Instaclustr Cluster
 
-**Vector Storage & Search for AI** · [← Course index](README.md) · [← How to run labs](docs/HANDS-ON-GUIDE.md)
+**Vector Storage & Search for AI** · [← Course index](README.md) · [← How to run labs](HANDS-ON-GUIDE.md)
 
 First, you'll want to start the sign-up process at (attribution link).
 

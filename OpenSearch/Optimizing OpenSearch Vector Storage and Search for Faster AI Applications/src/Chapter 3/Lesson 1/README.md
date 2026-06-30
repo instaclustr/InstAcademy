@@ -1,8 +1,8 @@
 # Chapter 3 · Lesson 1 — Neural sparse encoding and hybrid search
 
-**Chapter 3 · Lesson 1** (one lab — video scripts **3-1**, **3-2**, **3-3**) · [Voice script](../../../voice-script.docx) — hybrid search rationale, sparse vector index + ML Commons, and score normalization for accurate hybrid ranking.
+**Chapter 3 · Lesson 1** — hybrid search rationale, sparse vector index + ML Commons, and score normalization for accurate hybrid ranking.
 
-← [Chapter 3 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 3 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -142,7 +142,7 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 `06-deploy-model.bru` → `07-poll-ml-task-deploy.bru`
 
 
-### **Step 5: Create the hybrid search pipeline (Course 3-1 / 3-3)**
+### **Step 5: Create the hybrid search pipeline (normalization)**
 
 **Why**  
 BM25 scores (~0–20) and sparse scores (~0–10) live on different scales. Without normalization, whichever branch produces larger numbers dominates. This pipeline rescales each branch to [0, 1], then combines with weights **[0.3 keyword, 0.7 sparse]**.
@@ -177,7 +177,7 @@ PUT _search/pipeline/nlp-search-normalization-pipeline
 `bruno/Chapter 3/Lesson 1/08-create-search-pipeline.bru`
 
 
-### **Step 6: Create the sparse neural index (Course 3-2)**
+### **Step 6: Create the sparse neural index**
 
 **Why each mapping choice:**
 

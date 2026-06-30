@@ -1,6 +1,6 @@
 # Fast mode — Bruno REST collection
 
-**Vector Storage & Search for AI** · [← How to run labs](../docs/HANDS-ON-GUIDE.md)
+**Vector Storage & Search for AI** · [← How to run labs](../HANDS-ON-GUIDE.md)
 
 Run the same REST calls as the lesson READMEs without typing them into Dev Tools. Use this to **catch up**, **recover after a mistake**, or **smoke-test** a cluster.
 
@@ -64,4 +64,4 @@ Each lesson folder matches the **Learn mode** README in `src/Chapter …`.
 | ML tasks | You poll manually in Dev Tools | **Poll ML task** request |
 | Bulk data | Small inline examples + `rest/bulk/` files | Bruno file bodies |
 
-Start with [Learn mode](../docs/HANDS-ON-GUIDE.md) at least once; use Bruno when you need speed or recovery.
+Start with [Learn mode](../HANDS-ON-GUIDE.md) at least once; use Bruno when you need speed or recovery.

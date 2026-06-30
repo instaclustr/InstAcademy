@@ -1,8 +1,8 @@
 # Chapter 4 · Lesson 3 — Query optimization for RAG pipelines
 
-**Chapter 4 · Lesson 3** · [Voice script](../../../voice-script.docx) — debug relevance with **explain**, measure quality with **`_rank_eval`**, and enforce business rules (in-stock) via **search pipelines**.
+**Chapter 4 · Lesson 3** — debug relevance with **explain**, measure quality with **`_rank_eval`**, and enforce business rules (in-stock) via **search pipelines**.
 
-← [Chapter 4 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 4 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -167,7 +167,7 @@ PUT _search/pipeline/bookstore-score-filter
 **Why**  
 **`index.search.default_pipeline`** applies the pipeline to every search automatically (distinct from **`index.default_pipeline`**, which is ingest).
 
-**Note:** The reference script sets **`bookstore-stock-filter`**. Ensure that pipeline exists (or substitute a pipeline id you created in the video). To bypass a default for one request, use **`?search_pipeline=_none`**.
+**Note:** The reference script sets **`bookstore-stock-filter`**. Ensure that pipeline exists (or substitute a pipeline id you created earlier). To bypass a default for one request, use **`?search_pipeline=_none`**.
 
 **Request** — paste into Dev Tools:
 
@@ -264,9 +264,9 @@ GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
 
 [Chapter 5 · Lesson 1](../../Chapter%205/Lesson%201/README.md) — production cluster operations (routing, shards, watermarks).
 
-## Video-only follow-up
+## Theory-only follow-up
 
-**Chapter 4 · Lesson 4 (video only)** — OpenSearch MCP server — see [video-only segments](../../../docs/HANDS-ON-GUIDE.md#video-only-segments-no-lab-folder).
+**Chapter 4 · Lesson 4 (theory only)** — OpenSearch MCP server — see [lessons without a lab folder](../../../HANDS-ON-GUIDE.md#lessons-without-a-lab-folder).
 
 ## Reference scripts
 

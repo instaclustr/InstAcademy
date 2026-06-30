@@ -1,8 +1,8 @@
 # Chapter 5 · Lesson 2 — Index optimization
 
-**Chapter 5 · Lesson 2** · [Voice script](../../../voice-script.docx) — mappings, shrink, reindex with Painless, and versioned k-NN index definitions.
+**Chapter 5 · Lesson 2** — mappings, shrink, reindex with Painless, and versioned k-NN index definitions.
 
-← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 

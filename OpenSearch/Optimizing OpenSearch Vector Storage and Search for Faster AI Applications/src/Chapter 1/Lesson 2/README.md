@@ -1,8 +1,8 @@
 # Chapter 1 · Lesson 2 — Choosing the right type of vector search (keyword baseline)
 
-**Chapter 1 · Lesson 2** · [Voice script](../../../voice-script.docx) — text vs keyword field types before vector search.
+**Chapter 1 · Lesson 2** — text vs keyword field types before vector search.
 
-← [Chapter 1 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 1 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -140,7 +140,7 @@ GET keyword-index/_search
 
 ## Next lesson
 
-- **Lesson 3 (video)** — GPUs vs CPUs — theory only, no lab folder.
+- **Chapter 1 · Lesson 3 (theory only)** — GPUs vs CPUs — no lab folder. See [lessons without a lab folder](../../../HANDS-ON-GUIDE.md#lessons-without-a-lab-folder).
 - **Hands-on:** [Lesson 4](../Lesson%204/README.md) — `knn_vector` index and `_reindex` with dimension truncation.
 
 ## Reference scripts

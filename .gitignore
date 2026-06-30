@@ -1,5 +1,3 @@
-site/
-site-docs/
 .DS_Store
 __pycache__/
 *.pyc
@@ -7,3 +5,4 @@ __pycache__/
 venv/
 .idea/
 .vscode/
+site/

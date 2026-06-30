@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-TARGETS = list((REPO / "src").rglob("README.md")) + [REPO / "docs" / "HANDS-ON-GUIDE.md"]
+TARGETS = list((REPO / "src").rglob("README.md")) + [REPO / "HANDS-ON-GUIDE.md"]
 
 
 def format_content(text: str) -> str:

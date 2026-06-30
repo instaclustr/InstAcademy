@@ -1,8 +1,8 @@
 # Chapter 2 · Lesson 1 — Setting up your neural search pipeline
 
-**Chapter 2 · Lesson 1** · [Voice script](../../../voice-script.docx) — enable ML Commons, register and deploy **`msmarco-distilbert-base-tas-b`**, and smoke-test text embedding inference.
+**Chapter 2 · Lesson 1** — enable ML Commons, register and deploy **`msmarco-distilbert-base-tas-b`**, and smoke-test text embedding inference.
 
-← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 

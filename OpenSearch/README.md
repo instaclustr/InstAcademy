@@ -19,9 +19,8 @@ Pick a course folder below. Each course includes:
 |---|---|
 | **Chapters** | 1 — Vector fundamentals · 2 — Neural pipelines · 3 — Hybrid/sparse search · 4 — RAG optimization · 5 — Production cluster ops |
 | **Course index** | [README.md](Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/README.md) |
-| **Start here** | [How to run labs](Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/docs/HANDS-ON-GUIDE.md) |
+| **Start here** | [How to run labs](Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/HANDS-ON-GUIDE.md) |
 | **First lesson** | [Chapter 1 · Lesson 1](Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/src/Chapter%201/Lesson%201/README.md) |
-| **Web version** | [GitHub Pages lab guide](https://instaclustr.github.io/InstAcademy/) |
 
 ## Up a level
 

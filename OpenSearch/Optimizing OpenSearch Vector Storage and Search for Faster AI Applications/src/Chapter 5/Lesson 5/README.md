@@ -1,8 +1,8 @@
 # Chapter 5 · Lesson 5 — Query optimization and cluster protection
 
-**Chapter 5 · Lesson 5** · [Voice script](../../../voice-script.docx) — priority **index routing**, **search backpressure**, and node-level tuning concepts.
+**Chapter 5 · Lesson 5** — priority **index routing**, **search backpressure**, and node-level tuning concepts.
 
-← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -181,7 +181,7 @@ Open **`opensearch.yml.example`** in this folder. It includes:
 - **`thread_pool.search`** and **`thread_pool.write`** sizing
 - **`cluster.initial_cluster_manager_nodes`** for a 3-node cluster
 
-**Do not** paste production secrets or restart managed Instaclustr nodes without provider guidance — use the file as a **reference** aligned with the video lesson.
+**Do not** paste production secrets or restart managed Instaclustr nodes without provider guidance — use the file as a **reference** for lab exploration only.
 
 ---
 
@@ -193,7 +193,7 @@ Open **`opensearch.yml.example`** in this folder. It includes:
 
 ## Course wrap-up
 
-You have completed the hands-on path for **Chapter 5**. Lesson **5-4** (secure, resilient AI apps) is covered primarily in **video** — see [Chapter 5 README](../README.md).
+You have completed the hands-on path for **Chapter 5**. **Chapter 5 · Lesson 4** (secure, resilient AI apps) is theory-only — see [Chapter 5 README](../README.md) and [lessons without a lab folder](../../../HANDS-ON-GUIDE.md#lessons-without-a-lab-folder).
 
 ## Reference scripts
 

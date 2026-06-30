@@ -1,8 +1,8 @@
 # Chapter 2 · Lesson 5 — Optimizing neural search (cluster routing)
 
-**Chapter 2 · Lesson 5** · [Voice script](../../../voice-script.docx) — cluster-level **routing** settings that control shard allocation and rebalancing during maintenance and at scale.
+**Chapter 2 · Lesson 5** — cluster-level **routing** settings that control shard allocation and rebalancing during maintenance and at scale.
 
-← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 

@@ -1,8 +1,8 @@
 # Chapter 4 · Lesson 2 — Optimizing indexes for RAG pipelines
 
-**Chapter 4 · Lesson 2** · [Voice script](../../../voice-script.docx) — fix common index mistakes (wrong field types, missing vectors), add chunking, tune bulk load throughput, size shards, and preload vector files.
+**Chapter 4 · Lesson 2** — fix common index mistakes (wrong field types, missing vectors), add chunking, tune bulk load throughput, size shards, and preload vector files.
 
-← [Chapter 4 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 4 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 

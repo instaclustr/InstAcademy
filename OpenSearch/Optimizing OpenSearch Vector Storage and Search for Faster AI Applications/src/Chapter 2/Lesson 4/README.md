@@ -1,8 +1,8 @@
 # Chapter 2 · Lesson 4 — AI model management with ML Commons
 
-**Chapter 2 · Lesson 4** · [Voice script](../../../voice-script.docx) — tear down Lesson 2 artifacts and optionally **undeploy** and **delete** the embedding model from Lesson 1.
+**Chapter 2 · Lesson 4** — tear down Lesson 2 artifacts and optionally **undeploy** and **delete** the embedding model from Lesson 1.
 
-← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../HANDS-ON-GUIDE.md)
 
 ## Overview
 
