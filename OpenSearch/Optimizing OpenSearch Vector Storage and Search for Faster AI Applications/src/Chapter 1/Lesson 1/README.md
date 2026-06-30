@@ -1,6 +1,8 @@
-# Chapter 1 Lesson 1 — Vector search fundamentals and configuration
+# Chapter 1 · Lesson 1 — Vector search fundamentals and configuration
 
-**InstAcademy → OpenSearch:** Lesson 1-1 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../OpenSearch%20Learning%20Path%201.docx) — connectivity and shared sample data for later labs.
+**Chapter 1 · Lesson 1** · [Voice script](../../../voice-script.docx) — connectivity and shared sample data for later labs.
+
+← [Chapter 1 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -15,8 +17,8 @@ The video lesson covers vector settings conceptually; this lab focuses on **gett
 
 ### Prerequisites
 
-- Complete [cluster setup](../../CREATE_CLUSTER.md): 3-node trial, **AI Search Plugin** enabled, your IP on the firewall.
-- Open **OpenSearch Dashboards** → **Dev Tools** (or use Bruno fast mode: [`bruno/Chapter 1/Lesson 1-1/`](../../bruno/Chapter%201/Lesson%201-1/)).
+- Complete [cluster setup](../../../CREATE_CLUSTER.md): 3-node trial, **AI Search Plugin** enabled, your IP on the firewall.
+- Open **OpenSearch Dashboards** → **Dev Tools** (or use Bruno fast mode: [`bruno/Chapter 1/Lesson 1/`](../../../bruno/Chapter%201/Lesson%201/)).
 
 Keep a notepad (or `src/.env`) for:
 
@@ -33,10 +35,7 @@ Keep a notepad (or `src/.env`) for:
 ### **Step 1: Verify cluster connectivity**
 
 **Why**  
-Every later lesson assumes basic auth and TLS work. A five-second smoke test saves hours of debugging bulk or ML errors.
-
-**Why**  
-`GET /` returns cluster name, version, and tag line.
+Every later lesson assumes basic auth and TLS work. `GET /` returns cluster name, version, and tag line — a five-second smoke test saves hours of debugging bulk or ML errors later.
 
 In **Dev Tools**, run:
 
@@ -61,7 +60,7 @@ GET /
 If you see `401 Unauthorized`, check username/password. If the request times out, verify your IP is on the Instaclustr firewall list.
 
 **Fast mode**  
-`bruno/Chapter 1/Lesson 1-1/01-cluster-info.bru`
+`bruno/Chapter 1/Lesson 1/01-cluster-info.bru`
 
 
 ### **Step 2: Download the course sample dataset**
@@ -73,7 +72,7 @@ The repo may already include `src/sample-data.json`. Refresh it if you want the 
 
 **Option A — one-time Python helper (recommended):**
 
-From `src/Chapter 1/1-1/`:
+From `src/Chapter 1/Lesson 1/`:
 
 ```bash
 pip install -r ../../../requirements.txt
@@ -90,7 +89,7 @@ This writes **`src/sample-data.json`** (256 books with titles, authors, summarie
 ls -la ../../../sample-data.json
 ```
 
-You do **not** index this file in Lesson 1-1; Chapter 2 onward bulk-load it into OpenSearch.
+You do **not** index this file in Lesson 1; Chapter 2 onward bulk-load it into OpenSearch.
 
 ---
 
@@ -101,7 +100,7 @@ You do **not** index this file in Lesson 1-1; Chapter 2 onward bulk-load it into
 
 ## Next lesson
 
-[Chapter 1 Lesson 2](../1-2/README.md) — create a **keyword** bookstore index and bulk a few sample documents using Dev Tools.
+[Chapter 1 · Lesson 2](../Lesson%202/README.md) — create a **keyword** bookstore index and bulk a few sample documents using Dev Tools.
 
 ## Reference scripts
 

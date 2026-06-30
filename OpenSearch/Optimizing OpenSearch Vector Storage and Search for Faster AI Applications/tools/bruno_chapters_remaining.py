@@ -13,7 +13,7 @@ CHUNKING_SCRIPT = (
 
 
 def ch1_lesson4() -> None:
-    p = "Chapter 1/Lesson 1-4"
+    p = "Chapter 1/Lesson 4"
     write(f"{p}/01-delete-dest-index.bru", bru_http("Delete my-optimized-vector-index", 1, "DELETE", "/my-optimized-vector-index"))
     write(f"{p}/02-delete-source-index.bru", bru_http("Delete my-vector-index", 2, "DELETE", "/my-vector-index"))
     write(

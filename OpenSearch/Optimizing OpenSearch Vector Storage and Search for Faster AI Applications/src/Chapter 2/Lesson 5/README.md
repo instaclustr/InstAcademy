@@ -1,6 +1,8 @@
-# Chapter 2 Lesson 5 — Optimizing neural search (cluster routing)
+# Chapter 2 · Lesson 5 — Optimizing neural search (cluster routing)
 
-**InstAcademy → OpenSearch:** Lesson 2-5 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — cluster-level **routing** settings that control shard allocation and rebalancing during maintenance and at scale.
+**Chapter 2 · Lesson 5** · [Voice script](../../../voice-script.docx) — cluster-level **routing** settings that control shard allocation and rebalancing during maintenance and at scale.
+
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -16,7 +18,7 @@ This lesson is **standalone operations practice** — it does not require Lesson
 
 ### Prerequisites
 
-- Complete [Chapter 1 Lesson 1-1](../../Chapter%201/1-1/README.md) (cluster connectivity).
+- Complete [Chapter 1 · Lesson 1](../../Chapter%201/Lesson%201/README.md) (cluster connectivity).
 - Open **Dev Tools** on a **lab cluster** only — routing changes affect **every index** on the cluster (or Bruno fast mode: [`bruno/Chapter 2/Lesson 5/`](../../../bruno/Chapter%202/Lesson%205/)).
 
 | Setting | Lab value | Meaning |

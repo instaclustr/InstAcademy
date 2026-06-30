@@ -1,6 +1,8 @@
-# Chapter 5 Lesson 3 — Vector storage modes
+# Chapter 5 · Lesson 3 — Vector storage modes
 
-**InstAcademy → OpenSearch:** Lesson **5-3** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../OpenSearch%20Learning%20Path%201.docx) — k-NN **vector storage modes** and the latency vs memory trade-off.
+**Chapter 5 · Lesson 3** · [Voice script](../../../voice-script.docx) — k-NN **vector storage modes** and the latency vs memory trade-off.
+
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -13,7 +15,7 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 5 Lesson 2](../Lesson%202/README.md) (k-NN index definitions).
+- Complete [Chapter 5 · Lesson 2](../Lesson%202/README.md) (k-NN index definitions).
 - Cluster with **k-NN** enabled and a version that supports the **`mode`** parameter on **`knn_vector`**.
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 5/Lesson 3/`](../../../bruno/Chapter%205/Lesson%203/)).
 
@@ -129,7 +131,7 @@ GET book-embeddings-efficient/_mapping
 ## Next lesson
 
 - **Course lesson 5-4:** secure, resilient AI apps — **mostly video**; no dedicated lab folder ([Chapter 5 overview](../README.md)).
-- **Hands-on:** [Chapter 5 Lesson 5](../Lesson%205/README.md) — priority index routing and search backpressure.
+- **Hands-on:** [Chapter 5 · Lesson 5](../Lesson%205/README.md) — priority index routing and search backpressure.
 
 ## Reference scripts
 

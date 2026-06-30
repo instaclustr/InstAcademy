@@ -17,7 +17,7 @@ from pathlib import Path
 # this lesson dependency-free. For real apps prefer ``httpx`` or ``requests``.
 from urllib.request import urlopen
 
-# ``parents[2]`` is ``src/`` (this file lives under Chapter 1/1-1).
+# ``parents[2]`` is ``src/`` (this file lives under Chapter 1/Lesson 1).
 # Writing to ``src/sample-data.json`` means *every* lesson script can load the
 # same file from a known relative location without re-downloading it.
 SAMPLE_DATA_PATH = Path(__file__).resolve().parents[2] / "sample-data.json"

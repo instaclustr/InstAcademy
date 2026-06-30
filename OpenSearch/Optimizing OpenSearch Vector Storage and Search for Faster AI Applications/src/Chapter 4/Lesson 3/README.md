@@ -1,6 +1,8 @@
-# Chapter 4 Lesson 3 — Query optimization for RAG pipelines
+# Chapter 4 · Lesson 3 — Query optimization for RAG pipelines
 
-**InstAcademy → OpenSearch:** Lesson **4-3** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — debug relevance with **explain**, measure quality with **`_rank_eval`**, and enforce business rules (in-stock) via **search pipelines**.
+**Chapter 4 · Lesson 3** · [Voice script](../../../voice-script.docx) — debug relevance with **explain**, measure quality with **`_rank_eval`**, and enforce business rules (in-stock) via **search pipelines**.
+
+← [Chapter 4 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -16,7 +18,7 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 4 Lesson 1](../Lesson%201/README.md) and [Lesson 2](../Lesson%202/README.md) — index **`bookstore-rag`**, pipeline **`bookstore-hybrid-pipeline`**, data loaded
+- Complete [Chapter 4 · Lesson 1](../Lesson%201/README.md) and [Lesson 2](../Lesson%202/README.md) — index **`bookstore-rag`**, pipeline **`bookstore-hybrid-pipeline`**, data loaded
 - Open **`001-bookstore-rag-query-vector.json`** in this folder (768-dim query vector for k-NN branches)
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 4/Lesson 3/`](../../../bruno/Chapter%204/Lesson%203/))
 
@@ -260,11 +262,11 @@ GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
 
 ## Next chapter
 
-[Chapter 5 Lesson 1](../../Chapter%205/Lesson%201/README.md) — production cluster operations (routing, shards, watermarks).
+[Chapter 5 · Lesson 1](../../Chapter%205/Lesson%201/README.md) — production cluster operations (routing, shards, watermarks).
 
 ## Video-only follow-up
 
-**Lesson 4-4 — OpenSearch MCP server** (AI agent integration) is video-only; see [Chapter 4 README](../README.md).
+**Chapter 4 · Lesson 4 (video only)** — OpenSearch MCP server — see [video-only segments](../../../docs/HANDS-ON-GUIDE.md#video-only-segments-no-lab-folder).
 
 ## Reference scripts
 

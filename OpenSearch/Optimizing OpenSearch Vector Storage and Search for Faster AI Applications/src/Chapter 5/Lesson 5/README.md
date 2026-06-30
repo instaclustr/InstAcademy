@@ -1,6 +1,8 @@
-# Chapter 5 Lesson 5 — Query optimization and cluster protection
+# Chapter 5 · Lesson 5 — Query optimization and cluster protection
 
-**InstAcademy → OpenSearch:** Lesson **5-5** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../OpenSearch%20Learning%20Path%201.docx) — priority **index routing**, **search backpressure**, and node-level tuning concepts.
+**Chapter 5 · Lesson 5** · [Voice script](../../../voice-script.docx) — priority **index routing**, **search backpressure**, and node-level tuning concepts.
+
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -15,7 +17,7 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 5 Lesson 3](../Lesson%203/README.md).
+- Complete [Chapter 5 · Lesson 3](../Lesson%203/README.md).
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 5/Lesson 5/`](../../../bruno/Chapter%205/Lesson%205/)).
 - **Index routing** settings only work when nodes advertise matching attributes (for example `node.attr.node_type: power` in `opensearch.yml`). On Instaclustr managed trials you can still run the APIs; shard placement may not change until node attributes exist.
 - **Search backpressure** changes cluster behavior — use your **3-node lab cluster** with instructor guidance.

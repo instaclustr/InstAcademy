@@ -1,16 +1,14 @@
 # Hands-on lab guide
 
-**InstAcademy → OpenSearch → Optimizing OpenSearch Vector Storage and Search for Faster AI Applications**
+**Vector Storage & Search for AI** — InstAcademy OpenSearch course
 
-| Navigate | Link |
-|----------|------|
-| **Up to OpenSearch courses** | [OpenSearch/](../../) |
-| **Up to InstAcademy home** | [InstAcademy/](../../../) |
-| **Course README** | [README.md](../README.md) |
+| | |
+|---|---|
+| **Course index** | [README.md](../README.md) |
+| **Cluster setup** | [CREATE_CLUSTER.md](../CREATE_CLUSTER.md) |
+| **Web version** | [GitHub Pages](https://instaclustr.github.io/InstAcademy/) |
 
-This folder contains the hands-on labs for that InstAcademy course. The voice script is [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications (script).docx](https://github.com/instaclustr/InstAcademy/blob/main/OpenSearch/Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications/OpenSearch%20Learning%20Path%201.docx); each lesson README follows that script.
-
-**Prefer the formatted site?** [Open the lab guide on GitHub Pages](https://instaclustr.github.io/InstAcademy/) (search, tabs, copy buttons on code blocks). Setup: [PUBLISHING.md](PUBLISHING.md).
+This is the **single entry point** for running the labs. Lesson READMEs under `src/Chapter …/` contain the step-by-step REST calls; they follow the [voice script](../voice-script.docx).
 
 ## How to read a lesson
 
@@ -18,7 +16,7 @@ Every hands-on lesson uses the same layout:
 
 | Label | What it means |
 |-------|----------------|
-| **InstAcademy → OpenSearch** | Breadcrumb — which InstAcademy course this lesson belongs to |
+| **Chapter N · Lesson M** | Which lab you are in (matches the folder name) |
 | **Goals** | What you will have when the lesson is done |
 | **Prerequisites** | What to complete first |
 | **Step N** | One action in Dev Tools — do these in order |
@@ -52,62 +50,49 @@ Details: [bruno/README.md](../bruno/README.md)
 
 ## Configuration
 
-**Dev Tools / Bruno**
+**Dev Tools / Bruno** — cluster URL, username, password
 
-- Cluster URL, username, password
+**Optional `src/.env`** (Python reference scripts only) — copy from `src/.env.example`; set `ML_MODEL_ID` after you deploy a model.
 
-**Optional `src/.env`** (for Python reference scripts only)
-
-- `OPENSEARCH_HOST`, `OPENSEARCH_USERNAME`, `OPENSEARCH_PASSWORD`
-- `ML_MODEL_ID` after you deploy a model
-
-Copy from `src/.env.example`.
-
-**While you work, save on a notepad**
-
-- `model_group_id`
-- `model_id`
-- `task_id` (when polling ML tasks)
+**Save while you work:** `model_group_id`, `model_id`, `task_id` (when polling ML tasks).
 
 ## Sample data
 
-Lessons bulk-index books from `src/sample-data.json`.
-
-- Small examples are inline in lesson READMEs
-- Full 256-book payloads are in [rest/bulk](../rest/bulk/)
-- Refresh the file once with `python data-loader.py` (Chapter 1 Lesson 1)
+Lessons bulk-index books from `src/sample-data.json`. Full payloads are in [rest/bulk](../rest/bulk/). Refresh once with `python data-loader.py` in [Chapter 1 · Lesson 1](../src/Chapter%201/Lesson%201/README.md).
 
 ## ML task polling
 
-Register and deploy often return a `task_id` immediately. The model is not ready until the task state is `COMPLETED`.
-
-**Request**
+Register and deploy often return a `task_id` immediately. Poll until `state` is `COMPLETED`:
 
 ```http
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
 
-Run every few seconds. When `state` is `COMPLETED`, copy `model_id` from the response.
-
 In Bruno, use the **Poll ML task** request in the same lesson folder.
 
 ## Video-only segments (no lab folder)
 
-- **Lesson 1-3** — GPUs vs CPUs
-- **Lesson 2-3** — Choosing embedding processors (dense/sparse labs are in Chapters 2–3)
-- **Lesson 4-4** — OpenSearch MCP server
-- **Lesson 5-4** — Secure, resilient AI apps
+These appear in the video course only. The **Video script** column is the segment id in [voice-script.docx](../voice-script.docx).
 
-## Suggested order
+| Chapter · Lesson | Video script | Topic |
+|------------------|--------------|--------|
+| Chapter 1 · Lesson 3 | 1-3 | GPUs vs CPUs |
+| Chapter 2 · Lesson 3 | 2-3 | Choosing embedding processors |
+| Chapter 4 · Lesson 4 | 4-4 | OpenSearch MCP server |
+| Chapter 5 · Lesson 4 | 5-4 | Secure, resilient AI apps |
 
-1. [Chapter 1 Lesson 1](../src/Chapter%201/1-1/README.md) — connectivity and sample data
-2. [Chapter 1 Lesson 2](../src/Chapter%201/1-2/README.md) — keyword index
-3. [Chapter 1 Lesson 4](../src/Chapter%201/1-4/README.md) — vector index and reindex
+## Chapter 3 — special layout
+
+Unlike other chapters, **Chapter 3 has one lab folder** (`Lesson 1`) that covers **three video segments** (scripts **3-1**, **3-2**, **3-3**). Start at [Chapter 3 · Lesson 1](../src/Chapter%203/Lesson%201/README.md).
+
+## Course order
+
+1. [Chapter 1 · Lesson 1](../src/Chapter%201/Lesson%201/README.md) — connectivity and sample data
+2. [Chapter 1 · Lesson 2](../src/Chapter%201/Lesson%202/README.md) — keyword index
+3. [Chapter 1 · Lesson 4](../src/Chapter%201/Lesson%204/README.md) — vector index and reindex
 4. [Chapter 2](../src/Chapter%202/README.md) — neural search pipeline
 5. [Chapter 3](../src/Chapter%203/README.md) — hybrid and sparse search
 6. [Chapter 4](../src/Chapter%204/README.md) — RAG optimization
 7. [Chapter 5](../src/Chapter%205/README.md) — production cluster tuning
 
-## Reference scripts
-
-Each lesson folder has commented Python files that run the same REST calls. Use them after you have done the Dev Tools steps once, or to compare your results.
+Optional Python scripts in each lesson folder mirror the same REST calls after you have completed the Dev Tools steps once.

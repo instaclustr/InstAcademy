@@ -1,6 +1,8 @@
-# Chapter 3 Lesson 1 — Neural sparse encoding and hybrid search
+# Chapter 3 · Lesson 1 — Neural sparse encoding and hybrid search
 
-**InstAcademy → OpenSearch:** Lessons **3-1** through **3-3** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — hybrid search rationale, sparse vector index + ML Commons, and score normalization for accurate hybrid ranking.
+**Chapter 3 · Lesson 1** (one lab — video scripts **3-1**, **3-2**, **3-3**) · [Voice script](../../../voice-script.docx) — hybrid search rationale, sparse vector index + ML Commons, and score normalization for accurate hybrid ranking.
+
+← [Chapter 3 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -19,7 +21,7 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 1 Lesson 1](../../Chapter%201/1-1/README.md) and [Chapter 2 Lesson 1](../../Chapter%202/Lesson%201/README.md) (or equivalent ML bootstrap).
+- Complete [Chapter 1 · Lesson 1](../../Chapter%201/Lesson%201/README.md) and [Chapter 2 · Lesson 1](../../Chapter%202/Lesson%201/README.md) (or equivalent ML bootstrap).
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 3/Lesson 1/`](../../../bruno/Chapter%203/Lesson%201/)).
 - Keep a notepad for **`model_group_id`**, **`model_id`**, **`task_id`**, and add **`ML_MODEL_ID=<model_id>`** to **`src/.env`** after deploy.
 
@@ -381,7 +383,7 @@ Try changing query text to **`whale`** or hybrid weights in Step 5 to feel ranki
 
 ## Next chapter
 
-[Chapter 4 Lesson 1](../../Chapter%204/Lesson%201/README.md) — bookstore **RAG** with **`all-mpnet-base-v2`**, dense k-NN, and hybrid search.
+[Chapter 4 · Lesson 1](../../Chapter%204/Lesson%201/README.md) — bookstore **RAG** with **`all-mpnet-base-v2`**, dense k-NN, and hybrid search.
 
 ## Reference scripts
 

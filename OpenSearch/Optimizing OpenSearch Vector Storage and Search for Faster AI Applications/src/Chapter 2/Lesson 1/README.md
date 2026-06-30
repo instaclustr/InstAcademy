@@ -1,6 +1,8 @@
-# Chapter 2 Lesson 1 — Setting up your neural search pipeline
+# Chapter 2 · Lesson 1 — Setting up your neural search pipeline
 
-**InstAcademy → OpenSearch:** Lesson 2-1 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — enable ML Commons, register and deploy **`msmarco-distilbert-base-tas-b`**, and smoke-test text embedding inference.
+**Chapter 2 · Lesson 1** · [Voice script](../../../voice-script.docx) — enable ML Commons, register and deploy **`msmarco-distilbert-base-tas-b`**, and smoke-test text embedding inference.
+
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -18,8 +20,8 @@ These steps prepare **`ML_MODEL_ID`** for [Lesson 2](../Lesson%202/README.md), w
 
 ### Prerequisites
 
-- Complete [Chapter 1 Lesson 1-1](../../Chapter%201/1-1/README.md): cluster connectivity and **`src/sample-data.json`**.
-- Complete [cluster setup](../../CREATE_CLUSTER.md): trial cluster with **AI Search / ML Commons** enabled and your IP on the firewall.
+- Complete [Chapter 1 · Lesson 1](../../Chapter%201/Lesson%201/README.md): cluster connectivity and **`src/sample-data.json`**.
+- Complete [cluster setup](../../../CREATE_CLUSTER.md): trial cluster with **AI Search / ML Commons** enabled and your IP on the firewall.
 - Open **OpenSearch Dashboards** → **Dev Tools** (or use Bruno fast mode: [`bruno/Chapter 2/Lesson 1/`](../../../bruno/Chapter%202/Lesson%201/)).
 - Keep a notepad (or **`src/.env`**) for ids returned by ML Commons:
 
@@ -281,7 +283,7 @@ POST _plugins/_ml/_predict/text_embedding/YOUR_MODEL_ID
 
 ## Next lesson
 
-[Chapter 2 Lesson 2](../Lesson%202/README.md) — create ingest pipeline **`vector-search-embeddings-pipeline`**, index **`vector-search-index`**, bulk-load books, and run hybrid neural + keyword search.
+[Chapter 2 · Lesson 2](../Lesson%202/README.md) — create ingest pipeline **`vector-search-embeddings-pipeline`**, index **`vector-search-index`**, bulk-load books, and run hybrid neural + keyword search.
 
 ## Reference scripts
 

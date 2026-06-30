@@ -1,6 +1,6 @@
 # Creating a NetApp Instaclustr Cluster
 
-**InstAcademy → OpenSearch → Optimizing OpenSearch Vector Storage and Search for Faster AI Applications**
+**Vector Storage & Search for AI** · [← Course index](README.md) · [← How to run labs](docs/HANDS-ON-GUIDE.md)
 
 First, you'll want to start the sign-up process at (attribution link).
 

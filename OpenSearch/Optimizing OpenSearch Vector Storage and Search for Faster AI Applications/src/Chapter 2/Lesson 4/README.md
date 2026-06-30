@@ -1,6 +1,8 @@
-# Chapter 2 Lesson 4 — AI model management with ML Commons
+# Chapter 2 · Lesson 4 — AI model management with ML Commons
 
-**InstAcademy → OpenSearch:** Lesson 2-4 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — tear down Lesson 2 artifacts and optionally **undeploy** and **delete** the embedding model from Lesson 1.
+**Chapter 2 · Lesson 4** · [Voice script](../../../voice-script.docx) — tear down Lesson 2 artifacts and optionally **undeploy** and **delete** the embedding model from Lesson 1.
+
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -176,7 +178,7 @@ After deletion, remove **`ML_MODEL_ID`** from **`src/.env`** or update it when y
 
 ## Next lesson
 
-[Chapter 2 Lesson 5](../Lesson%205/README.md) — cluster **routing** settings for shard allocation and rebalancing (standalone operations practice).
+[Chapter 2 · Lesson 5](../Lesson%205/README.md) — cluster **routing** settings for shard allocation and rebalancing (standalone operations practice).
 
 ## Reference scripts
 

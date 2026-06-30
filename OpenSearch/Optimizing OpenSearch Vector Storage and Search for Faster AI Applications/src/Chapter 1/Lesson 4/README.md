@@ -1,6 +1,8 @@
-# Chapter 1 Lesson 4 — Vector storage and search optimizations
+# Chapter 1 · Lesson 4 — Vector storage and search optimizations
 
-**InstAcademy → OpenSearch:** Lesson 1-4 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../OpenSearch%20Learning%20Path%201.docx) — `knn_vector` indexes, HNSW, and reducing dimensions with `_reindex`.
+**Chapter 1 · Lesson 4** · [Voice script](../../../voice-script.docx) — `knn_vector` indexes, HNSW, and reducing dimensions with `_reindex`.
+
+← [Chapter 1 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -12,7 +14,7 @@
 
 ### Prerequisites
 
-- Complete [Lesson 1-1](../1-1/README.md) (cluster connectivity).
+- Complete [Lesson 1](../Lesson%201/README.md) (cluster connectivity).
 - Open **Dev Tools**.
 
 ---
@@ -38,7 +40,7 @@ DELETE my-vector-index
 404 responses are fine.
 
 **Fast mode**  
-`bruno/Chapter 1/Lesson 1-4/01-delete-indexes.bru`
+`bruno/Chapter 1/Lesson 4/01-delete-indexes.bru`
 
 
 ### **Step 2: Create source index (256-dim vectors)**
@@ -78,7 +80,7 @@ PUT my-vector-index
 **Why**  
 Vectors are large — use the pre-generated bulk file rather than typing 256 floats per document.
 
-**Option A — Dev Tools:** paste the contents of [`rest/bulk/chapter-1-lesson-4-vector-index.ndjson`](../../rest/bulk/chapter-1-lesson-4-vector-index.ndjson) after:
+**Option A — Dev Tools:** paste the contents of [`rest/bulk/chapter-1-lesson-4-vector-index.ndjson`](../../../rest/bulk/chapter-1-lesson-4-vector-index.ndjson) after:
 
 **Request** — paste into Dev Tools:
 
@@ -101,7 +103,7 @@ POST my-vector-index/_refresh
 ```
 
 **Fast mode**  
-`bruno/Chapter 1/Lesson 1-4/03-bulk-sample-vectors.bru`
+`bruno/Chapter 1/Lesson 4/03-bulk-sample-vectors.bru`
 
 
 ### **Step 4: Create destination index (128-dim)**
@@ -178,7 +180,7 @@ GET my-optimized-vector-index/_search
 ```
 
 **Fast mode**  
-`bruno/Chapter 1/Lesson 1-4/05-reindex-truncate.bru`
+`bruno/Chapter 1/Lesson 4/05-reindex-truncate.bru`
 
 ---
 

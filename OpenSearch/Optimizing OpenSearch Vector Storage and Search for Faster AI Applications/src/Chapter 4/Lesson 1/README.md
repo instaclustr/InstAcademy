@@ -1,6 +1,8 @@
-# Chapter 4 Lesson 1 — Optimizing RAG pipelines in OpenSearch
+# Chapter 4 · Lesson 1 — Optimizing RAG pipelines in OpenSearch
 
-**InstAcademy → OpenSearch:** Lesson **4-1** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — RAG performance and accuracy levers: stronger embeddings, ingest pipelines, k-NN retrieval, hybrid normalization, and k-NN cache warmup.
+**Chapter 4 · Lesson 1** · [Voice script](../../../voice-script.docx) — RAG performance and accuracy levers: stronger embeddings, ingest pipelines, k-NN retrieval, hybrid normalization, and k-NN cache warmup.
+
+← [Chapter 4 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -19,7 +21,7 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 1 Lesson 1](../../Chapter%201/1-1/README.md).
+- Complete [Chapter 1 · Lesson 1](../../Chapter%201/Lesson%201/README.md).
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 4/Lesson 1/`](../../../bruno/Chapter%204/Lesson%201/)).
 - Save **`model_group_id`**, **`model_id`**, **`task_id`**; set **`ML_MODEL_ID`** in **`src/.env`** after deploy.
 - For k-NN / hybrid steps, open **`001-bookstore-rag-query-vector.json`** in this folder — a pre-baked 768-dimensional query vector used by the lab scripts (paste its array into the `"vector"` field below).
@@ -370,7 +372,7 @@ PUT _cluster/settings
 
 ## Next lesson
 
-[Chapter 4 Lesson 2](../Lesson%202/README.md) — index design, chunking, optimized bulk loading, shard sizing, and file preload.
+[Chapter 4 · Lesson 2](../Lesson%202/README.md) — index design, chunking, optimized bulk loading, shard sizing, and file preload.
 
 ## Reference scripts
 

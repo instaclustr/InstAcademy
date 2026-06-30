@@ -1,10 +1,16 @@
+# Chapter 1 exam guide
+
+**Optional** — study questions for Chapter 1. Not required for the hands-on labs.
+
+← [Chapter 1](../src/Chapter%201/README.md) · [Course index](../README.md)
+
 # Chapter 1 Exam Guide — Indexing and Optimizing for Vector Search with OpenSearch
 
 ---
 
 ## Questions
 
-### Question 1 (Chapter 1, Lesson 1-1: Vector Search Settings)
+### Question 1 (Chapter 1, Lesson 1: Vector Search Settings)
 
 Your bookstore wants to add semantic search to its product catalog. A team member suggests storing book descriptions as-is and running keyword searches. Why would you use vector embeddings instead?
 
@@ -16,7 +22,7 @@ C) Vector embeddings replace the need for an OpenSearch cluster entirely, since 
 
 ---
 
-### Question 2 (Chapter 1, Lesson 1-1: Vector Search Settings)
+### Question 2 (Chapter 1, Lesson 1: Vector Search Settings)
 
 Your bookstore has a large catalog of older, rarely updated books. You want to reduce memory costs for storing their embeddings. Which optimization technique stores vectors primarily on disk and uses quantization to dramatically lower memory usage?
 
@@ -28,7 +34,7 @@ C) Segment merging, which consolidates Lucene segments to reduce the number of f
 
 ---
 
-### Question 3 (Chapter 1, Lesson 1-2: Choosing the Right Type of Vector Search)
+### Question 3 (Chapter 1, Lesson 2: Choosing the Right Type of Vector Search)
 
 Your bookstore has a small, curated collection of 5,000 rare first-edition books. Customers need perfect accuracy when searching — every relevant result must appear. Which vector search algorithm should you use?
 
@@ -52,7 +58,7 @@ C) Reducing the memory footprint of stored vectors by compressing them using GPU
 
 ---
 
-### Question 5 (Chapter 1, Lesson 1-4: Vector Storage and Search Optimizations)
+### Question 5 (Chapter 1, Lesson 4: Vector Storage and Search Optimizations)
 
 Your bookstore has thousands of lengthy knowledge-base articles for its AI support assistant. Without any preprocessing, the assistant frequently misses key troubleshooting steps. What optimization technique would fix this?
 

@@ -1,6 +1,6 @@
 # Fast mode — Bruno REST collection
 
-**InstAcademy → OpenSearch → Optimizing OpenSearch Vector Storage and Search for Faster AI Applications**
+**Vector Storage & Search for AI** · [← How to run labs](../docs/HANDS-ON-GUIDE.md)
 
 Run the same REST calls as the lesson READMEs without typing them into Dev Tools. Use this to **catch up**, **recover after a mistake**, or **smoke-test** a cluster.
 
@@ -40,9 +40,9 @@ bruno/
   environments/
     Local.bru          # Your cluster credentials
   Chapter 1/
-    Lesson 1-1/          # Connectivity
-    Lesson 1-2/          # Keyword index
-    Lesson 1-4/          # Vector reindex
+    Lesson 1/          # Connectivity
+    Lesson 2/          # Keyword index
+    Lesson 4/          # Vector reindex
   Chapter 2/
     Lesson 1/ … Lesson 5/
   Chapter 3/

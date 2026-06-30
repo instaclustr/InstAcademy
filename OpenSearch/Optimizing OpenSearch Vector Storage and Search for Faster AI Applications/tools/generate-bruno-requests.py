@@ -86,15 +86,15 @@ def ml_poll(seq: int = 99) -> str:
 def ch1() -> None:
     base = "Chapter 1"
     write(
-        f"{base}/Lesson 1-1/01-cluster-info.bru",
+        f"{base}/Lesson 1/01-cluster-info.bru",
         bru_http("Cluster info", 1, "GET", "/"),
     )
     write(
-        f"{base}/Lesson 1-2/01-delete-keyword-index.bru",
+        f"{base}/Lesson 2/01-delete-keyword-index.bru",
         bru_http("Delete keyword-index if exists", 1, "DELETE", "/keyword-index"),
     )
     write(
-        f"{base}/Lesson 1-2/02-create-keyword-index.bru",
+        f"{base}/Lesson 2/02-create-keyword-index.bru",
         bru_http(
             "Create keyword-index",
             2,
@@ -129,7 +129,7 @@ def ch1() -> None:
         ),
     )
     write(
-        f"{base}/Lesson 1-2/03-bulk-sample-books.bru",
+        f"{base}/Lesson 2/03-bulk-sample-books.bru",
         bru_http(
             "Bulk index sample books",
             3,
@@ -140,7 +140,7 @@ def ch1() -> None:
         ),
     )
     write(
-        f"{base}/Lesson 1-2/04-refresh-keyword-index.bru",
+        f"{base}/Lesson 2/04-refresh-keyword-index.bru",
         bru_http("Refresh keyword-index", 4, "POST", "/keyword-index/_refresh"),
     )
 

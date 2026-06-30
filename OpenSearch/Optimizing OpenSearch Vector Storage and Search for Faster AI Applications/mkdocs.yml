@@ -1,4 +1,4 @@
-site_name: InstAcademy · OpenSearch — Optimizing OpenSearch Vector Storage and Search for Faster AI Applications
+site_name: InstAcademy · Vector Storage & Search for AI
 site_description: InstAcademy OpenSearch hands-on labs — Optimizing OpenSearch Vector Storage and Search for Faster AI Applications
 site_url: https://instaclustr.github.io/InstAcademy/
 repo_url: https://github.com/instaclustr/InstAcademy
@@ -88,9 +88,9 @@ nav:
       - Fast mode (Bruno): fast-mode/bruno/index.md
   - Chapter 1:
       - Overview: chapter-1/index.md
-      - Lesson 1-1 — Connectivity: chapter-1/lesson-1-1/index.md
-      - Lesson 1-2 — Keyword index: chapter-1/lesson-1-2/index.md
-      - Lesson 1-4 — Vector reindex: chapter-1/lesson-1-4/index.md
+      - Lesson 1 — Connectivity: chapter-1/lesson-1/index.md
+      - Lesson 2 — Keyword index: chapter-1/lesson-2/index.md
+      - Lesson 4 — Vector reindex: chapter-1/lesson-4/index.md
   - Chapter 2:
       - Overview: chapter-2/index.md
       - Lesson 1 — ML setup: chapter-2/lesson-1/index.md

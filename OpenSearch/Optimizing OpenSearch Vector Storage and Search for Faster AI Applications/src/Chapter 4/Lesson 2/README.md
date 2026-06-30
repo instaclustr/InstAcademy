@@ -1,6 +1,8 @@
-# Chapter 4 Lesson 2 — Optimizing indexes for RAG pipelines
+# Chapter 4 · Lesson 2 — Optimizing indexes for RAG pipelines
 
-**InstAcademy → OpenSearch:** Lesson **4-2** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — fix common index mistakes (wrong field types, missing vectors), add chunking, tune bulk load throughput, size shards, and preload vector files.
+**Chapter 4 · Lesson 2** · [Voice script](../../../voice-script.docx) — fix common index mistakes (wrong field types, missing vectors), add chunking, tune bulk load throughput, size shards, and preload vector files.
+
+← [Chapter 4 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -17,7 +19,7 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 4 Lesson 1](../Lesson%201/README.md) — **`ML_MODEL_ID`** in **`src/.env`**
+- Complete [Chapter 4 · Lesson 1](../Lesson%201/README.md) — **`ML_MODEL_ID`** in **`src/.env`**
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 4/Lesson 2/`](../../../bruno/Chapter%204/Lesson%202/))
 
 ---
@@ -330,7 +332,7 @@ GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
 
 ## Next lesson
 
-[Chapter 4 Lesson 3](../Lesson%203/README.md) — **explain**, **`_rank_eval`**, and search pipelines with business filters.
+[Chapter 4 · Lesson 3](../Lesson%203/README.md) — **explain**, **`_rank_eval`**, and search pipelines with business filters.
 
 ## Reference scripts
 

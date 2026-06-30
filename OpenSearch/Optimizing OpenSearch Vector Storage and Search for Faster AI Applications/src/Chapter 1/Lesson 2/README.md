@@ -1,6 +1,8 @@
-# Chapter 1 Lesson 2 — Choosing the right type of vector search (keyword baseline)
+# Chapter 1 · Lesson 2 — Choosing the right type of vector search (keyword baseline)
 
-**InstAcademy → OpenSearch:** Lesson 1-2 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../OpenSearch%20Learning%20Path%201.docx) — text vs keyword field types before vector search.
+**Chapter 1 · Lesson 2** · [Voice script](../../../voice-script.docx) — text vs keyword field types before vector search.
+
+← [Chapter 1 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -10,7 +12,7 @@ Create a small **keyword + text** bookstore index and bulk-index three sample bo
 
 ### Prerequisites
 
-- Complete [Lesson 1-1](../1-1/README.md) (cluster connectivity).
+- Complete [Lesson 1](../Lesson%201/README.md) (cluster connectivity).
 - Open **Dev Tools**.
 
 ---
@@ -99,7 +101,7 @@ POST _bulk
 **Expected** `"errors": false` and three `"result": "created"` (or `"updated"`) entries.
 
 **Fast mode**  
-`bruno/Chapter 1/Lesson 1-2/03-bulk-sample-books.bru` uses [`rest/bulk/chapter-1-keyword-index-sample.ndjson`](../../rest/bulk/chapter-1-keyword-index-sample.ndjson).
+`bruno/Chapter 1/Lesson 2/03-bulk-sample-books.bru` uses [`rest/bulk/chapter-1-keyword-index-sample.ndjson`](../../../rest/bulk/chapter-1-keyword-index-sample.ndjson).
 
 
 ### **Step 4: Refresh and search**
@@ -138,8 +140,8 @@ GET keyword-index/_search
 
 ## Next lesson
 
-- **Lesson 1-3 (video):** GPUs vs CPUs — theory only, no lab folder.
-- **Hands-on:** [Lesson 1-4](../1-4/README.md) — `knn_vector` index and `_reindex` with dimension truncation.
+- **Lesson 3 (video)** — GPUs vs CPUs — theory only, no lab folder.
+- **Hands-on:** [Lesson 4](../Lesson%204/README.md) — `knn_vector` index and `_reindex` with dimension truncation.
 
 ## Reference scripts
 

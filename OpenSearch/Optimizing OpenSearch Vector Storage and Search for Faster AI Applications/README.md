@@ -2,69 +2,44 @@
 
 **Optimizing OpenSearch Vector Storage and Search for Faster AI Applications**
 
-Hands-on labs for this InstAcademy course. Work through lessons in **Dev Tools** (recommended) or use the **Bruno** fast-mode collection.
+Short label: **Vector Storage & Search for AI** — hands-on labs for the InstAcademy video course.
 
-| Navigate | Link |
-|----------|------|
+## Start here
+
+1. **[How to run the labs](docs/HANDS-ON-GUIDE.md)** — Dev Tools walkthrough, Bruno fast mode, credentials, sample data (read this first).
+2. **[Cluster setup](CREATE_CLUSTER.md)** — provision a 3-node Instaclustr trial with the AI Search Plugin.
+3. **[Chapter 1 · Lesson 1](src/Chapter%201/Lesson%201/README.md)** — verify connectivity and download sample data.
+
+**Prefer a formatted site?** [Open the lab guide on GitHub Pages](https://instaclustr.github.io/InstAcademy/).
+
+| | |
+|---|---|
 | **Up to OpenSearch courses** | [OpenSearch/](../) |
 | **Up to InstAcademy home** | [InstAcademy/](../../) |
-| **How to read a lesson** | [docs/HANDS-ON-GUIDE.md](docs/HANDS-ON-GUIDE.md) |
-| **Cluster setup (Instaclustr trial)** | [CREATE_CLUSTER.md](CREATE_CLUSTER.md) |
-| **Formatted web guide** | [instaclustr.github.io/InstAcademy](https://instaclustr.github.io/InstAcademy/) |
-| **Voice script** | [course script.docx](OpenSearch%20Learning%20Path%201.docx) |
+| **Voice script** | [voice-script.docx](voice-script.docx) |
+| **Chapter 1 exam guide** *(optional)* | [docs/chapter-1-exam-guide.md](docs/chapter-1-exam-guide.md) |
 
-The voice script is [`Optimizing OpenSearch Vector Storage and Search for Faster AI Applications (script).docx`](OpenSearch%20Learning%20Path%201.docx). Each lesson README under `src/Chapter …` follows that narrative.
+## Chapters
 
-## How to use this course
+| Chapter | Topic | Entry |
+|---------|--------|--------|
+| 1 | Vector fundamentals | [Chapter 1](src/Chapter%201/README.md) |
+| 2 | Neural search pipelines | [Chapter 2](src/Chapter%202/README.md) |
+| 3 | Hybrid / sparse search | [Chapter 3](src/Chapter%203/README.md) — **one lab folder, three video segments** |
+| 4 | RAG optimization | [Chapter 4](src/Chapter%204/README.md) |
+| 5 | Production cluster ops | [Chapter 5](src/Chapter%205/README.md) |
 
-### Learn mode (start here)
+## What's in this folder
 
-Follow step-by-step **Dev Tools** instructions in each lesson README:
-
-1. Install Python 3 (optional — only for sample-data download and reference scripts).
-2. Provision a **3-node Instaclustr trial** with the **AI Search Plugin** ([CREATE_CLUSTER.md](CREATE_CLUSTER.md)).
-3. Read [How to read a lesson](docs/HANDS-ON-GUIDE.md#how-to-read-a-lesson) (bold labels: **Step**, **Why**, **Request**, **Expected**, **Save**).
-4. Start at [Chapter 1 Lesson 1](src/Chapter%201/1-1/README.md) — connectivity and sample data.
-5. Continue chapter by chapter in **Lab steps** order.
-
-### Fast mode (Bruno)
-
-Use the [`bruno/`](bruno/) collection to run the same REST calls with less typing — recovery, catch-up, or smoke tests. See [bruno/README.md](bruno/README.md) (set `baseUrl`, credentials, **SSL verify off**).
-
-## Course layout
-
-| Path | Purpose |
-|------|---------|
-| [`src/Chapter 1/`](src/Chapter%201) | Connectivity, keyword index, vector reindex |
-| [`src/Chapter 2/`](src/Chapter%202) | ML Commons, neural ingest pipeline, search |
-| [`src/Chapter 3/`](src/Chapter%203) | Neural sparse + hybrid search |
-| [`src/Chapter 4/`](src/Chapter%204) | Bookstore RAG, index tuning, query optimization |
-| [`src/Chapter 5/`](src/Chapter%205) | Production cluster operations |
-| [`rest/bulk/`](rest/bulk/) | NDJSON bulk payloads for Dev Tools / Bruno |
+| Path | For learners |
+|------|----------------|
+| [`src/Chapter …/`](src/Chapter%201/) | Step-by-step Dev Tools lab READMEs |
 | [`bruno/`](bruno/) | Fast-mode REST collection |
-| [`tools/`](tools/) | Generators for bulk NDJSON and Bruno requests |
-| [`src/.env.example`](src/.env.example) | Optional env vars for Python reference scripts |
+| [`rest/bulk/`](rest/bulk/) | NDJSON bulk payloads |
+| [`src/sample-data.json`](src/sample-data.json) | Shared Gutendex book dataset |
+| [`docs/HANDS-ON-GUIDE.md`](docs/HANDS-ON-GUIDE.md) | How to read a lesson and run the course |
 
-## Optional Python scripts
-
-Fully commented `.py` files mirror the REST steps. Shared connection helpers live in [`src/utils/`](src/utils/). Copy `src/.env.example` → `src/.env` if you use them.
-
-Regenerate bulk/Bruno assets after changing sample data:
-
-```bash
-python tools/generate-bulk-ndjson.py
-python tools/generate-bruno-requests.py
-```
-
-Build the docs site locally (from this course folder):
-
-```bash
-pip install -r requirements-docs.txt
-python tools/sync-mkdocs-content.py
-mkdocs serve
-```
-
-Open [http://127.0.0.1:8000/InstAcademy/](http://127.0.0.1:8000/InstAcademy/) when the dev server starts.
+Optional commented Python scripts mirror the REST steps under each lesson folder. Maintainer docs: [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Support
 

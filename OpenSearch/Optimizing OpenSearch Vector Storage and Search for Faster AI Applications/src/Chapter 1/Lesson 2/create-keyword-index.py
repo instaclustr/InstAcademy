@@ -11,8 +11,8 @@ What this script teaches:
 import sys
 from pathlib import Path
 
-# Add ``src/`` to ``sys.path`` so shared ``utils`` imports work from Chapter 1/1-2.
-# Repeated in every lesson script — see ``Chapter 1/1-1/opensearch-status.py``
+# Add ``src/`` to ``sys.path`` so shared ``utils`` imports work from Chapter 1/Lesson 2.
+# Repeated in every lesson script — see ``Chapter 1/Lesson 1/opensearch-status.py``
 # for a full explanation of why ``parents[2]`` resolves to ``src/``.
 _SRC_ROOT = Path(__file__).resolve().parents[2]
 if str(_SRC_ROOT) not in sys.path:

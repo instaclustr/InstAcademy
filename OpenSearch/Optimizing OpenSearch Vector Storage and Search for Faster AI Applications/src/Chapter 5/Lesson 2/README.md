@@ -1,6 +1,8 @@
-# Chapter 5 Lesson 2 — Index optimization
+# Chapter 5 · Lesson 2 — Index optimization
 
-**InstAcademy → OpenSearch:** Lesson **5-2** · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../OpenSearch%20Learning%20Path%201.docx) — mappings, shrink, reindex with Painless, and versioned k-NN index definitions.
+**Chapter 5 · Lesson 2** · [Voice script](../../../voice-script.docx) — mappings, shrink, reindex with Painless, and versioned k-NN index definitions.
+
+← [Chapter 5 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -15,8 +17,8 @@ By the end of this lesson you will:
 
 ### Prerequisites
 
-- Complete [Chapter 5 Lesson 1](../Lesson%201/README.md) (shard basics).
-- Ensure **`bookstore-rag-all-together`** exists ([Chapter 4 Lesson 2](../../Chapter%204/Lesson%202/README.md) script **`06`**).
+- Complete [Chapter 5 · Lesson 1](../Lesson%201/README.md) (shard basics).
+- Ensure **`bookstore-rag-all-together`** exists ([Chapter 4 · Lesson 2](../../Chapter%204/Lesson%202/README.md) script **`06`**).
 - Open **Dev Tools** (or Bruno: [`bruno/Chapter 5/Lesson 2/`](../../../bruno/Chapter%205/Lesson%202/)).
 
 **Save values as you go:**
@@ -458,7 +460,7 @@ PUT book-embeddings-v3
 
 ## Next lesson
 
-[Chapter 5 Lesson 3](../Lesson%203/README.md) — **vector storage modes** (`on_disk` vs `in_memory`).
+[Chapter 5 · Lesson 3](../Lesson%203/README.md) — **vector storage modes** (`on_disk` vs `in_memory`).
 
 ## Reference scripts
 

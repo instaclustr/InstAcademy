@@ -17,8 +17,8 @@ Why bother truncating dimensions?
 import sys
 from pathlib import Path
 
-# Lesson folder is ``src/Chapter 1/1-4`` — ``parents[2]`` is the repo ``src/``
-# so we can import shared ``utils``. See Chapter 1/1-1 for full notes.
+# Lesson folder is ``src/Chapter 1/Lesson 4`` — ``parents[2]`` is the repo ``src/``
+# so we can import shared ``utils``. See Chapter 1/Lesson 1 for full notes.
 _SRC_ROOT = Path(__file__).resolve().parents[2]
 if str(_SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(_SRC_ROOT))

@@ -1,6 +1,8 @@
-# Chapter 2 Lesson 2 — Ingesting data and running queries
+# Chapter 2 · Lesson 2 — Ingesting data and running queries
 
-**InstAcademy → OpenSearch:** Lesson 2-2 · [Optimizing OpenSearch Vector Storage and Search for Faster AI Applications](../../../OpenSearch%20Learning%20Path%201.docx) — ingest pipeline embeddings, bulk-load the Gutendex dataset, and run hybrid neural + keyword search on **`vector-search-index`**.
+**Chapter 2 · Lesson 2** · [Voice script](../../../voice-script.docx) — ingest pipeline embeddings, bulk-load the Gutendex dataset, and run hybrid neural + keyword search on **`vector-search-index`**.
+
+← [Chapter 2 overview](../README.md) · [How to run labs](../../../docs/HANDS-ON-GUIDE.md)
 
 ## Overview
 
@@ -16,7 +18,7 @@ By the end of this lesson you will:
 ### Prerequisites
 
 - Complete [Lesson 1](../Lesson%201/README.md) and set **`ML_MODEL_ID`** in **`src/.env`** (copy from **`src/.env.example`** if needed).
-- Confirm **`src/sample-data.json`** exists ([Chapter 1 Lesson 1-1](../../Chapter%201/1-1/README.md)).
+- Confirm **`src/sample-data.json`** exists ([Chapter 1 · Lesson 1](../../Chapter%201/Lesson%201/README.md)).
 - Open **Dev Tools** (or Bruno fast mode: [`bruno/Chapter 2/Lesson 2/`](../../../bruno/Chapter%202/Lesson%202/)).
 
 | Variable | Example | Used in |
@@ -248,7 +250,7 @@ GET vector-search-index/_search
 
 ## Next lesson
 
-- **Lesson 2-3 (video only):** [Choosing your text embedding processor](../README.md#lesson-3-video-only) — theory on dense models and processor choice; no hands-on folder.
+- **Chapter 2 · Lesson 3 (video only):** choosing embedding processors — see [video-only segments](../../../docs/HANDS-ON-GUIDE.md#video-only-segments-no-lab-folder).
 - **Hands-on cleanup:** [Lesson 4](../Lesson%204/README.md) — tear down **`vector-search-index`**, the pipeline, and optionally undeploy/delete the model.
 
 ## Reference scripts

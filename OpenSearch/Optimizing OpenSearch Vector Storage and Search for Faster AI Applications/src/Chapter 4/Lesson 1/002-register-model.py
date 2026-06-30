@@ -15,7 +15,7 @@ import os
 import sys
 from pathlib import Path
 
-# Standard ``src/`` import path setup; see Chapter 1/1-1 for full notes.
+# Standard ``src/`` import path setup; see Chapter 1/Lesson 1 for full notes.
 _SRC_ROOT = Path(__file__).resolve().parents[2]
 if str(_SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(_SRC_ROOT))

@@ -17,7 +17,7 @@ SITE_DOCS = REPO / "site-docs"
 GITHUB_REPO = "https://github.com/instaclustr/InstAcademy"
 GITHUB_BRANCH = "main"
 COURSE_GITHUB_PATH = (
-    "OpenSearch/Optimizing OpenSearch Vector Storage and Search for Faster AI Applications"
+    "OpenSearch/Optimizing%20OpenSearch%20Vector%20Storage%20and%20Search%20for%20Faster%20AI%20Applications"
 )
 
 
@@ -29,7 +29,8 @@ def _github_tree(rel: str) -> str:
     return f"{GITHUB_REPO}/tree/{GITHUB_BRANCH}/{COURSE_GITHUB_PATH}/{rel}"
 
 
-DOCX_GITHUB_URL = _github_blob("OpenSearch%20Learning%20Path%201.docx")
+DOCX_GITHUB_URL = _github_blob("voice-script.docx")
+CREATE_CLUSTER_GITHUB_URL = _github_blob("CREATE_CLUSTER.md")
 BULK_GITHUB_URL = _github_tree("rest/bulk/")
 BRUNO_GITHUB = _github_tree("bruno")
 
@@ -39,9 +40,9 @@ PAGES: list[tuple[str, str]] = [
     ("CREATE_CLUSTER.md", "getting-started/cluster-setup/index.md"),
     ("bruno/README.md", "fast-mode/bruno/index.md"),
     ("src/Chapter 1/README.md", "chapter-1/index.md"),
-    ("src/Chapter 1/1-1/README.md", "chapter-1/lesson-1-1/index.md"),
-    ("src/Chapter 1/1-2/README.md", "chapter-1/lesson-1-2/index.md"),
-    ("src/Chapter 1/1-4/README.md", "chapter-1/lesson-1-4/index.md"),
+    ("src/Chapter 1/Lesson 1/README.md", "chapter-1/lesson-1/index.md"),
+    ("src/Chapter 1/Lesson 2/README.md", "chapter-1/lesson-2/index.md"),
+    ("src/Chapter 1/Lesson 4/README.md", "chapter-1/lesson-4/index.md"),
     ("src/Chapter 2/README.md", "chapter-2/index.md"),
     ("src/Chapter 2/Lesson 1/README.md", "chapter-2/lesson-1/index.md"),
     ("src/Chapter 2/Lesson 2/README.md", "chapter-2/lesson-2/index.md"),
@@ -63,14 +64,18 @@ PAGES: list[tuple[str, str]] = [
 # Rewrite GitHub-style README links → MkDocs site paths (order: longest first).
 LINK_REWRITES: list[tuple[str, str]] = [
     (r"\]\(\.\./\.\./\.\./OpenSearch%20Learning%20Path%201\.docx\)", f"]({DOCX_GITHUB_URL})"),
+    (r"\]\(\.\./\.\./\.\./voice-script\.docx\)", f"]({DOCX_GITHUB_URL})"),
+    (r"\]\(\.\./\.\./voice-script\.docx\)", f"]({DOCX_GITHUB_URL})"),
+    (r"\]\(\.\./voice-script\.docx\)", f"]({DOCX_GITHUB_URL})"),
     (r"\]\(\.\./\.\./OpenSearch%20Learning%20Path%201\.docx\)", f"]({DOCX_GITHUB_URL})"),
     (r"\]\(\.\./\.\./\.\./\.\./OpenSearch%20Learning%20Path%201\.docx\)", f"]({DOCX_GITHUB_URL})"),
     (r"\]\(\.\./CREATE_CLUSTER\.md\)", "](../getting-started/cluster-setup/)"),
     (r"\]\(\.\./\.\./CREATE_CLUSTER\.md\)", "](../../getting-started/cluster-setup/)"),
+    (rf"\]\({re.escape(CREATE_CLUSTER_GITHUB_URL)}\)", "](../../getting-started/cluster-setup/)"),
     (r"\]\(\.\./bruno/\)", "](../fast-mode/bruno/)"),
-    (r"\]\(\.\./src/Chapter%201/1-1/README\.md\)", "](../chapter-1/lesson-1-1/)"),
-    (r"\]\(\.\./src/Chapter%201/1-2/README\.md\)", "](../chapter-1/lesson-1-2/)"),
-    (r"\]\(\.\./src/Chapter%201/1-4/README\.md\)", "](../chapter-1/lesson-1-4/)"),
+    (r"\]\(\.\./src/Chapter%201/Lesson%201/README\.md\)", "](../chapter-1/lesson-1/)"),
+    (r"\]\(\.\./src/Chapter%201/Lesson%202/README\.md\)", "](../chapter-1/lesson-2/)"),
+    (r"\]\(\.\./src/Chapter%201/Lesson%204/README\.md\)", "](../chapter-1/lesson-4/)"),
     (r"\]\(\.\./src/Chapter%202/README\.md\)", "](../chapter-2/)"),
     (r"\]\(\.\./src/Chapter%203/README\.md\)", "](../chapter-3/)"),
     (r"\]\(\.\./src/Chapter%204/README\.md\)", "](../chapter-4/)"),
@@ -90,13 +95,13 @@ LINK_REWRITES: list[tuple[str, str]] = [
     (r"\]\(\.\./\.\./bruno/\)", "](../../fast-mode/bruno/)"),
     (r"\]\(\.\./\.\./\.\./bruno/\)", "](../../../fast-mode/bruno/)"),
     (r"\]\(\.\./\.\./\.\./\.\./bruno/\)", "](../../../../fast-mode/bruno/)"),
-    (r"\]\(\.\./Chapter%201/1-1/README\.md\)", "](../chapter-1/lesson-1-1/)"),
-    (r"\]\(\.\./Chapter%201/1-2/README\.md\)", "](../chapter-1/lesson-1-2/)"),
-    (r"\]\(\.\./Chapter%201/1-4/README\.md\)", "](../chapter-1/lesson-1-4/)"),
+    (r"\]\(\.\./Chapter%201/Lesson%201/README\.md\)", "](../chapter-1/lesson-1/)"),
+    (r"\]\(\.\./Chapter%201/Lesson%202/README\.md\)", "](../chapter-1/lesson-2/)"),
+    (r"\]\(\.\./Chapter%201/Lesson%204/README\.md\)", "](../chapter-1/lesson-4/)"),
     (r"\]\(\.\./Chapter%201/README\.md\)", "](../chapter-1/)"),
-    (r"\]\(\.\./\.\./Chapter%201/1-1/README\.md\)", "](../../chapter-1/lesson-1-1/)"),
-    (r"\]\(\.\./\.\./Chapter%201/1-2/README\.md\)", "](../../chapter-1/lesson-1-2/)"),
-    (r"\]\(\.\./\.\./Chapter%201/1-4/README\.md\)", "](../../chapter-1/lesson-1-4/)"),
+    (r"\]\(\.\./\.\./Chapter%201/Lesson%201/README\.md\)", "](../../chapter-1/lesson-1/)"),
+    (r"\]\(\.\./\.\./Chapter%201/Lesson%202/README\.md\)", "](../../chapter-1/lesson-2/)"),
+    (r"\]\(\.\./\.\./Chapter%201/Lesson%204/README\.md\)", "](../../chapter-1/lesson-4/)"),
     (r"\]\(\.\./\.\./Chapter%201/README\.md\)", "](../../chapter-1/)"),
     (r"\]\(\.\./\.\./Chapter%202/README\.md\)", "](../../chapter-2/)"),
     (r"\]\(\.\./\.\./Chapter%203/README\.md\)", "](../../chapter-3/)"),
@@ -111,20 +116,18 @@ LINK_REWRITES: list[tuple[str, str]] = [
     (r"\]\(\.\./Lesson%202/README\.md\)", "](lesson-2/)"),
     (r"\]\(\.\./Lesson%204/README\.md\)", "](lesson-4/)"),
     (r"\]\(\.\./Lesson%205/README\.md\)", "](lesson-5/)"),
-    (r"\]\(\.\./1-1/README\.md\)", "](lesson-1-1/)"),
-    (r"\]\(\.\./1-2/README\.md\)", "](lesson-1-2/)"),
-    (r"\]\(\.\./1-4/README\.md\)", "](lesson-1-4/)"),
     (r"\]\(\.\./\.\./\.\./Chapter%202/Lesson%201/README\.md\)", "](../../../chapter-2/lesson-1/)"),
     (r"\]\(\.\./\.\./\.\./Chapter%204/Lesson%202/README\.md\)", "](../../../chapter-4/lesson-2/)"),
     (r"\]\(\.\./\.\./\.\./Chapter%204/Lesson%203/README\.md\)", "](../../../chapter-4/lesson-3/)"),
-    (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%201/1-1/README\.md\)", "](../../chapter-1/lesson-1-1/)"),
-    (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%201/1-2/README\.md\)", "](../../chapter-1/lesson-1-2/)"),
-    (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%201/1-4/README\.md\)", "](../../chapter-1/lesson-1-4/)"),
+    (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%201/Lesson%201/README\.md\)", "](../../chapter-1/lesson-1/)"),
+    (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%201/Lesson%202/README\.md\)", "](../../chapter-1/lesson-2/)"),
+    (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%201/Lesson%204/README\.md\)", "](../../chapter-1/lesson-4/)"),
     (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%202/README\.md\)", "](../../chapter-2/)"),
     (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%203/README\.md\)", "](../../chapter-3/)"),
     (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%204/README\.md\)", "](../../chapter-4/)"),
     (r"\]\(\.\./\.\./\.\./\.\./src/Chapter%205/README\.md\)", "](../../chapter-5/)"),
-    (r"\]\(\.\./\.\./rest/bulk/", f"]({BULK_GITHUB_URL}"),
+    (r"\]\(\.\./\.\./\.\./rest/bulk/", f"]({BULK_GITHUB_URL}"),
+    (r"\]\(\.\./\.\./\.\./\.\./rest/bulk/", f"]({BULK_GITHUB_URL}"),
     (r"\]\(\.\./\.\./\.\./rest/bulk/", f"]({BULK_GITHUB_URL}"),
     (r"\]\(\.\./\.\./\.\./\.\./rest/bulk/", f"]({BULK_GITHUB_URL}"),
     (r"\]\(\.\./\.\./\.\./\.\./\.\./rest/bulk/", f"]({BULK_GITHUB_URL}"),
@@ -139,11 +142,12 @@ PLAIN_REPLACEMENTS: list[tuple[str, str]] = [
     ("](Lesson%203/README.md)", "](lesson-3/)"),
     ("](Lesson%204/README.md)", "](lesson-4/)"),
     ("](Lesson%205/README.md)", "](lesson-5/)"),
-    ("](1-1/README.md)", "](lesson-1-1/)"),
-    ("](1-2/README.md)", "](lesson-1-2/)"),
-    ("](1-4/README.md)", "](lesson-1-4/)"),
     ("](../README.md#lesson-3-video-only)", "](../#lesson-3-video-only)"),
     ("](../README.md)", "](../)"),
+    ("](../../Chapter%201/Lesson%201/README.md)", "](../../chapter-1/lesson-1/)"),
+    ("](../../Chapter%201/Lesson%202/README.md)", "](../../chapter-1/lesson-2/)"),
+    ("](../../Chapter%201/Lesson%204/README.md)", "](../../chapter-1/lesson-4/)"),
+    ("](../Chapter%201/Lesson%201/README.md)", "](../chapter-1/lesson-1/)"),
     ("](../../Chapter%202/Lesson%201/README.md)", "](../../chapter-2/lesson-1/)"),
     ("](../../Chapter%204/Lesson%201/README.md)", "](../../chapter-4/lesson-1/)"),
     ("](../../Chapter%204/Lesson%202/README.md)", "](../../chapter-4/lesson-2/)"),
@@ -176,6 +180,10 @@ def rewrite_links(text: str, *, dest_rel: str) -> str:
         text = text.replace("](../fast-mode/", "](fast-mode/")
         text = text.replace(
             "](../OpenSearch%20Learning%20Path%201.docx)",
+            f"]({DOCX_GITHUB_URL})",
+        )
+        text = text.replace(
+            "](../voice-script.docx)",
             f"]({DOCX_GITHUB_URL})",
         )
         text = text.replace(
