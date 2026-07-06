@@ -1,0 +1,16 @@
+meta {
+  name: Verify the internal user
+  type: http
+  seq: 53
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_security/api/internalusers/bookstore_analyst
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Shrink: pin shards and block writes
+  type: http
+  seq: 28
+}
+
+put {
+  url: {{baseUrl}}/bookstore-rag-split/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.routing.allocation.require._name": "YOUR_NODE_NAME",
+    "index.blocks.write": true
+  }
+}
+}

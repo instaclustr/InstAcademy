@@ -1,0 +1,22 @@
+meta {
+  name: Set default search pipeline
+  type: http
+  seq: 40
+}
+
+put {
+  url: {{baseUrl}}/bookstore-rag/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.search.default_pipeline": "bookstore-stock-filter"
+}
+}

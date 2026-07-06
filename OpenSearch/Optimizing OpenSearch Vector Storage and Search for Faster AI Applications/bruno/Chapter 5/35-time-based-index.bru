@@ -1,0 +1,26 @@
+meta {
+  name: Time-based index with write alias
+  type: http
+  seq: 35
+}
+
+put {
+  url: {{baseUrl}}/searches-000001
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "aliases": {
+    "searches-current": {
+      "is_write_index": true
+    }
+  }
+}
+}

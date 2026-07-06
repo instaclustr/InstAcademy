@@ -1,0 +1,16 @@
+meta {
+  name: Refresh my-index
+  type: http
+  seq: 21
+}
+
+post {
+  url: {{baseUrl}}/my-index/_refresh
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

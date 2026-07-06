@@ -1,0 +1,16 @@
+meta {
+  name: Close bookstore-rag
+  type: http
+  seq: 32
+}
+
+post {
+  url: {{baseUrl}}/bookstore-rag/_close
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

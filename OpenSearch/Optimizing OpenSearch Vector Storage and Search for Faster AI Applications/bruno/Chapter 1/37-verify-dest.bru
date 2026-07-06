@@ -1,0 +1,20 @@
+meta {
+  name: Verify destination index
+  type: http
+  seq: 37
+}
+
+post {
+  url: {{baseUrl}}/my-optimized-vector-index/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{ "size": 3, "_source": ["title"] }
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Model profile
+  type: http
+  seq: 20
+}
+
+docs {
+Runtime data: worker nodes and per-request latency. Run a query first so stats appear.
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_ml/profile/models/{{modelId}}
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

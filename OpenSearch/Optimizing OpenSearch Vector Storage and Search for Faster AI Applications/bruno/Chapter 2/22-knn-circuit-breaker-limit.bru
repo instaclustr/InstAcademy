@@ -1,0 +1,25 @@
+meta {
+  name: Set k-NN memory circuit breaker
+  type: http
+  seq: 22
+}
+
+put {
+  url: {{baseUrl}}/_cluster/settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "persistent": {
+    "knn.memory.circuit_breaker.enabled": true,
+    "knn.memory.circuit_breaker.limit": "50%"
+  }
+}
+}

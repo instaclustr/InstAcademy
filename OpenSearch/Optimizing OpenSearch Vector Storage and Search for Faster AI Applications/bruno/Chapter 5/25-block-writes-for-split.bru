@@ -1,0 +1,22 @@
+meta {
+  name: Block writes on bookstore-rag (prerequisite for split)
+  type: http
+  seq: 25
+}
+
+put {
+  url: {{baseUrl}}/bookstore-rag/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.blocks.write": true
+}
+}

@@ -1,0 +1,48 @@
+meta {
+  name: Create nlp-ingest-pipeline
+  type: http
+  seq: 7
+}
+
+docs {
+Chunk passage_text, then sparse-encode each chunk. Create before the index.
+}
+
+put {
+  url: {{baseUrl}}/_ingest/pipeline/nlp-ingest-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "description": "A sparse encoding ingest pipeline",
+  "processors": [
+    {
+      "text_chunking": {
+        "algorithm": {
+          "fixed_token_length": {
+            "token_limit": 5,
+            "overlap_rate": 0.5,
+            "tokenizer": "standard"
+          }
+        },
+        "field_map": { "passage_text": "passage_chunk" }
+      }
+    },
+    {
+      "sparse_encoding": {
+        "model_id": "{{sparseModelId}}",
+        "prune_type": "max_ratio",
+        "prune_ratio": 0.1,
+        "field_map": { "passage_chunk": "passage_embedding" }
+      }
+    }
+  ]
+}
+}

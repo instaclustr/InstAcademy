@@ -1,0 +1,24 @@
+meta {
+  name: Configure search slow logs
+  type: http
+  seq: 62
+}
+
+put {
+  url: {{baseUrl}}/book-browse/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.search.slowlog.threshold.query.warn": "10s",
+  "index.search.slowlog.threshold.query.info": "5s",
+  "index.search.slowlog.threshold.fetch.warn": "1s"
+}
+}

@@ -1,0 +1,48 @@
+meta {
+  name: Hybrid search (normalized)
+  type: http
+  seq: 16
+}
+
+docs {
+BM25 + neural_sparse fused by score normalization. Save the top-5 order to compare with RRF.
+}
+
+post {
+  url: {{baseUrl}}/my-sparse-neural-index/_search?search_pipeline=nlp-search-normalization-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "_source": { "excludes": ["passage_embedding", "passage_chunk"] },
+  "size": 5,
+  "query": {
+    "hybrid": {
+      "queries": [
+        { "match": { "passage_text": { "query": "a hero on a dangerous sea voyage" } } },
+        {
+          "nested": {
+            "path": "passage_embedding",
+            "score_mode": "max",
+            "query": {
+              "neural_sparse": {
+                "passage_embedding.sparse_encoding": {
+                  "query_text": "a hero on a dangerous sea voyage",
+                  "model_id": "{{sparseModelId}}"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+}

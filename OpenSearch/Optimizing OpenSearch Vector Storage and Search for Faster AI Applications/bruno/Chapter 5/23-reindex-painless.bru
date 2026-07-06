@@ -1,0 +1,31 @@
+meta {
+  name: Reindex my-index with Painless transform
+  type: http
+  seq: 23
+}
+
+post {
+  url: {{baseUrl}}/_reindex?slices=5&wait_for_completion=true
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "source": {
+    "index": "my-index"
+  },
+  "dest": {
+    "index": "my-index-new"
+  },
+  "script": {
+    "lang": "painless",
+    "source": "ctx._source.title = ctx._source.title + ' ' + ctx._source.author; ctx._source.remove('author');"
+  }
+}
+}

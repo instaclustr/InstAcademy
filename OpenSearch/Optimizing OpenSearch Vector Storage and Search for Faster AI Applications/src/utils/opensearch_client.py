@@ -5,7 +5,7 @@ The lesson scripts share one ``src/.env`` (host, username, password, optional
 ``opensearchpy.OpenSearch`` instance you can call like a normal HTTP client.
 
 Why a helper module?
-  * Each lesson lives in ``src/<Chapter>/<Lesson>/*.py``. Without a helper we'd
+  * Each chapter's scripts live in ``src/<Chapter>/*.py``. Without a helper we'd
     duplicate the ``hosts``/``http_auth``/``use_ssl`` plumbing in every script.
   * Most local labs run plain HTTP on ``localhost:9200``; managed clusters use
     TLS + basic auth. The defaults here favour the safer (TLS) path so you don't
@@ -71,17 +71,16 @@ def print_opensearch_connection_test(
 
 
 def src_env_file(__file__: str | Path) -> Path:
-    """Return the path to the shared ``src/.env`` for lesson scripts at ``src/<chapter>/<lesson>/*.py``.
+    """Return the path to the shared ``src/.env`` for chapter scripts at ``src/<chapter>/*.py``.
 
-    ``parents[2]`` walks up three levels:
-        src/Chapter 2/Lesson 1/001-setup.py   # __file__
-        src/Chapter 2/Lesson 1                # parents[0]
-        src/Chapter 2                         # parents[1]
-        src/                                  # parents[2]  <-- env lives here
+    ``parents[1]`` walks up two levels:
+        src/Chapter 2/01-setup.py    # __file__
+        src/Chapter 2                # parents[0]
+        src/                         # parents[1]  <-- env lives here
 
-    All lessons read the same ``src/.env`` so you only configure your cluster once.
+    All chapters read the same ``src/.env`` so you only configure your cluster once.
     """
-    return Path(__file__).resolve().parents[2] / ".env"
+    return Path(__file__).resolve().parents[1] / ".env"
 
 
 def load_src_dotenv(__file__: str | Path, *, override: bool = False) -> Path:

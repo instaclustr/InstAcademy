@@ -1,0 +1,25 @@
+meta {
+  name: Profile a query
+  type: http
+  seq: 61
+}
+
+get {
+  url: {{baseUrl}}/book-browse/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "profile": true,
+  "query": {
+    "match_all": {}
+  }
+}
+}

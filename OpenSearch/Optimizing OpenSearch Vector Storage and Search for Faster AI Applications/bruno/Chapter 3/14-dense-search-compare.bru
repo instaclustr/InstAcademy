@@ -1,0 +1,36 @@
+meta {
+  name: Dense only (Chapter 2 index, optional)
+  type: http
+  seq: 14
+}
+
+docs {
+Reuses Chapter 2's vector-search-index and dense model (modelId). Skip if Chapter 2 was torn down.
+}
+
+post {
+  url: {{baseUrl}}/vector-search-index/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "_source": { "excludes": ["passage_embedding"] },
+  "size": 5,
+  "query": {
+    "neural": {
+      "passage_embedding": {
+        "query_text": "a hero on a dangerous sea voyage",
+        "model_id": "{{modelId}}",
+        "k": 10
+      }
+    }
+  }
+}
+}

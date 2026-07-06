@@ -1,0 +1,38 @@
+meta {
+  name: Register MCP tools
+  type: http
+  seq: 44
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/mcp/tools/_register
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "tools": [
+    {
+      "name": "ListIndexTool",
+      "type": "ListIndexTool",
+      "description": "List indexes in the cluster"
+    },
+    {
+      "name": "IndexMappingTool",
+      "type": "IndexMappingTool",
+      "description": "Read an index mapping"
+    },
+    {
+      "name": "SearchIndexTool",
+      "type": "SearchIndexTool",
+      "description": "Run a search query against an index"
+    }
+  ]
+}
+}

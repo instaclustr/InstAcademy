@@ -1,0 +1,32 @@
+meta {
+  name: Lexical only (BM25 match)
+  type: http
+  seq: 12
+}
+
+docs {
+Keyword-only baseline. Save the top-5 order to compare against sparse, hybrid, and RRF.
+}
+
+post {
+  url: {{baseUrl}}/my-sparse-neural-index/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "_source": { "excludes": ["passage_embedding", "passage_chunk"] },
+  "size": 5,
+  "query": {
+    "match": {
+      "passage_text": "a hero on a dangerous sea voyage"
+    }
+  }
+}
+}

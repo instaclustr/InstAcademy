@@ -1,0 +1,20 @@
+meta {
+  name: Undeploy sparse model
+  type: http
+  seq: 33
+}
+
+docs {
+Cleanup (only if you deployed the sparse model in Lesson 2-3).
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/models/{{sparseModelId}}/_undeploy
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

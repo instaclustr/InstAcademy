@@ -1,0 +1,24 @@
+meta {
+  name: Text embedding predict (dense)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/_predict/text_embedding/{{modelId}}
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "text_docs": ["Some example text to embed.", "Another sentence for testing."],
+  "return_number": true,
+  "target_response": ["sentence_embedding"]
+}
+}

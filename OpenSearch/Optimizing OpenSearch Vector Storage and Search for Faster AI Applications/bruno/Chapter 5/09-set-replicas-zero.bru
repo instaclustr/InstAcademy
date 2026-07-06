@@ -1,0 +1,22 @@
+meta {
+  name: Reduce replicas to zero
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/my-index/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "number_of_replicas": 0
+}
+}

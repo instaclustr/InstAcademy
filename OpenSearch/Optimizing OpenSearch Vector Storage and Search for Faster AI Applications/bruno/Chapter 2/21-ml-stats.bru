@@ -1,0 +1,16 @@
+meta {
+  name: ML Commons stats
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_ml/stats
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

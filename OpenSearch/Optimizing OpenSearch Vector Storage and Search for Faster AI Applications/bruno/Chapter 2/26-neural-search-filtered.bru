@@ -1,0 +1,37 @@
+meta {
+  name: Neural search with metadata filter
+  type: http
+  seq: 26
+}
+
+docs {
+Filtering before ANN reduces the candidate set. search_pipeline supplies the model_id.
+}
+
+get {
+  url: {{baseUrl}}/vector-search-index/_search?search_pipeline=default-model-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "_source": { "excludes": ["passage_embedding"] },
+  "query": {
+    "neural": {
+      "passage_embedding": {
+        "query_text": "a tragic romance",
+        "k": 10,
+        "filter": {
+          "term": { "bookshelves": "Category: Romance" }
+        }
+      }
+    }
+  }
+}
+}

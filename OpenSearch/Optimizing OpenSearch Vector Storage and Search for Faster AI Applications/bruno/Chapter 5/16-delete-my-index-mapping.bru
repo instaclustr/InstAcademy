@@ -1,0 +1,16 @@
+meta {
+  name: Delete my-index before mapping recreate
+  type: http
+  seq: 16
+}
+
+delete {
+  url: {{baseUrl}}/my-index
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

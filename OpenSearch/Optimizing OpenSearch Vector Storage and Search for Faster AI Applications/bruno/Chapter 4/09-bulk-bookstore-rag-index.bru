@@ -1,0 +1,21 @@
+meta {
+  name: Bulk ingest bookstore-rag-index
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/_bulk?timeout=600s
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+file: ../../rest/bulk/chapter-4-bookstore-rag-index.ndjson
+  contentType: application/x-ndjson
+}

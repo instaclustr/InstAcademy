@@ -1,0 +1,58 @@
+meta {
+  name: Create book-embeddings-v3
+  type: http
+  seq: 39
+}
+
+put {
+  url: {{baseUrl}}/book-embeddings-v3
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "index.knn": true
+  },
+  "mappings": {
+    "properties": {
+      "book_id": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text"
+      },
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 1024,
+        "method": {
+          "name": "hnsw",
+          "space_type": "l2",
+          "engine": "faiss",
+          "parameters": {
+            "ef_construction": 256,
+            "m": 32
+          }
+        }
+      },
+      "model_version": {
+        "type": "keyword"
+      },
+      "model_name": {
+        "type": "keyword"
+      },
+      "created_at": {
+        "type": "date"
+      }
+    }
+  }
+}
+}

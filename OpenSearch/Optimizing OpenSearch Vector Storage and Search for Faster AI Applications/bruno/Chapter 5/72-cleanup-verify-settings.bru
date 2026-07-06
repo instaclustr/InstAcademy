@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: verify settings restored
+  type: http
+  seq: 72
+}
+
+get {
+  url: {{baseUrl}}/_cluster/settings?flat_settings=true
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

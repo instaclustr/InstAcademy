@@ -1,0 +1,36 @@
+meta {
+  name: Create on_disk 16x compression index
+  type: http
+  seq: 42
+}
+
+put {
+  url: {{baseUrl}}/book-embeddings-archive-16x
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.knn": true
+  },
+  "mappings": {
+    "properties": {
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "space_type": "l2",
+        "data_type": "float",
+        "mode": "on_disk",
+        "compression_level": "16x"
+      }
+    }
+  }
+}
+}

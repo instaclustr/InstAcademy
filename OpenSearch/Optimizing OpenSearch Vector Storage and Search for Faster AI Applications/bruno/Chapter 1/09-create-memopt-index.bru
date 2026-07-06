@@ -1,0 +1,33 @@
+meta {
+  name: Create vector-memopt-demo (on_disk 1x)
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/vector-memopt-demo
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index": { "knn": true } },
+  "mappings": {
+    "properties": {
+      "my_vector": {
+        "type": "knn_vector",
+        "dimension": 8,
+        "space_type": "l2",
+        "mode": "on_disk",
+        "compression_level": "1x"
+      }
+    }
+  }
+}
+}

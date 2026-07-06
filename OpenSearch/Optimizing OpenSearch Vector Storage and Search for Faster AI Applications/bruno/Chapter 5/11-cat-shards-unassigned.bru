@@ -1,0 +1,16 @@
+meta {
+  name: Shards with unassigned reason
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/_cat/shards?v&h=index,shard,prirep,state,node,unassigned.reason
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

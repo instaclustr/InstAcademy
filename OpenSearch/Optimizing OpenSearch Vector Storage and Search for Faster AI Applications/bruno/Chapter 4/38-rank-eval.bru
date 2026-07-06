@@ -1,0 +1,85 @@
+meta {
+  name: Rank evaluation (MRR@10)
+  type: http
+  seq: 38
+}
+
+post {
+  url: {{baseUrl}}/bookstore-rag/_rank_eval
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "requests": [
+    {
+      "id": "whale_query",
+      "request": {
+        "query": {
+          "match": {
+            "content": "whale sea captain revenge"
+          }
+        }
+      },
+      "ratings": [
+        {
+          "_index": "bookstore-rag",
+          "_id": "2701",
+          "rating": 3
+        }
+      ]
+    },
+    {
+      "id": "detective_query",
+      "request": {
+        "query": {
+          "match": {
+            "content": "detective mystery investigation"
+          }
+        }
+      },
+      "ratings": [
+        {
+          "_index": "bookstore-rag",
+          "_id": "1661",
+          "rating": 3
+        }
+      ]
+    },
+    {
+      "id": "gothic_query",
+      "request": {
+        "query": {
+          "match": {
+            "content": "gothic horror monster"
+          }
+        }
+      },
+      "ratings": [
+        {
+          "_index": "bookstore-rag",
+          "_id": "345",
+          "rating": 3
+        },
+        {
+          "_index": "bookstore-rag",
+          "_id": "84",
+          "rating": 2
+        }
+      ]
+    }
+  ],
+  "metric": {
+    "mean_reciprocal_rank": {
+      "k": 10,
+      "relevant_rating_threshold": 1
+    }
+  }
+}
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Cluster health by index
+  type: http
+  seq: 48
+}
+
+get {
+  url: {{baseUrl}}/_cluster/health?level=indices
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

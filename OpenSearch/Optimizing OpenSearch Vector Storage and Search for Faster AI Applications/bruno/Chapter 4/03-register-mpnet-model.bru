@@ -1,0 +1,25 @@
+meta {
+  name: Register all-mpnet-base-v2
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/models/_register
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "name": "huggingface/sentence-transformers/all-mpnet-base-v2",
+  "version": "1.0.1",
+  "model_group_id": "{{modelGroupId}}",
+  "model_format": "TORCH_SCRIPT"
+}
+}

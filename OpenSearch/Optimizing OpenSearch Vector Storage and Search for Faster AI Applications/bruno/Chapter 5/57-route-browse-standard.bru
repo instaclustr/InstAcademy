@@ -1,0 +1,22 @@
+meta {
+  name: Route book-browse to standard-tier nodes
+  type: http
+  seq: 57
+}
+
+put {
+  url: {{baseUrl}}/book-browse/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.routing.allocation.require.node_type": "standard"
+}
+}

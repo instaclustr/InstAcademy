@@ -1,0 +1,72 @@
+meta {
+  name: Create my-index with optimized mapping
+  type: http
+  seq: 17
+}
+
+put {
+  url: {{baseUrl}}/my-index
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    }
+  },
+  "mappings": {
+    "properties": {
+      "book_id": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "author": {
+        "type": "keyword"
+      },
+      "isbn": {
+        "type": "keyword"
+      },
+      "genre": {
+        "type": "keyword"
+      },
+      "description": {
+        "type": "text"
+      },
+      "price": {
+        "type": "float"
+      },
+      "in_stock": {
+        "type": "boolean"
+      },
+      "published_year": {
+        "type": "integer"
+      },
+      "internal_notes": {
+        "type": "text",
+        "index": false
+      },
+      "inventory_metadata": {
+        "type": "object",
+        "enabled": false
+      }
+    }
+  }
+}
+}

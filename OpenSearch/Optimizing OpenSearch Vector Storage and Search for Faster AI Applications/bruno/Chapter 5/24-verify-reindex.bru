@@ -1,0 +1,22 @@
+meta {
+  name: Verify reindexed documents
+  type: http
+  seq: 24
+}
+
+get {
+  url: {{baseUrl}}/my-index-new/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "size": 1
+}
+}

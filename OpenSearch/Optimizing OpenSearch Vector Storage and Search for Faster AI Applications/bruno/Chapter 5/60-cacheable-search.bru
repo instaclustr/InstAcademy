@@ -1,0 +1,25 @@
+meta {
+  name: Run a cacheable search
+  type: http
+  seq: 60
+}
+
+get {
+  url: {{baseUrl}}/book-browse/_search?request_cache=true
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "size": 0,
+  "query": {
+    "match_all": {}
+  }
+}
+}

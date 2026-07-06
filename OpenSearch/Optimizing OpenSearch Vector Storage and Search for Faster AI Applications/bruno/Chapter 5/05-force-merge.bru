@@ -1,0 +1,16 @@
+meta {
+  name: Force merge bookstore-rag
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/bookstore-rag/_forcemerge?max_num_segments=5
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

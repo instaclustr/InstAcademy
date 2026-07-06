@@ -1,0 +1,20 @@
+meta {
+  name: Delete default-model search pipeline
+  type: http
+  seq: 29
+}
+
+docs {
+Cleanup. 404 is fine if already gone.
+}
+
+delete {
+  url: {{baseUrl}}/_search/pipeline/default-model-pipeline
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

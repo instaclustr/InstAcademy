@@ -1,0 +1,16 @@
+meta {
+  name: k-NN warmup (bookstore-rag)
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_knn/warmup/bookstore-rag
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

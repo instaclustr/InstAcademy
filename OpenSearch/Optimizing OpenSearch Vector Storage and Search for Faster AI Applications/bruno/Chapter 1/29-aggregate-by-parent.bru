@@ -1,0 +1,33 @@
+meta {
+  name: Regroup chunks by parent
+  type: http
+  seq: 29
+}
+
+post {
+  url: {{baseUrl}}/kb-chunks/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "size": 0,
+  "query": {
+    "knn": {
+      "chunk_vector": {
+        "vector": [0.88, 0.12, 0.12, 0.10, 0.10, 0.10, 0.11, 0.10],
+        "k": 5
+      }
+    }
+  },
+  "aggs": {
+    "by_parent": { "terms": { "field": "parent_id" } }
+  }
+}
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Create on_disk archive index
+  type: http
+  seq: 41
+}
+
+put {
+  url: {{baseUrl}}/book-embeddings-archive
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.knn": true
+  },
+  "mappings": {
+    "properties": {
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "space_type": "l2",
+        "data_type": "float",
+        "mode": "on_disk"
+      }
+    }
+  }
+}
+}

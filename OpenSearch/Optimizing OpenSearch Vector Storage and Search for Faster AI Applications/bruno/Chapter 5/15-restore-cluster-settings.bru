@@ -1,0 +1,30 @@
+meta {
+  name: Restore watermarks and awareness
+  type: http
+  seq: 15
+}
+
+put {
+  url: {{baseUrl}}/_cluster/settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "transient": {
+    "cluster.routing.allocation.disk.watermark.low": null,
+    "cluster.routing.allocation.disk.watermark.high": null,
+    "cluster.routing.allocation.disk.watermark.flood_stage": null
+  },
+  "persistent": {
+    "cluster.routing.allocation.awareness.attributes": null,
+    "cluster.routing.allocation.awareness.force.rack_id.values": null
+  }
+}
+}

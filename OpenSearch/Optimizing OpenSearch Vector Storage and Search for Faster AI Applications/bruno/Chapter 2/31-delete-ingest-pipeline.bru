@@ -1,0 +1,20 @@
+meta {
+  name: Delete vector-search-embeddings-pipeline
+  type: http
+  seq: 31
+}
+
+docs {
+Cleanup. 404 is fine if already gone.
+}
+
+delete {
+  url: {{baseUrl}}/_ingest/pipeline/vector-search-embeddings-pipeline
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Refresh my-sparse-neural-index
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/my-sparse-neural-index/_refresh
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

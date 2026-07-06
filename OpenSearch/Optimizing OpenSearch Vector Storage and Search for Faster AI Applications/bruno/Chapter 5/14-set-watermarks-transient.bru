@@ -1,0 +1,26 @@
+meta {
+  name: Set disk watermarks (transient)
+  type: http
+  seq: 14
+}
+
+put {
+  url: {{baseUrl}}/_cluster/settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "transient": {
+    "cluster.routing.allocation.disk.watermark.low": "85%",
+    "cluster.routing.allocation.disk.watermark.high": "90%",
+    "cluster.routing.allocation.disk.watermark.flood_stage": "95%"
+  }
+}
+}

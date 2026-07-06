@@ -1,0 +1,16 @@
+meta {
+  name: Read the my-index mapping
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{baseUrl}}/my-index/_mapping
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

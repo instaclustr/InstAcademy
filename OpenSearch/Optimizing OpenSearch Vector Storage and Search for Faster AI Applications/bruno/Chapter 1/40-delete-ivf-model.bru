@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete IVF model
+  type: http
+  seq: 40
+}
+
+delete {
+  url: {{baseUrl}}/_plugins/_knn/models/YOUR_MODEL_ID
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

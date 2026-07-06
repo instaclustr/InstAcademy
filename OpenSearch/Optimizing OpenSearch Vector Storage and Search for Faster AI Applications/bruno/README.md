@@ -2,7 +2,7 @@
 
 **Vector Storage & Search for AI** · [← How to run labs](../HANDS-ON-GUIDE.md)
 
-Run the same REST calls as the lesson READMEs without typing them into Dev Tools. Use this to **catch up**, **recover after a mistake**, or **smoke-test** a cluster.
+Run the same REST calls as the chapter workshop READMEs without typing them into Dev Tools. Use this to **catch up**, **recover after a mistake**, or **smoke-test** a cluster.
 
 ## Setup (once)
 
@@ -23,9 +23,9 @@ Run the same REST calls as the lesson READMEs without typing them into Dev Tools
 
 5. Select the **Local** environment in the top-right before sending requests.
 
-## How to run a lesson
+## How to run a chapter
 
-1. Open the folder for the chapter and lesson (e.g. `Chapter 2 / Lesson 1`).
+1. Open the chapter folder (e.g. `Chapter 2`). Requests are numbered in workshop order and match the steps in that chapter's README under `src/Chapter …/README.md`.
 2. Run requests **top to bottom** (`seq` order).
 3. After **Register model** or **Deploy model**, if the response contains `task_id`:
    - Set `taskId` in the environment (or edit the Poll request URL).
@@ -39,21 +39,14 @@ Run the same REST calls as the lesson READMEs without typing them into Dev Tools
 bruno/
   environments/
     Local.bru          # Your cluster credentials
-  Chapter 1/
-    Lesson 1/          # Connectivity
-    Lesson 2/          # Keyword index
-    Lesson 4/          # Vector reindex
-  Chapter 2/
-    Lesson 1/ … Lesson 5/
-  Chapter 3/
-    Lesson 1/
-  Chapter 4/
-    Lesson 1/ … Lesson 3/
-  Chapter 5/
-    Lesson 1/ … Lesson 5/
+  Chapter 1/           # 01–40 · vector fundamentals, kNN/HNSW/IVF, storage optimizations
+  Chapter 2/           # 01–36 · neural search pipeline, model management, tuning
+  Chapter 3/           # 01–19 · sparse, hybrid, and RRF search
+  Chapter 4/           # 01–51 · RAG pipeline, chunking, query optimization, MCP server
+  Chapter 5/           # 01–72 · shards, index optimization, security, query tuning
 ```
 
-Each lesson folder matches the **Learn mode** README in `src/Chapter …`.
+Each chapter folder is **flat** — requests are numbered `01-…`, `02-…` in the same order as the steps in the matching chapter workshop (`src/Chapter …/README.md`).
 
 ## Learn mode vs fast mode
 

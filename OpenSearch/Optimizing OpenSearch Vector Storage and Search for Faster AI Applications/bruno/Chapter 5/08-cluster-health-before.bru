@@ -1,0 +1,16 @@
+meta {
+  name: Cluster health before replica fix
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/_cluster/health
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

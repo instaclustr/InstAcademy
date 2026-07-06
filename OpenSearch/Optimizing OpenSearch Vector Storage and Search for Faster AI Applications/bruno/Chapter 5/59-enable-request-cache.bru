@@ -1,0 +1,22 @@
+meta {
+  name: Enable shard request cache
+  type: http
+  seq: 59
+}
+
+put {
+  url: {{baseUrl}}/book-browse/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.requests.cache.enable": true
+}
+}

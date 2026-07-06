@@ -1,0 +1,16 @@
+meta {
+  name: Delete my-index before oversharding
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/my-index
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

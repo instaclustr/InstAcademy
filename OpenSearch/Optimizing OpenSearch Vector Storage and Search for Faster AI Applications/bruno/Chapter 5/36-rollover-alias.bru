@@ -1,0 +1,26 @@
+meta {
+  name: Roll the write alias over
+  type: http
+  seq: 36
+}
+
+post {
+  url: {{baseUrl}}/searches-current/_rollover
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "conditions": {
+    "max_age": "30d",
+    "max_size": "50gb",
+    "max_docs": 100000
+  }
+}
+}

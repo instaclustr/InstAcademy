@@ -1,0 +1,20 @@
+meta {
+  name: Poll ML task (register)
+  type: http
+  seq: 4
+}
+
+docs {
+Run repeatedly until state is COMPLETED. Set taskId from the register response. Copy model_id into sparseModelId when done.
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_ml/tasks/{{taskId}}
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

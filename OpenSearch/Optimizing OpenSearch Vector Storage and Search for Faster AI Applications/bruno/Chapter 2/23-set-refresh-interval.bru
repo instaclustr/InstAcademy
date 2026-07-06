@@ -1,0 +1,22 @@
+meta {
+  name: Set index refresh interval
+  type: http
+  seq: 23
+}
+
+put {
+  url: {{baseUrl}}/vector-search-index/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.refresh_interval": "30s"
+}
+}

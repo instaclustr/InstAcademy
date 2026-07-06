@@ -1,0 +1,16 @@
+meta {
+  name: List MCP tools
+  type: http
+  seq: 45
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_ml/mcp/tools/_list
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

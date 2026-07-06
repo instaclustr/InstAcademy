@@ -1,0 +1,16 @@
+meta {
+  name: List nodes and roles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/_cat/nodes?v&h=name,node.role,master,heap.percent,disk.used_percent
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

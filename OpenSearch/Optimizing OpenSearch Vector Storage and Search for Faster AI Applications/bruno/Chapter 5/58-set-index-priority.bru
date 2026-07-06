@@ -1,0 +1,22 @@
+meta {
+  name: Set recovery priority on orders
+  type: http
+  seq: 58
+}
+
+put {
+  url: {{baseUrl}}/orders/_settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "index.priority": 100
+}
+}

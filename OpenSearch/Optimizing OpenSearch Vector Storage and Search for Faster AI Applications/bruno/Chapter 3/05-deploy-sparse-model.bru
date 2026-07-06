@@ -1,0 +1,20 @@
+meta {
+  name: Deploy sparse model
+  type: http
+  seq: 5
+}
+
+docs {
+If the response has a task_id, set taskId and poll 06 until COMPLETED.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/models/{{sparseModelId}}/_deploy
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

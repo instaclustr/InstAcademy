@@ -1,0 +1,16 @@
+meta {
+  name: Inspect index stats
+  type: http
+  seq: 46
+}
+
+get {
+  url: {{baseUrl}}/book-embeddings-fp16/_stats
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Create nlp-search-normalization-pipeline
+  type: http
+  seq: 15
+}
+
+put {
+  url: {{baseUrl}}/_search/pipeline/nlp-search-normalization-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "description": "Post processor for hybrid search",
+  "phase_results_processors": [
+    {
+      "normalization-processor": {
+        "normalization": { "technique": "min_max" },
+        "combination": {
+          "technique": "arithmetic_mean",
+          "parameters": { "weights": [0.3, 0.7] }
+        }
+      }
+    }
+  ]
+}
+}

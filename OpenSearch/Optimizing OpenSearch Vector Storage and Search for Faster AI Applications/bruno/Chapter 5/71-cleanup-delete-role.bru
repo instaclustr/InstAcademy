@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete read-only role
+  type: http
+  seq: 71
+}
+
+delete {
+  url: {{baseUrl}}/_plugins/_security/api/roles/bookstore_read_only
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

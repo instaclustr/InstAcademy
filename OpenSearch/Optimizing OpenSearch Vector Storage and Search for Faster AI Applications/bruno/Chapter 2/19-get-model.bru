@@ -1,0 +1,16 @@
+meta {
+  name: Get model metadata
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_ml/models/{{modelId}}
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

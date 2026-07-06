@@ -1,0 +1,38 @@
+meta {
+  name: Exact k-NN with pre-filter
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/products-hnsw/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "size": 3,
+  "query": {
+    "script_score": {
+      "query": {
+        "bool": { "filter": { "term": { "category": "books" } } }
+      },
+      "script": {
+        "source": "knn_score",
+        "lang": "knn",
+        "params": {
+          "field": "product_vector",
+          "query_value": [0.10, 0.10, 0.90, 0.90, 0.10, 0.10, 0.10, 0.10],
+          "space_type": "l2"
+        }
+      }
+    }
+  }
+}
+}

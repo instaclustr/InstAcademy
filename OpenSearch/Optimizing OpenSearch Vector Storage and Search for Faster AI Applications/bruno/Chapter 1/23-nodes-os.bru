@@ -1,0 +1,16 @@
+meta {
+  name: Node OS / processor info
+  type: http
+  seq: 23
+}
+
+get {
+  url: {{baseUrl}}/_nodes/os?filter_path=nodes.*.os.available_processors,nodes.*.os.name
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

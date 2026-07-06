@@ -1,0 +1,16 @@
+meta {
+  name: Delete book-embeddings-archive
+  type: http
+  seq: 40
+}
+
+delete {
+  url: {{baseUrl}}/book-embeddings-archive
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

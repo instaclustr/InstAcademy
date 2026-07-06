@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete lab indexes
+  type: http
+  seq: 68
+}
+
+delete {
+  url: {{baseUrl}}/my-index,my-index-new,searches-000001,orders,book-browse,book-embeddings-v2,book-embeddings-v3,book-embeddings-archive,book-embeddings-archive-16x,book-embeddings-efficient,book-embeddings-fp16
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

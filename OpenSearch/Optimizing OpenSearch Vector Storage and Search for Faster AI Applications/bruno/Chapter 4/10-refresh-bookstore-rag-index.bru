@@ -1,0 +1,16 @@
+meta {
+  name: Refresh bookstore-rag-index
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/bookstore-rag-index/_refresh
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

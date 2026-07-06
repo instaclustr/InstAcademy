@@ -1,0 +1,44 @@
+meta {
+  name: Create fp16 scalar-quantized index
+  type: http
+  seq: 45
+}
+
+put {
+  url: {{baseUrl}}/book-embeddings-fp16
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index.knn": true
+  },
+  "mappings": {
+    "properties": {
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "space_type": "l2",
+        "method": {
+          "name": "hnsw",
+          "engine": "faiss",
+          "parameters": {
+            "encoder": {
+              "name": "sq"
+            },
+            "ef_construction": 128,
+            "m": 16
+          }
+        }
+      }
+    }
+  }
+}
+}

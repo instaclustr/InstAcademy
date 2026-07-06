@@ -1,0 +1,16 @@
+meta {
+  name: Get vector-fundamentals mapping
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/vector-fundamentals/_mapping
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

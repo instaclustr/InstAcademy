@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete internal user
+  type: http
+  seq: 70
+}
+
+delete {
+  url: {{baseUrl}}/_plugins/_security/api/internalusers/bookstore_analyst
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

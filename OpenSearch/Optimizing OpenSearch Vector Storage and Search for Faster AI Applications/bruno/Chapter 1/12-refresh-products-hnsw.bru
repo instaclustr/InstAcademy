@@ -1,0 +1,16 @@
+meta {
+  name: Refresh products-hnsw
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/products-hnsw/_refresh
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

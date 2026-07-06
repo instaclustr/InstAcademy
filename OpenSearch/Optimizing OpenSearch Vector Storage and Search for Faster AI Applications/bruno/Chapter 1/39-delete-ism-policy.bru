@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete ISM policy
+  type: http
+  seq: 39
+}
+
+delete {
+  url: {{baseUrl}}/_plugins/_ism/policies/vector-rollover-policy
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

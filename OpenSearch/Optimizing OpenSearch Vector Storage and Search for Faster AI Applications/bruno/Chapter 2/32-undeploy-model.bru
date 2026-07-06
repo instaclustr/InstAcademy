@@ -1,0 +1,20 @@
+meta {
+  name: Undeploy ML model
+  type: http
+  seq: 32
+}
+
+docs {
+Cleanup. Set taskId and poll (34) if response includes task_id. Required before delete.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/models/{{modelId}}/_undeploy
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

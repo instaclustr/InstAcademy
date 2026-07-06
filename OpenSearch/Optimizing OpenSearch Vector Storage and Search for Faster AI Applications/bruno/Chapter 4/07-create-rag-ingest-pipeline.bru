@@ -1,0 +1,32 @@
+meta {
+  name: Create RAG ingest pipeline
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/_ingest/pipeline/bookstore-rag-ingest-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "description": "Embed book content for RAG retrieval",
+  "processors": [
+    {
+      "text_embedding": {
+        "model_id": "{{modelId}}",
+        "field_map": {
+          "content": "content_embedding"
+        }
+      }
+    }
+  ]
+}
+}

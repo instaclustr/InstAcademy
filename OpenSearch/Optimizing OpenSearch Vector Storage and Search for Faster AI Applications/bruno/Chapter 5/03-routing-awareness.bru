@@ -1,0 +1,25 @@
+meta {
+  name: Configure shard allocation awareness
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/_cluster/settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "persistent": {
+    "cluster.routing.allocation.awareness.attributes": "rack_id",
+    "cluster.routing.allocation.awareness.force.rack_id.values": "us-west-2a,us-west-2b,us-west-2c"
+  }
+}
+}

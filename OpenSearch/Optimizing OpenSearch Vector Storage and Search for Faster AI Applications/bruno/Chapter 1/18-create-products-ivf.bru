@@ -1,0 +1,32 @@
+meta {
+  name: Create products-ivf (model_id)
+  type: http
+  seq: 18
+}
+
+put {
+  url: {{baseUrl}}/products-ivf
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index": { "knn": true } },
+  "mappings": {
+    "properties": {
+      "title": { "type": "text" },
+      "category": { "type": "keyword" },
+      "product_vector": {
+        "type": "knn_vector",
+        "model_id": "YOUR_MODEL_ID"
+      }
+    }
+  }
+}
+}

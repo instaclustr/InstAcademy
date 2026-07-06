@@ -1,0 +1,16 @@
+meta {
+  name: Shrink: delete source index
+  type: http
+  seq: 34
+}
+
+delete {
+  url: {{baseUrl}}/bookstore-rag-split
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

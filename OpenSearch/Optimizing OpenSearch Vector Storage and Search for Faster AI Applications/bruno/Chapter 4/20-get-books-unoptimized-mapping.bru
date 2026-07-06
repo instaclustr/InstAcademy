@@ -1,0 +1,16 @@
+meta {
+  name: Inspect books-unoptimized mapping
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/books-unoptimized/_mapping
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

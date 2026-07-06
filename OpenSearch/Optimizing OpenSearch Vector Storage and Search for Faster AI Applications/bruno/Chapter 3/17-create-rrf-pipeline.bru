@@ -1,0 +1,37 @@
+meta {
+  name: Create rrf-search-pipeline
+  type: http
+  seq: 17
+}
+
+docs {
+Rank-based fusion via score-ranker-processor. rank_constant default is 60; we use 40.
+}
+
+put {
+  url: {{baseUrl}}/_search/pipeline/rrf-search-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "description": "Post processor for hybrid RRF search",
+  "phase_results_processors": [
+    {
+      "score-ranker-processor": {
+        "combination": {
+          "technique": "rrf",
+          "rank_constant": 40,
+          "parameters": { "weights": [0.7, 0.3] }
+        }
+      }
+    }
+  ]
+}
+}

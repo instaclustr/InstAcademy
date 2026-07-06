@@ -1,0 +1,16 @@
+meta {
+  name: Refresh kb-chunks
+  type: http
+  seq: 27
+}
+
+post {
+  url: {{baseUrl}}/kb-chunks/_refresh
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

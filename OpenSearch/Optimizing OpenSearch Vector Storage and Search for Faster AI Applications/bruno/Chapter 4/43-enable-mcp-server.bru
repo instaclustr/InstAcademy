@@ -1,0 +1,24 @@
+meta {
+  name: Enable built-in MCP server
+  type: http
+  seq: 43
+}
+
+put {
+  url: {{baseUrl}}/_cluster/settings
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "persistent": {
+    "plugins.ml_commons.mcp_server_enabled": "true"
+  }
+}
+}

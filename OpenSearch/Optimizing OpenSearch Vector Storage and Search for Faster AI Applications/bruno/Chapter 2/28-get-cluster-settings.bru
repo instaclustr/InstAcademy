@@ -1,0 +1,16 @@
+meta {
+  name: Get cluster settings
+  type: http
+  seq: 28
+}
+
+get {
+  url: {{baseUrl}}/_cluster/settings?include_defaults=false&flat_settings=true
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Poll deploy task
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_ml/tasks/{{taskId}}
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

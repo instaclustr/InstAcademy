@@ -1,0 +1,20 @@
+meta {
+  name: Cleanup (delete normalization pipeline)
+  type: http
+  seq: 19
+}
+
+docs {
+Frees resources. Also delete rrf-search-pipeline, my-sparse-neural-index, and nlp-ingest-pipeline (see README cleanup). Leave Chapter 2 assets if continuing to Chapter 4.
+}
+
+delete {
+  url: {{baseUrl}}/_search/pipeline/nlp-search-normalization-pipeline
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

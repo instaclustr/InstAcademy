@@ -1,0 +1,16 @@
+meta {
+  name: Per-node disk usage
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/_cat/allocation?v&h=node,disk.used_percent,disk.avail
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

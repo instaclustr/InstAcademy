@@ -1,0 +1,20 @@
+meta {
+  name: Delete sparse model
+  type: http
+  seq: 36
+}
+
+docs {
+Cleanup (only if you registered the sparse model in Lesson 2-3).
+}
+
+delete {
+  url: {{baseUrl}}/_plugins/_ml/models/{{sparseModelId}}
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

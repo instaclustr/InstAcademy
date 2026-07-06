@@ -1,0 +1,16 @@
+meta {
+  name: Cat shards (vector-fundamentals)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/_cat/shards/vector-fundamentals?v
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

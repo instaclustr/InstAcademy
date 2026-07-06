@@ -1,0 +1,35 @@
+meta {
+  name: Shrink: atomic alias swap
+  type: http
+  seq: 33
+}
+
+post {
+  url: {{baseUrl}}/_aliases
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "actions": [
+    {
+      "remove": {
+        "index": "bookstore-rag-split",
+        "alias": "bookstore-rag-alias"
+      }
+    },
+    {
+      "add": {
+        "index": "bookstore-rag-shrunk",
+        "alias": "bookstore-rag-alias"
+      }
+    }
+  ]
+}
+}

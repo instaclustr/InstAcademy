@@ -1,0 +1,16 @@
+meta {
+  name: k-NN plugin stats
+  type: http
+  seq: 47
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_knn/stats?pretty
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

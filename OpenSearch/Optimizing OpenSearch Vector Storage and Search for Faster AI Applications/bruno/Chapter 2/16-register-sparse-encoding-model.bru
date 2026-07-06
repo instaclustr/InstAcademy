@@ -1,0 +1,29 @@
+meta {
+  name: Register sparse encoding model
+  type: http
+  seq: 16
+}
+
+docs {
+Optional (Lesson 2-3). Poll with 05, save model_id to sparseModelId.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/models/_register
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v2-distill",
+  "version": "1.0.0",
+  "model_group_id": "{{modelGroupId}}",
+  "model_format": "TORCH_SCRIPT"
+}
+}

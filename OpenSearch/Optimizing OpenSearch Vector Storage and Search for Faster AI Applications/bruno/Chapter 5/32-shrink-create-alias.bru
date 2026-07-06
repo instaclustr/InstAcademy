@@ -1,0 +1,29 @@
+meta {
+  name: Shrink: create alias on source
+  type: http
+  seq: 32
+}
+
+post {
+  url: {{baseUrl}}/_aliases
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "actions": [
+    {
+      "add": {
+        "index": "bookstore-rag-split",
+        "alias": "bookstore-rag-alias"
+      }
+    }
+  ]
+}
+}

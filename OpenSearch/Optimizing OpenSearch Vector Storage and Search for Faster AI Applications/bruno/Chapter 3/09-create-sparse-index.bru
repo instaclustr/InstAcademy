@@ -1,0 +1,38 @@
+meta {
+  name: Create my-sparse-neural-index
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/my-sparse-neural-index
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1,
+      "default_pipeline": "nlp-ingest-pipeline"
+    }
+  },
+  "mappings": {
+    "properties": {
+      "passage_text": { "type": "text" },
+      "passage_chunk": { "type": "text" },
+      "passage_embedding": {
+        "type": "nested",
+        "properties": { "sparse_encoding": { "type": "rank_features" } }
+      }
+    }
+  }
+}
+}

@@ -1,0 +1,34 @@
+meta {
+  name: Create stock-filter request pipeline
+  type: http
+  seq: 39
+}
+
+put {
+  url: {{baseUrl}}/_search/pipeline/bookstore-stock-filter
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "description": "Filter out-of-stock books from every search",
+  "request_processors": [
+    {
+      "filter_query": {
+        "query": {
+          "term": {
+            "in_stock": true
+          }
+        },
+        "tag": "stock_filter"
+      }
+    }
+  ]
+}
+}

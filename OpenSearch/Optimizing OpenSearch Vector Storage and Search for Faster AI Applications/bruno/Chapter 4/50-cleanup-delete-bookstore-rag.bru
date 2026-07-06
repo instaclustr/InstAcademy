@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete bookstore-rag
+  type: http
+  seq: 50
+}
+
+delete {
+  url: {{baseUrl}}/bookstore-rag
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

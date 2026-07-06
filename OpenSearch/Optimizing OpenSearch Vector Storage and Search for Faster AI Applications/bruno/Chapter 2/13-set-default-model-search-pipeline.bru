@@ -1,0 +1,32 @@
+meta {
+  name: Create default-model search pipeline
+  type: http
+  seq: 13
+}
+
+docs {
+neural_query_enricher injects a default model_id so neural queries can omit it.
+}
+
+put {
+  url: {{baseUrl}}/_search/pipeline/default-model-pipeline
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "request_processors": [
+    {
+      "neural_query_enricher": {
+        "default_model_id": "{{modelId}}"
+      }
+    }
+  ]
+}
+}
