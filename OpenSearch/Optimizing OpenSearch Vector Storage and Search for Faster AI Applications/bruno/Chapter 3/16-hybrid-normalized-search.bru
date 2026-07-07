@@ -8,7 +8,7 @@ docs {
 BM25 + neural_sparse fused by score normalization. Save the top-5 order to compare with RRF.
 }
 
-post {
+get {
   url: {{baseUrl}}/my-sparse-neural-index/_search?search_pipeline=nlp-search-normalization-pipeline
   body: json
   auth: basic

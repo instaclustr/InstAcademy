@@ -24,7 +24,7 @@ body:json {
       "category": { "type": "keyword" },
       "product_vector": {
         "type": "knn_vector",
-        "model_id": "YOUR_MODEL_ID"
+        "model_id": "{{ivfModelId}}"
       }
     }
   }

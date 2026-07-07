@@ -8,7 +8,7 @@ docs {
 Identical query body to 16 — only the search_pipeline changes. Compare the RRF order to the normalized order.
 }
 
-post {
+get {
   url: {{baseUrl}}/my-sparse-neural-index/_search?search_pipeline=rrf-search-pipeline
   body: json
   auth: basic

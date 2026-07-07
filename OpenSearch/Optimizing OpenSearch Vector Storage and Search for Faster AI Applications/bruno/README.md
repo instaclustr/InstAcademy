@@ -16,8 +16,14 @@ Run the same REST calls as the chapter workshop READMEs without typing them into
    | `username` | `icopensearch` | As shown in the console |
    | `password` | *(your password)* | |
    | `modelGroupId` | | Fill after **Register model group** |
-   | `modelId` | | Fill after register/deploy **COMPLETED** |
+   | `modelId` | | Fill after register/deploy **COMPLETED** (dense model, Chapters 2–4) |
    | `taskId` | | Update when polling ML tasks |
+   | `ivfModelId` | | Chapter 1 — fill with the `model_id` from **Train IVF model** |
+   | `sparseModelId` | | Chapters 2–3 — the **sparse** model's id (keep separate from `modelId`) |
+   | `agentId` | | Chapter 4 optional MCP section — fill after **Register conversational agent** |
+   | `nodeName` | | Chapter 5 — a node name from `_cat/nodes`, used by the shrink pin |
+
+   The pipeline-name variables (`hybridPipelineId`, `bookstoreHybridPipelineId`) are pre-filled and never need editing.
 
 4. **Disable SSL certificate verification** in Bruno: **Settings → SSL/TLS Certificate Verification → OFF**. Trial clusters use certificates that fail strict verification.
 
@@ -30,7 +36,7 @@ Run the same REST calls as the chapter workshop READMEs without typing them into
 3. After **Register model** or **Deploy model**, if the response contains `task_id`:
    - Set `taskId` in the environment (or edit the Poll request URL).
    - Run **Poll ML task** repeatedly until `"state": "COMPLETED"`.
-   - Copy `model_id` into `modelId` (and into `src/.env` as `ML_MODEL_ID` if you use Python scripts).
+   - Copy `model_id` into `modelId`.
 4. Bulk requests use body files under [`../rest/bulk/`](../rest/bulk/). In Bruno, the file path is relative to the request file.
 
 ## Folder layout

@@ -51,13 +51,11 @@ Details: [bruno/README.md](bruno/README.md)
 
 **Dev Tools / Bruno** — cluster URL, username, password
 
-**Optional `src/.env`** (Python reference scripts only) — copy from `src/.env.example`; set `ML_MODEL_ID` after you deploy a model.
-
-**Save while you work:** `model_group_id`, `model_id`, `task_id` (when polling ML tasks).
+**Save while you work:** `model_group_id`, `model_id`, `task_id` (when polling ML tasks). In Bruno, keep them in the **Local** environment variables ([bruno/README.md](bruno/README.md) lists them all).
 
 ## Sample data
 
-Chapters 2–5 bulk-index books from `src/sample-data.json`; Chapter 1 uses small hand-crafted vector payloads. Full bulk bodies are in [rest/bulk](rest/bulk/). Refresh the book dataset once with `python "src/Chapter 1/02-data-loader.py"` ([Chapter 1 workshop](src/Chapter%201/README.md)).
+Chapters 2–5 bulk-index a shared Gutendex (Project Gutenberg) book dataset; Chapter 1 uses small hand-crafted vector payloads. All bulk bodies ship ready-to-use in [rest/bulk](rest/bulk/) — there is nothing to download or generate.
 
 ## ML task polling
 
@@ -87,5 +85,3 @@ Lesson 4-4 (MCP server, steps for OpenSearch 3.3+) includes an optional section 
 3. [Chapter 3](src/Chapter%203/README.md) — sparse, hybrid, and RRF search
 4. [Chapter 4](src/Chapter%204/README.md) — RAG optimization and the MCP server
 5. [Chapter 5](src/Chapter%205/README.md) — production cluster tuning
-
-Optional Python scripts in each chapter folder (`src/Chapter N/01-….py`) mirror the same REST calls after you have completed the Dev Tools steps once.

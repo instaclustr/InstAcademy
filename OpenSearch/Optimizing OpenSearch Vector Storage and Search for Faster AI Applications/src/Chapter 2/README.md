@@ -24,10 +24,10 @@ Written for **OpenSearch 3.5+**. Where the video script simplifies or predates c
 
 ## Prerequisites
 
-- [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity, `src/sample-data.json`, and (optional) `src/.env`.
+- [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
 - [Cluster setup](../../CREATE_CLUSTER.md) — a **3-node** Instaclustr cluster with the **AI Search / ML Commons** plugin and your IP on the firewall.
 - **Dev Tools** open (or Bruno fast mode: [`bruno/Chapter 2/`](../../bruno/Chapter%202/)).
-- A notepad (or `src/.env`) for ids returned by ML Commons:
+- A notepad (or the Bruno **Local** environment) for ids returned by ML Commons:
 
 | Variable | From | Used in |
 |----------|------|---------|
@@ -190,11 +190,7 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 { "state": "COMPLETED", "model_id": "YOUR_MODEL_ID", "task_type": "DEPLOY_MODEL" }
 ```
 
-**Save** confirm `model_id`, then set it in `src/.env`:
-
-```bash
-ML_MODEL_ID=YOUR_MODEL_ID
-```
+**Save** confirm `model_id` and write it down — every later step that says `YOUR_MODEL_ID` means this value (in Bruno, set `modelId` in the **Local** environment).
 
 **Fast mode** `bruno/Chapter 2/06-deploy-model.bru`, then `07-poll-ml-task-deploy.bru`.
 
@@ -332,8 +328,6 @@ First lines of the payload look like:
 ```
 
 **Expected** `errors: false`. If any item errors, the usual causes are an **undeployed model**, wrong **`model_id`** in the pipeline, or a **dimension mismatch**.
-
-**Alternative** run `python "src/Chapter 2/07-ingest-data.py"` — builds the same bulk request from `src/sample-data.json`.
 
 **Fast mode** `bruno/Chapter 2/11-bulk-ingest-books.bru` (body file points at the same `.ndjson`).
 
@@ -813,7 +807,7 @@ If you deployed the sparse model in Lesson 2-3, undeploy it too (`YOUR_SPARSE_MO
 DELETE _plugins/_ml/models/YOUR_MODEL_ID
 ```
 
-Repeat for `YOUR_SPARSE_MODEL_ID` if used. Then clear `ML_MODEL_ID` from `src/.env`. **Fast mode** `bruno/Chapter 2/35-delete-model.bru` (+ `36-delete-sparse-model.bru`).
+Repeat for `YOUR_SPARSE_MODEL_ID` if used. **Fast mode** `bruno/Chapter 2/35-delete-model.bru` (+ `36-delete-sparse-model.bru`).
 
 ---
 
@@ -828,20 +822,3 @@ Repeat for `YOUR_SPARSE_MODEL_ID` if used. Then clear `ML_MODEL_ID` from `src/.e
 ## Next chapter
 
 [Chapter 3](../Chapter%203/README.md) — neural **sparse** encoding, sparse ingest pipelines, and the dedicated **`hybrid`** query with score normalization.
-
-## Reference scripts
-
-Python mirrors of the REST steps (run after doing the Dev Tools steps once). They read `src/.env` and `src/sample-data.json`.
-
-| Script | Mirrors |
-|--------|---------|
-| `01-setup.py` | Steps 1–3 (connectivity, ML settings, model group) |
-| `02-register-model.py` | Step 4 + poll |
-| `03-deploy-model.py` | Step 5 + poll |
-| `04-generate-embeddings.py` | Steps 6 / 14 (dense predict) |
-| `05-create-index-pipeline.py` | Step 7 |
-| `06-create-index.py` | Step 8 |
-| `07-ingest-data.py` | Step 9 (bulk from `sample-data.json`) |
-| `08-search.py` | Step 13 (hybrid search) |
-| `09-cleanup.py` | Cleanup C1–C5 |
-| `10-optimize-neural-search.py` | Lesson 2-5 (circuit breaker, refresh interval, routing) |

@@ -32,10 +32,7 @@ Short label: **Vector Storage & Search for AI** — hands-on labs for this InstA
 | [`HANDS-ON-GUIDE.md`](HANDS-ON-GUIDE.md) | How to read a chapter workshop and run the course |
 | [`src/Chapter …/`](src/Chapter%201/) | One step-by-step Dev Tools workshop README per chapter |
 | [`bruno/`](bruno/) | Fast-mode REST collection |
-| [`rest/bulk/`](rest/bulk/) | NDJSON bulk payloads |
-| [`src/sample-data.json`](src/sample-data.json) | Shared Gutendex book dataset |
-
-Optional commented Python scripts mirror the REST steps in each chapter folder.
+| [`rest/bulk/`](rest/bulk/) | NDJSON bulk payloads (the shared Gutendex book dataset) |
 
 ## Support
 

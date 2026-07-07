@@ -21,7 +21,7 @@ Lesson 4-2 deliberately rebuilds the index from scratch (with chunking and corre
 
 ## Prerequisites
 
-- Complete [Chapter 1 · Lesson 1](../Chapter%201/README.md) — `src/.env`, `src/sample-data.json`.
+- Complete [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
 - A cluster with **ML Commons**, **k-NN**, and the **AI Search** plugin (the course 3-node Instaclustr cluster). See [cluster setup](../../CREATE_CLUSTER.md).
 - Open **OpenSearch Dashboards → Dev Tools** (learn mode) or the [Bruno `Chapter 4`](../../bruno/Chapter%204/) collection (fast mode — flat, numbered `01`…`51`).
 - **Save as you go:** `model_group_id`, `model_id`, `task_id`. In Bruno, set them as `modelGroupId`, `modelId`, `taskId`, `agentId` environment variables.
@@ -99,7 +99,7 @@ POST _plugins/_ml/models/_register
 ```http
 POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 ```
-**Expected** — a `task_id`; poll until `COMPLETED`. Add `ML_MODEL_ID=YOUR_MODEL_ID` to `src/.env`.
+**Expected** — a `task_id`; poll until `COMPLETED`. Write down the returned `model_id` (in Bruno, set `modelId` in the **Local** environment).
 **Fast mode** — `05-deploy-model.bru` → `06-poll-deploy-task.bru`
 
 ### Step 5: Create the RAG ingest pipeline
@@ -645,7 +645,7 @@ GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
 **Expected** — only in-stock hits, with normalized blended scores.
 **Fast mode** — `41-create-full-pipeline.bru` → `42-hybrid-with-full-pipeline.bru`
 
-> **Version gate (verified against a real OpenSearch 3.5.0 cluster).** The filtering works (only in-stock hits return), but the blended scores are **not** normalized when a `filter_query` request processor and a `normalization-processor` phase-results processor are combined in the same pipeline — hits come back with raw, un-normalized `_score` values identical to a plain `knn` query's scores (e.g. `0.0074...` instead of the `0.0–1.0` range you get from `bookstore-hybrid-pipeline` alone, step 11/14). Splitting the two processors into separate pipelines and running the `bookstore-stock-filter` request-processor pipeline and `bookstore-hybrid-pipeline` phase-results pipeline back-to-back does not help either, since only one search pipeline applies per request. Treat this combination as filtering-only until the neural-search plugin fixes the interaction; for now, do business-rule filtering with a `bool`/`must_not` clause inside the hybrid query itself if you need normalized scores **and** filtering together.
+> **Version gate (verified against a real OpenSearch 3.5.0 cluster).** The filtering works (only in-stock hits return), but the blended scores are **not** normalized when a `filter_query` request processor and a `normalization-processor` phase-results processor are combined in the same pipeline — hits come back with raw, un-normalized `_score` values identical to a plain `knn` query's scores (e.g. `0.0074...` instead of the `0.0–1.0` range you get from `bookstore-hybrid-pipeline` alone in Step 11, `14-hybrid-search.bru`). Splitting the two processors into separate pipelines and running the `bookstore-stock-filter` request-processor pipeline and `bookstore-hybrid-pipeline` phase-results pipeline back-to-back does not help either, since only one search pipeline applies per request. Treat this combination as filtering-only until the neural-search plugin fixes the interaction; for now, do business-rule filtering with a `bool`/`must_not` clause inside the hybrid query itself if you need normalized scores **and** filtering together.
 
 ---
 
@@ -776,7 +776,7 @@ POST _plugins/_ml/agents/YOUR_AGENT_ID/_execute
 **Expected** — a final answer plus the reasoning trace and a `memory_id`.
 **Fast mode** — `48-execute-agent.bru`
 
-**External MCP clients.** Any MCP client can connect to the same server. A Python example using `fastmcp` is in [`10-mcp-client.py`](10-mcp-client.py) — LangChain agents, Claude Desktop, or Cursor can reuse the exact indexes and pipelines you built this chapter.
+**External MCP clients.** Any MCP client can connect to the same server — point it at `{{baseUrl}}/_plugins/_ml/mcp` (Streamable HTTP) with your cluster credentials. LangChain agents, Claude Desktop, or Cursor can reuse the exact indexes and pipelines you built this chapter.
 
 **Security.** The MCP server and agents inherit the caller's permissions. In production, create a dedicated read-only service account scoped to `bookstore-rag`, restrict which tools the agent can access (no `delete_index` for a customer-facing agent), and require TLS + authentication for external clients.
 
@@ -795,7 +795,7 @@ DELETE books-unoptimized
 DELETE _ingest/pipeline/bookstore-rag-ingest-pipeline
 DELETE _ingest/pipeline/bookstore-chunking-pipeline
 ```
-Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. Index deletes have matching Bruno requests `49`–`51`.
+Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. Index deletes have matching Bruno requests: `49-cleanup-delete-bookstore-rag-index.bru` → `50-cleanup-delete-bookstore-rag.bru` → `51-cleanup-delete-books-unoptimized.bru`.
 
 ## What you learned
 
@@ -803,32 +803,3 @@ Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy
 - **Index:** native `text_chunking`, `nested` chunks, intentional shard sizing, the fast-bulk recipe, and vector warm/preload.
 - **Query:** profiling, `_rank_eval`, and centralizing filters + normalization in search pipelines.
 - **Agents:** enabling the built-in MCP server and (optionally) wiring an LLM-driven conversational agent.
-
-## Reference scripts
-
-Optional Python mirrors of the REST steps (run after doing the Dev Tools steps once). All read `src/.env`; set `ML_MODEL_ID` after Step 4.
-
-| Script | Mirrors |
-|--------|---------|
-| `01-setup.py` | Steps 1–2 (enable URL registration + model group) |
-| `02-register-model.py` | Step 3 (register + poll) |
-| `03-deploy-model.py` | Step 4 (deploy + poll) |
-| `04-bookstore-rag-index.py` | Steps 5–7 (pipeline + index + bulk) |
-| `05-knn-and-hybrid-search.py` | Steps 8–12 (k-NN, filtered, hybrid, rerank) |
-| `06-warmup-and-cache.py` | Step 13 (warmup, stats, circuit breaker) |
-| `07-chunking-index.py` | Steps 14–17 (baseline, chunking pipeline, `bookstore-rag`, fast bulk) |
-| `08-shards-and-preload.py` | Steps 18–19 (shard sizes, warm, preload) |
-| `09-query-optimization.py` | Steps 20–25 (profile, explain, rank_eval, pipelines) |
-| `10-mcp-client.py` | Lesson 4-4 external MCP client (`fastmcp`) |
-
-```bash
-python "src/Chapter 4/01-setup.py"
-python "src/Chapter 4/02-register-model.py" <model_group_id>
-python "src/Chapter 4/03-deploy-model.py" <model_id>
-python "src/Chapter 4/04-bookstore-rag-index.py"
-python "src/Chapter 4/05-knn-and-hybrid-search.py"
-python "src/Chapter 4/06-warmup-and-cache.py"
-python "src/Chapter 4/07-chunking-index.py"
-python "src/Chapter 4/08-shards-and-preload.py"
-python "src/Chapter 4/09-query-optimization.py"
-```

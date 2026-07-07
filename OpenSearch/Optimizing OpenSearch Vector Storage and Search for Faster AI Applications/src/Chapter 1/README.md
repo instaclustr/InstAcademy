@@ -75,7 +75,7 @@ down into three resources: **CPU, RAM, and storage**. Two structural knobs
 dominate:
 
 - **Shards** — more shards means smaller shards and more parallelism, but each
-  shard adds coordination overhead. You'll size these in [Lesson 1-4](#step-16-shard-sizing-and-ism-rollover).
+  shard adds coordination overhead. You'll size these in [Lesson 1-4](#step-25-shard-sizing-and-ism-rollover).
 - **Segments** — Lucene stores each shard as a set of immutable segments. More
   segments means higher search latency, so merging segments is a core tuning
   lever (Step 5 below).
@@ -422,6 +422,11 @@ searchable (and visible to `_reindex` later).
 POST products-hnsw/_refresh
 ```
 
+**Expected** — `"_shards"` with `"failed": 0` (on the 3-node course cluster,
+`"total": 2, "successful": 2` — one primary plus one replica). The ten products
+from Step 9 are now searchable; a quick `GET products-hnsw/_count` should return
+`"count": 10`.
+
 **Fast mode** — `12-refresh-products-hnsw.bru`
 
 ### Step 11: Exact k-NN with a scoring script
@@ -568,7 +573,8 @@ POST _plugins/_knn/models/_train
 ```
 
 **Save** — the returned `model_id`; the next three steps use it. In the requests
-below, replace **`YOUR_MODEL_ID`** with this value.
+below, replace **`YOUR_MODEL_ID`** with this value. In Bruno, set **`ivfModelId`**
+in the **Local** environment instead — requests 17, 18, and 40 reference it.
 
 **Fast mode** — `16-train-ivf-model.bru`
 
@@ -1147,19 +1153,6 @@ DELETE _plugins/_knn/models/YOUR_MODEL_ID
 - The GPU-vs-CPU decision framework and how to inspect your cluster's compute.
 - How chunking, ISM-based shard management, and dimension reduction optimize
   storage and search at scale.
-
-## Reference scripts
-
-Optional Python equivalents live alongside this README (they mirror the same REST
-calls once you've run the Dev Tools steps). They read connection settings from
-`src/.env` (copy from `src/.env.example`).
-
-| Script | Mirrors |
-|--------|---------|
-| `01-opensearch-status.py` | Step 1 — connectivity (`GET /`) |
-| `02-data-loader.py` | Downloads the shared Gutendex dataset used from Chapter 2 on |
-| `03-create-vector-index.py` | Steps 2, 6, 7 — HNSW, on_disk, and memory-optimized indexes |
-| `04-dimension-reduction.py` | Steps 26–29 — 256→128 reindex with Painless |
 
 ## Next chapter
 

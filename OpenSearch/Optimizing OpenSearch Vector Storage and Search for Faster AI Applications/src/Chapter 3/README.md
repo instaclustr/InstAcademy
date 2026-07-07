@@ -18,7 +18,7 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 
 ## Prerequisites
 
-- [Chapter 1 · Lesson 1](../Chapter%201/README.md) — confirms **`src/sample-data.json`** exists.
+- [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
 - [Chapter 2](../Chapter%202/README.md) — you deployed a **dense** model (`msmarco-distilbert-base-tas-b`) and built **`vector-search-index`**. **Keep both in place** — the dense comparison in Lesson 3-1 (Step 10) reuses them. If you tore them down, that one step is optional.
 - A 3-node Instaclustr cluster with **ML Commons / AI Search** enabled.
 - Open **OpenSearch Dashboards → Dev Tools** (Learn mode) or the **[Bruno `Chapter 3`](../../bruno/Chapter%203/)** collection (Fast mode).
@@ -32,7 +32,7 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 | `dense_model_id` | Chapter 2 Lesson 1 | Step 10 (dense comparison only) |
 | `task_id` | register / deploy | Polling |
 
-> **Two models, two ids.** Chapter 3 uses a **sparse** encoding model; Chapter 2 used a **dense** one. Keep both ids straight. For the Python scripts, `ML_MODEL_ID` in `src/.env` is the **sparse** model.
+> **Two models, two ids.** Chapter 3 uses a **sparse** encoding model; Chapter 2 used a **dense** one. Keep both ids straight (in Bruno: `sparseModelId` vs `modelId`).
 
 **Query used throughout:** we run the *same* text — **`"a hero on a dangerous sea voyage"`** — against every method so you can line up the rankings side by side.
 
@@ -131,7 +131,7 @@ Repeat every few seconds until `"state": "COMPLETED"`. On `FAILED`, check cluste
 
 **Save** `model_id` from the completed task — this is your **`sparse_model_id`**.
 
-**Fast mode** `03-register-sparse-model.bru` → `04-poll-register-task.bru`
+**Fast mode** `bruno/Chapter 3/03-register-sparse-model.bru` → `bruno/Chapter 3/04-poll-register-task.bru`
 
 
 ### **Step 4: Deploy the sparse model**
@@ -153,9 +153,9 @@ Poll again if deploy returns a `task_id`:
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
 
-**Save** add **`ML_MODEL_ID=YOUR_SPARSE_MODEL_ID`** to **`src/.env`** (used by the Python scripts).
+**Save** write down the sparse model id (in Bruno, set **`sparseModelId`** in the **Local** environment).
 
-**Fast mode** `05-deploy-sparse-model.bru` → `06-poll-deploy-task.bru`
+**Fast mode** `bruno/Chapter 3/05-deploy-sparse-model.bru` → `bruno/Chapter 3/06-poll-deploy-task.bru`
 
 
 ### **Step 5: Create the sparse ingest pipeline**
@@ -254,7 +254,7 @@ PUT my-sparse-neural-index
 
 **Expected** `"acknowledged": true`
 
-**Fast mode** `08-delete-sparse-index.bru` (optional) → `09-create-sparse-index.bru`
+**Fast mode** `bruno/Chapter 3/08-delete-sparse-index.bru` (optional) → `bruno/Chapter 3/09-create-sparse-index.bru`
 
 
 ### **Step 7: Bulk index the sample books**
@@ -292,7 +292,7 @@ Refresh so hits are immediately searchable:
 POST my-sparse-neural-index/_refresh
 ```
 
-**Fast mode** `10-bulk-sparse-index.bru` → `11-refresh-sparse-index.bru`
+**Fast mode** `bruno/Chapter 3/10-bulk-sparse-index.bru` → `bruno/Chapter 3/11-refresh-sparse-index.bru`
 
 
 ### **Step 8: Lexical-only baseline (BM25)**
@@ -390,6 +390,8 @@ GET vector-search-index/_search
 
 **Expected** Up to 5 semantically ranked hits. Dense and sparse often agree on *theme* but disagree on exact order — neither alone matches keyword precision. That is the motivation for hybrid.
 
+**Save** the **top-5 order** alongside your lexical and sparse lists — Lesson 3-3 asks you to line all three up against the RRF ranking.
+
 **Fast mode** `bruno/Chapter 3/14-dense-search-compare.bru`
 
 ---
@@ -407,6 +409,9 @@ BM25 scores (~0–20) and sparse scores (~0–10) live on different scales. Add 
 - **`weights`** — one per sub-query, must sum to **1.0**. Here `[0.3, 0.7]` trusts the sparse branch more than keyword.
 
 ### **Step 1: Create the normalization search pipeline**
+
+**Why**
+This turns the theory above into a reusable cluster object. The pipeline lives on the cluster (not in any one query), so every hybrid search that references it by name gets the same min–max rescaling and 30/70 weighting — change the weights once here and every caller picks it up. Creating it **before** running a `hybrid` query matters: without it, the two branches' raw scores are simply summed and the larger scale wins.
 
 **Request** — paste into Dev Tools:
 
@@ -639,39 +644,6 @@ DELETE _plugins/_ml/models/YOUR_SPARSE_MODEL_ID
 **Fast mode** `bruno/Chapter 3/19-cleanup.bru` (delete pipelines + index).
 
 Leave Chapter 2's `vector-search-index` and dense model in place if you plan to continue to Chapter 4.
-
-## Reference scripts
-
-Python equivalents live in this folder (`src/Chapter 3/`). Set `ML_MODEL_ID` (the **sparse** model) in `src/.env`, then run in order:
-
-| Script | README step |
-|--------|-------------|
-| `01-setup.py` | 3-1 Steps 1–2 (enable URL + model group) |
-| `02-register-model.py <model_group_id>` | 3-1 Step 3 (+ poll) |
-| `03-deploy-model.py <sparse_model_id>` | 3-1 Step 4 (+ poll) |
-| `04-sparse-ingest-pipeline.py` | 3-1 Step 5 |
-| `05-create-sparse-index.py` | 3-1 Step 6 |
-| `06-load-data.py` | 3-1 Step 7 (full bulk from `src/sample-data.json`) |
-| `07-compare-single-methods.py` | 3-1 Steps 8–9 (lexical + sparse) |
-| `08-normalization-pipeline.py` | 3-2 Step 1 |
-| `09-hybrid-search.py` | 3-2 Step 2 |
-| `10-rrf-pipeline.py` | 3-3 Step 1 |
-| `11-rrf-search.py` | 3-3 Step 2 |
-
-```bash
-pip install -r ../../requirements.txt
-python 01-setup.py
-python 02-register-model.py <model_group_id>
-python 03-deploy-model.py <sparse_model_id>   # then set ML_MODEL_ID in src/.env
-python 04-sparse-ingest-pipeline.py
-python 05-create-sparse-index.py
-python 06-load-data.py
-python 07-compare-single-methods.py
-python 08-normalization-pipeline.py
-python 09-hybrid-search.py
-python 10-rrf-pipeline.py
-python 11-rrf-search.py
-```
 
 ## Next chapter
 

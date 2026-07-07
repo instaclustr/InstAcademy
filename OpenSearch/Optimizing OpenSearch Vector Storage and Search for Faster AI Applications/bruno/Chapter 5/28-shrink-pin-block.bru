@@ -18,7 +18,7 @@ auth:basic {
 body:json {
 {
   "settings": {
-    "index.routing.allocation.require._name": "YOUR_NODE_NAME",
+    "index.routing.allocation.require._name": "{{nodeName}}",
     "index.blocks.write": true
   }
 }
