@@ -27,33 +27,22 @@ Work through the sections in order — later steps reuse earlier indexes. A
 
 Every step uses the same layout (see the [lab guide](../../HANDS-ON-GUIDE.md)):
 
-- **Why** — the concept from the video, in plain language.
-- **Request** — paste into **Dev Tools** (Dashboards → Dev Tools).
-- **Expected** — what success looks like.
+- A concept from the video is described.
+- **Request** — code you'll paste into **Dev Tools** (Dashboards → Dev Tools).
+- **Expected** — what the output should look like.
 - **Save** — values you'll reuse later.
-- **Fast mode** — the matching Bruno request in [`bruno/Chapter 1/`](../../bruno/Chapter%201/).
+- **Fast mode** — ability to run it as a full script with bruno instead of doing it manually.
 
 ## Prerequisites
 
 - A running **Instaclustr OpenSearch cluster** (3-node trial, **AI Search
   Plugin** enabled) reachable from your browser — see [cluster setup](../../CREATE_CLUSTER.md).
   Your IP must be on the firewall allow-list.
-- **OpenSearch 2.19+ (targeted at 3.5+).** A few features used here
-  (`mode: on_disk`, memory-optimized search) are newest in the 3.x line; each
-  step notes its minimum version.
-- **Dev Tools** open, or [Bruno](../../bruno/README.md) configured with
-  `baseUrl`, `username`, `password`.
+- **OpenSearch 3.5+.**
+- **Dev Tools** to run the commands or [Bruno](../../bruno/README.md) configured with
+  `baseUrl`, `username`, `password` of the OpenSearch cluster.
 - Sample floating-point vectors used in these labs are tiny (8-dimensional) and
-  ship as bulk files under [`rest/bulk/`](../../rest/bulk/) so you never type
-  raw vectors by hand. Real embeddings arrive in Chapter 2.
-
-> **Engine note (important for OpenSearch 3.x).** OpenSearch ships three vector
-> engines: **`faiss`** (the **default**), **`lucene`**, and **`nmslib`**.
-> `nmslib` is **deprecated** in favor of `faiss` and `lucene` — do not use it for
-> new indexes. The Chapter 1 video mentions all three engines as equals; that was
-> accurate for older releases, but for 3.5+ prefer `faiss` (used throughout this
-> workshop) or `lucene`. Only `faiss` implements **IVF**; `lucene` adds smart
-> filtering for smaller deployments.
+  ship as bulk files under [`rest/bulk/`](../../rest/bulk/). Real embeddings used in Chapter 2.
 
 ---
 
@@ -80,9 +69,8 @@ dominate:
   segments means higher search latency, so merging segments is a core tuning
   lever (Step 5 below).
 
-### Step 1: Verify cluster connectivity
+### Step 1: Verify cluster connectivity (only if using Fast-mode/Bruno)
 
-**Why**  
 Every later step assumes basic auth and TLS work. `GET /` returns the cluster
 name and version — a five-second smoke test that saves hours of debugging bulk
 or model errors later. It also confirms your engine version so you know which
@@ -105,16 +93,13 @@ GET /
 }
 ```
 
-`401 Unauthorized` → check username/password. A timeout → check that your IP is
+If you get `401 Unauthorized` check the username/password. If it timesout, check that your IP is
 on the Instaclustr firewall list.
-
-**Save** — the `version.number`; a few steps note a minimum version.
 
 **Fast mode** — `01-cluster-info.bru`
 
 ### Step 2: Create a vector index
-
-**Why**  
+  
 `knn_vector` is the field type that stores embeddings. Three settings do the
 heavy lifting:
 
@@ -126,7 +111,13 @@ heavy lifting:
   default engine). `space_type` is the distance function (`l2` = Euclidean); it
   can sit at the top level of the field or inside `method`. The HNSW parameters
   **`m`** (links per node, default 16) and **`ef_construction`** (build-time
-  candidate list, default 100) trade graph quality against build cost and memory.
+  candidate list, default 100) trade graph quality against the build cost and memory.
+
+This is a k-NN-enabled index with a title and vector field **(my_vector)** that builds a proper HNSW graph, 
+with a standard approximate-nearest-neighbor index structure.
+
+**m: 16** means each node in the graph connects to **up to 16 neighbors**. This controls density/accuracy vs memory usage.
+**ef_construction: 100** is how thoroughly the graph is built at index time (higher is a better quality graph but slower to build).
 
 **Request**
 
@@ -163,20 +154,22 @@ PUT vector-fundamentals
 **Expected**
 
 ```json
-{ "acknowledged": true, "shards_acknowledged": true, "index": "vector-fundamentals" }
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "vector-fundamentals"
+}
 ```
+This means it saved your new index correctly.
 
 If it already exists from a previous run, `DELETE vector-fundamentals` first.
-
-**Save** — index name `vector-fundamentals`.
 
 **Fast mode** — `02-create-vector-index.bru`
 
 ### Step 3: Inspect the mapping and settings
 
-**Why**  
 Reading back the mapping confirms OpenSearch accepted your `knn_vector`
-configuration and shows the effective defaults it filled in — useful when you
+configuration and shows the effective defaults it filled in. This is useful when you
 want to know exactly what `m`, `ef_construction`, and `space_type` your index is
 actually using.
 
@@ -189,38 +182,213 @@ GET vector-fundamentals/_mapping
 **Expected** — the `my_vector` field echoed back with `type: knn_vector`,
 `dimension: 8`, and your `method` block.
 
+```
+{
+  "vector-fundamentals": {
+    "mappings": {
+      "properties": {
+        "my_vector": {
+          "type": "knn_vector",
+          "dimension": 8,
+          "method": {
+            "engine": "faiss",
+            "space_type": "l2",
+            "name": "hnsw",
+            "parameters": {
+              "ef_construction": 100,
+              "m": 16
+            }
+          },
+          "space_type": "l2"
+        },
+        "title": {
+          "type": "text"
+        }
+      }
+    }
+  }
+}
+```
+
 **Fast mode** — `03-get-mapping.bru`
 
 ### Step 4: Index a few vectors
 
-**Why**  
 You need documents in the index before shards, segments, and search become
 meaningful. The bulk API indexes many documents in one request as alternating
-action/source lines (NDJSON). These three vectors are 8-dimensional so they're
-readable.
+action/source lines (NDJSON). These three vectors are 8-dimensional to be more
+readable by eye. We'll index these 50 vectors across two _bulk commands and show what that looks
 
-**Request** — run the `POST _bulk` line, then paste the entire contents of
-[`rest/bulk/chapter-1-lesson-1-vectors.ndjson`](../../rest/bulk/chapter-1-lesson-1-vectors.ndjson)
-below it, ending with a blank line:
+**Request** — run the `POST` command to index the 50 vectors
 
 ```http
 POST _bulk
-```
-
-The file contains lines like:
-
-```json
 {"index": {"_index": "vector-fundamentals", "_id": "1"}}
-{"title": "Intro to Vector Search", "my_vector": [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]}
+{"title": "Intro to Vector Search", "my_vector": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]}
+{"index": {"_index": "vector-fundamentals", "_id": "2"}}
+{"title": "Scaling Retrieval", "my_vector": [0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]}
+{"index": {"_index": "vector-fundamentals", "_id": "3"}}
+{"title": "Tuning HNSW Graphs", "my_vector": [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]}
+{"index": {"_index": "vector-fundamentals", "_id": "4"}}
+{"title": "Approximate Nearest Neighbors 101", "my_vector": [0.12, 0.22, 0.32, 0.42, 0.52, 0.62, 0.72, 0.82]}
+{"index": {"_index": "vector-fundamentals", "_id": "5"}}
+{"title": "Embedding Models Compared", "my_vector": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2]}
+{"index": {"_index": "vector-fundamentals", "_id": "6"}}
+{"title": "Recall vs Latency Tradeoffs", "my_vector": [0.18, 0.28, 0.38, 0.48, 0.58, 0.68, 0.78, 0.88]}
+{"index": {"_index": "vector-fundamentals", "_id": "7"}}
+{"title": "FAISS Under the Hood", "my_vector": [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25, 0.15]}
+{"index": {"_index": "vector-fundamentals", "_id": "8"}}
+{"title": "Scalar Quantization Explained", "my_vector": [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75]}
+{"index": {"_index": "vector-fundamentals", "_id": "9"}}
+{"title": "HNSW Graph Construction", "my_vector": [0.95, 0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25]}
+{"index": {"_index": "vector-fundamentals", "_id": "10"}}
+{"title": "Cosine vs L2 Distance", "my_vector": [0.22, 0.32, 0.42, 0.52, 0.62, 0.72, 0.82, 0.92]}
+{"index": {"_index": "vector-fundamentals", "_id": "11"}}
+{"title": "Building a RAG Pipeline", "my_vector": [0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05]}
+{"index": {"_index": "vector-fundamentals", "_id": "12"}}
+{"title": "Chunking Strategies for Docs", "my_vector": [0.14, 0.24, 0.34, 0.44, 0.54, 0.64, 0.74, 0.84]}
+{"index": {"_index": "vector-fundamentals", "_id": "13"}}
+{"title": "Hybrid Search Deep Dive", "my_vector": [0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18, 0.08]}
+{"index": {"_index": "vector-fundamentals", "_id": "14"}}
+{"title": "Reciprocal Rank Fusion", "my_vector": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]}
+{"index": {"_index": "vector-fundamentals", "_id": "15"}}
+{"title": "Sparse Neural Search", "my_vector": [0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05, 0.15]}
+{"index": {"_index": "vector-fundamentals", "_id": "16"}}
+{"title": "Segment Merging Basics", "my_vector": [0.26, 0.36, 0.46, 0.56, 0.66, 0.76, 0.86, 0.96]}
+{"index": {"_index": "vector-fundamentals", "_id": "17"}}
+{"title": "Force Merge in Practice", "my_vector": [0.65, 0.55, 0.45, 0.35, 0.25, 0.15, 0.05, 0.1]}
+{"index": {"_index": "vector-fundamentals", "_id": "18"}}
+{"title": "On-Disk Vector Storage", "my_vector": [0.19, 0.29, 0.39, 0.49, 0.59, 0.69, 0.79, 0.89]}
+{"index": {"_index": "vector-fundamentals", "_id": "19"}}
+{"title": "Memory-Optimized Indexing", "my_vector": [0.82, 0.72, 0.62, 0.52, 0.42, 0.32, 0.22, 0.12]}
+{"index": {"_index": "vector-fundamentals", "_id": "20"}}
+{"title": "Compression Levels Tuning", "my_vector": [0.08, 0.18, 0.28, 0.38, 0.48, 0.58, 0.68, 0.78]}
+{"index": {"_index": "vector-fundamentals", "_id": "21"}}
+{"title": "IVF Index Structure", "my_vector": [0.91, 0.81, 0.71, 0.61, 0.51, 0.41, 0.31, 0.21]}
+{"index": {"_index": "vector-fundamentals", "_id": "22"}}
+{"title": "Product Quantization", "my_vector": [0.33, 0.43, 0.53, 0.63, 0.73, 0.83, 0.93, 0.13]}
+{"index": {"_index": "vector-fundamentals", "_id": "23"}}
+{"title": "Reindexing with Painless", "my_vector": [0.55, 0.45, 0.35, 0.25, 0.15, 0.05, 0.1, 0.2]}
+{"index": {"_index": "vector-fundamentals", "_id": "24"}}
+{"title": "Truncating Embeddings", "my_vector": [0.16, 0.26, 0.36, 0.46, 0.56, 0.66, 0.76, 0.86]}
+{"index": {"_index": "vector-fundamentals", "_id": "25"}}
+{"title": "PCA for Dimensionality Reduction", "my_vector": [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18]}
+{"index": {"_index": "vector-fundamentals", "_id": "26"}}
+{"title": "Binary Vector Encoding", "my_vector": [0.07, 0.17, 0.27, 0.37, 0.47, 0.57, 0.67, 0.77]}
+{"index": {"_index": "vector-fundamentals", "_id": "27"}}
+{"title": "FP16 Precision Storage", "my_vector": [0.93, 0.83, 0.73, 0.63, 0.53, 0.43, 0.33, 0.23]}
+{"index": {"_index": "vector-fundamentals", "_id": "28"}}
+{"title": "ef_search Tuning Guide", "my_vector": [0.24, 0.34, 0.44, 0.54, 0.64, 0.74, 0.84, 0.94]}
+{"index": {"_index": "vector-fundamentals", "_id": "29"}}
+{"title": "ef_construction Explained", "my_vector": [0.72, 0.62, 0.52, 0.42, 0.32, 0.22, 0.12, 0.02]}
+{"index": {"_index": "vector-fundamentals", "_id": "30"}}
+{"title": "m Parameter in HNSW", "my_vector": [0.11, 0.21, 0.31, 0.41, 0.51, 0.61, 0.71, 0.81]}
+{"index": {"_index": "vector-fundamentals", "_id": "31"}}
+{"title": "Shard Allocation Strategy", "my_vector": [0.87, 0.77, 0.67, 0.57, 0.47, 0.37, 0.27, 0.17]}
+```
+Since we just added these vectors in memory we will refresh the index to force the
+bulk-indexed documents to become visible/searchable immediately. Since this is a
+brand new index we want to guarantee they are visible before we look at the shards
+and segments. 
+
+```
+POST vector-fundamentals/_refresh
 ```
 
-**Expected** — `"errors": false` and three `"result": "created"` items.
+and...
+```
+POST _bulk
+{"index": {"_index": "vector-fundamentals", "_id": "32"}}
+{"title": "Replica Placement Rules", "my_vector": [0.31, 0.41, 0.51, 0.61, 0.71, 0.81, 0.91, 0.06]}
+{"index": {"_index": "vector-fundamentals", "_id": "33"}}
+{"title": "Cluster Health Basics", "my_vector": [0.59, 0.49, 0.39, 0.29, 0.19, 0.09, 0.14, 0.24]}
+{"index": {"_index": "vector-fundamentals", "_id": "34"}}
+{"title": "Bulk API Performance", "my_vector": [0.13, 0.23, 0.33, 0.43, 0.53, 0.63, 0.73, 0.83]}
+{"index": {"_index": "vector-fundamentals", "_id": "35"}}
+{"title": "Refresh Interval Tradeoffs", "my_vector": [0.79, 0.69, 0.59, 0.49, 0.39, 0.29, 0.19, 0.09]}
+{"index": {"_index": "vector-fundamentals", "_id": "36"}}
+{"title": "Near Real-Time Search", "my_vector": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]}
+{"index": {"_index": "vector-fundamentals", "_id": "37"}}
+{"title": "Lucene Segment Internals", "my_vector": [0.62, 0.52, 0.42, 0.32, 0.22, 0.12, 0.02, 0.11]}
+{"index": {"_index": "vector-fundamentals", "_id": "38"}}
+{"title": "Compound File Format", "my_vector": [0.36, 0.46, 0.56, 0.66, 0.76, 0.86, 0.96, 0.06]}
+{"index": {"_index": "vector-fundamentals", "_id": "39"}}
+{"title": "Doc Values vs Postings", "my_vector": [0.74, 0.64, 0.54, 0.44, 0.34, 0.24, 0.14, 0.04]}
+{"index": {"_index": "vector-fundamentals", "_id": "40"}}
+{"title": "k-NN Plugin Architecture", "my_vector": [0.09, 0.19, 0.29, 0.39, 0.49, 0.59, 0.69, 0.79]}
+{"index": {"_index": "vector-fundamentals", "_id": "41"}}
+{"title": "Filtering with k-NN Queries", "my_vector": [0.96, 0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.26]}
+{"index": {"_index": "vector-fundamentals", "_id": "42"}}
+{"title": "Pre-filter vs Post-filter", "my_vector": [0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]}
+{"index": {"_index": "vector-fundamentals", "_id": "43"}}
+{"title": "Painless Scripting Tips", "my_vector": [0.66, 0.56, 0.46, 0.36, 0.26, 0.16, 0.06, 0.16]}
+{"index": {"_index": "vector-fundamentals", "_id": "44"}}
+{"title": "ISM Policies for Retention", "my_vector": [0.17, 0.27, 0.37, 0.47, 0.57, 0.67, 0.77, 0.87]}
+{"index": {"_index": "vector-fundamentals", "_id": "45"}}
+{"title": "Rollover Index Patterns", "my_vector": [0.84, 0.74, 0.64, 0.54, 0.44, 0.34, 0.24, 0.14]}
+{"index": {"_index": "vector-fundamentals", "_id": "46"}}
+{"title": "Security Roles and Users", "my_vector": [0.06, 0.16, 0.26, 0.36, 0.46, 0.56, 0.66, 0.76]}
+{"index": {"_index": "vector-fundamentals", "_id": "47"}}
+{"title": "Hybrid Weighted Scoring", "my_vector": [0.92, 0.82, 0.72, 0.62, 0.52, 0.42, 0.32, 0.22]}
+{"index": {"_index": "vector-fundamentals", "_id": "48"}}
+{"title": "Min-Max Normalization", "my_vector": [0.29, 0.39, 0.49, 0.59, 0.69, 0.79, 0.89, 0.99]}
+{"index": {"_index": "vector-fundamentals", "_id": "49"}}
+{"title": "Arithmetic Mean Combination", "my_vector": [0.53, 0.43, 0.33, 0.23, 0.13, 0.03, 0.15, 0.25]}
+{"index": {"_index": "vector-fundamentals", "_id": "50"}}
+{"title": "Cluster Settings Deep Dive", "my_vector": [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.05]}
+```
+We'll invoke another refresh since we added more vectors.
+
+```
+POST vector-fundamentals/_refresh
+```
+
+**Expected** — The command should return a similar output to the following:
+```
+{
+  "took": 25,
+  "errors": false,
+  "items": [
+    {
+      "index": {
+        "_index": "vector-fundamentals",
+        "_id": "1",
+        "_version": 1,
+        "result": "created",
+        "_shards": {
+          "total": 2,
+          "successful": 2,
+          "failed": 0
+        },
+        "_seq_no": 0,
+        "_primary_term": 1,
+        "status": 201
+      }
+    },
+    {
+      "index": {
+        "_index": "vector-fundamentals",
+        "_id": "2",
+        "_version": 1,
+        "result": "created",
+        "_shards": {
+          "total": 2,
+          "successful": 2,
+          "failed": 0
+        },
+        "_seq_no": 1,
+        "_primary_term": 1,
+        "status": 201
+      }
+    },...
+}
+```
+**NOTE:** numbers start at '0' and not '1'. "_seq_no" for the first vector will appear as '0', which is normal.
 
 **Fast mode** — `04-bulk-fundamentals.bru`
 
 ### Step 5: Inspect shards and segments, then force-merge
 
-**Why**  
 This is the "segment management" the video calls out. `_cat/shards` shows how the
 index is distributed; `_cat/segments` shows the immutable Lucene segments inside
 each shard. Because more segments means higher query latency, `_forcemerge`
@@ -228,17 +396,41 @@ collapses them — here down to one segment — which is a common optimization f
 read-heavy indexes that are no longer being written. (Only force-merge indexes
 that are done ingesting; it is expensive.)
 
-**Request** — how the index is spread across nodes:
+You'll see we have 2 total shards and both were successful.
 
+**Request** — This command will show us where the shards are in our cluster
 ```http
 GET _cat/shards/vector-fundamentals?v
 ```
+Notice in the image below that **shard 0** has a **Primary (p)** and 
+**Replica (r)** on two separate nodes.
 
-**Request** — the segments inside the shard:
+![shard_location](../../screenshots/OpenSearch%202026-07-10%20at%2012.54.21 PM.png)
+
+Now we'll take a look at any segments inside of the shard:
+
+**Request**:
 
 ```http
 GET _cat/segments/vector-fundamentals?v
 ```
+Let's break down what we are looking at:
+**shard = 0** is the first shard created on these nodes.
+**segment = _0** means this is the very first segment created for this shard.
+**docs.count`/`docs.deleted** shows the 3 docs you indexed in Step 4. No documents have been deleted 
+**size = 5.2kb** the size of the segments on disk,  
+**size.memory = 0** means we are using approximately zero JVM heap
+**committed = true** shows the segment has been fsynced to disk (it's durable)
+**searchable = true** means the segment is visible to queries. A segment can exist
+but not be searchable if it was written and a refresh hadn't happened yet.
+**version = 10.3.2** is the Lucene version that wrote the segment
+**compound = true** means all segment's files (postings, doc values, vectors, etc)
+are packed into a single compound file (.cfs) to conserve file handles. Not the focus
+of this workshop, but good to know.
+
+![shard_location](../../screenshots/OpenSearch%202026-07-10%20at%201.04.25 PM.png)
+
+
 
 **Request** — merge to a single segment:
 
@@ -246,21 +438,41 @@ GET _cat/segments/vector-fundamentals?v
 POST vector-fundamentals/_forcemerge?max_num_segments=1
 ```
 
-**Expected** — `_cat/segments` after the merge shows a single row per shard.
+**Expected** — Successful command
+```
+{
+  "_shards": {
+    "total": 2,
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+**Request** - Because our index is not under much load, we will refresh it to ensure we see the results:
+```
+POST vector-fundamentals/_refresh
+```
+
+Now if we run our segment query again, we will see a single segment:
+**Request**
+```
+GET _cat/segments/vector-fundamentals?v
+```
+Notice how we now see a single segment: **'_2'** with the 50 documents combined!
+![shard_location](../../screenshots/OpenSearch%202026-07-10%20at%201.11.08 PM.png)
 
 **Fast mode** — `05-cat-shards.bru`, `06-cat-segments.bru`, `07-forcemerge.bru`
 
 ### Step 6: Disk-based (on_disk) storage
 
-**Why**  
 Disk-based vector search stores full-fidelity vectors on disk and keeps only a
 compressed form in memory, cutting RAM cost while preserving strong recall
 through a two-phase quantize-then-rescore search. You enable it with
 **`mode: on_disk`** and tune the memory/recall trade with **`compression_level`**
 (valid values `1x`, `2x`, `4x`, `8x`, `16x`, `32x`; `on_disk` defaults to `32x`).
-The video calls the compression step *scalar quantization* — that is one of the
-encoders OpenSearch uses under the hood — and notes recall is very high but not
-perfectly exact. Requires OpenSearch 2.17+ and `float` vectors.
+We will use 16x in our call, which means OpenSearch is quantizing (shrinking) the 
+stored representation to about 1/16th the size of the full float32 precision.
 
 **Request**
 
@@ -282,16 +494,20 @@ PUT vector-disk-demo
 }
 ```
 
-**Expected** — `"acknowledged": true`. Note we set only `mode` and
-`compression_level`; OpenSearch chooses the `faiss` engine and a quantizing
-encoder for you. (You cannot set both `compression_level` and a manual
-`method.encoder`.)
+**Expected** — Note we set only `mode` and `compression_level`; OpenSearch chooses
+ the `faiss` engine and a quantizing encoder for you.
+```
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "vector-disk-demo"
+}
+```
 
 **Fast mode** — `08-create-disk-index.bru`
 
 ### Step 7: Memory-optimized storage
 
-**Why**  
 Memory-optimized search is the other low-footprint option the video describes:
 instead of loading the whole index into RAM, OpenSearch memory-maps the index
 files and lets the operating system page vector data in and out on demand. This
@@ -357,7 +573,7 @@ You'll run all three against the same 10 product vectors and compare.
 
 ### Step 8: Create the products index (HNSW)
 
-**Why**  
+  
 This `faiss`/`hnsw` index is both the HNSW demo and the source of training data
 for IVF later. The `category` keyword field lets us demonstrate filtered exact
 search. We set `m` and `ef_construction` explicitly so you can see the knobs from
@@ -394,7 +610,7 @@ PUT products-hnsw
 
 ### Step 9: Bulk-index the product vectors
 
-**Why**  
+  
 Ten small products (three rough clusters: electronics, books, outdoor) give the
 search methods something to distinguish.
 
@@ -412,7 +628,7 @@ POST _bulk
 
 ### Step 10: Refresh
 
-**Why**  
+  
 OpenSearch is near-real-time; a refresh makes the new documents immediately
 searchable (and visible to `_reindex` later).
 
@@ -431,7 +647,7 @@ from Step 9 are now searchable; a quick `GET products-hnsw/_count` should return
 
 ### Step 11: Exact k-NN with a scoring script
 
-**Why**  
+  
 Exact kNN is done with a **scoring script**, not the `knn` query. The special
 `knn_score` script (note `"lang": "knn"`) computes the true distance from the
 query vector to every matched document — a brute-force scan with perfect recall.
@@ -469,7 +685,7 @@ the electronics cluster.
 
 ### Step 12: Exact k-NN with a pre-filter
 
-**Why**  
+  
 The scoring-script approach shines when you need **heavy pre-filtering**: you
 restrict the candidate set *first* with a normal query, then compute exact
 distances only over what survives. Here we score exact distance only across the
@@ -508,7 +724,7 @@ outdoor are excluded by the filter.
 
 ### Step 13: Approximate search with HNSW
 
-**Why**  
+  
 The `knn` query runs the approximate HNSW search you configured on the index — it
 walks the graph instead of scanning every vector. `k` is how many neighbors to
 return; `method_parameters.ef_search` widens the search list at query time
@@ -539,7 +755,7 @@ GET products-hnsw/_search
 
 ### Step 14: Train an IVF model
 
-**Why**  
+  
 IVF must learn its centroids before it can index anything, so you **train a
 model** with the Train API. It reads vectors from an existing `knn_vector` field
 (`products-hnsw`), clusters them into `nlist` buckets, and stores a reusable
@@ -596,7 +812,7 @@ in the **Local** environment instead — requests 17, 18, and 40 reference it.
 
 ### Step 15: Poll the model until it's ready
 
-**Why**  
+  
 Training runs in the background. Poll the model until its `state` is `created`
 (from `training`); only then can an index use it.
 
@@ -619,7 +835,7 @@ training vectors for `nlist`).
 
 ### Step 16: Create the IVF index from the model
 
-**Why**  
+  
 An IVF-backed field references the trained model with **`model_id`** instead of a
 `method` block — the model already carries the dimension, engine, and centroids.
 
@@ -648,7 +864,7 @@ PUT products-ivf
 
 ### Step 17: Copy the data into the IVF index
 
-**Why**  
+  
 `_reindex` copies every document from `products-hnsw` into `products-ivf`
 server-side; as each vector lands it is assigned to its nearest IVF centroid.
 
@@ -672,7 +888,7 @@ POST products-ivf/_refresh
 
 ### Step 18: Search the IVF index
 
-**Why**  
+  
 The same `knn` query now runs against IVF. `method_parameters.nprobes` controls
 how many centroid buckets are scanned — raise it for better recall, lower it for
 speed. Because most buckets are skipped, IVF stays fast on very large datasets
@@ -741,7 +957,7 @@ about your own cluster's compute.
 
 ### Step 19: Confirm the k-NN plugin is installed
 
-**Why**  
+  
 Vector search depends on the k-NN plugin. This lists installed plugins per node so
 you can confirm `opensearch-knn` (which bundles the `faiss` engine and its SIMD
 libraries) is present.
@@ -758,7 +974,7 @@ GET _cat/plugins?v
 
 ### Step 20: Inspect node CPU
 
-**Why**  
+  
 GPU-vs-CPU decisions start with knowing your CPU capacity. This returns the
 available processor count per node, which bounds how much parallelism your
 CPU-based index builds and SIMD-accelerated searches can use.
@@ -775,7 +991,7 @@ GET _nodes/os?filter_path=nodes.*.os.available_processors,nodes.*.os.name
 
 ### Step 21: Inspect k-NN engine statistics
 
-**Why**  
+  
 The k-NN stats endpoint reports graph-build and query activity (cache hits, graph
 memory, script compilations). It's how you observe whether index building — the
 part GPUs would accelerate — is a bottleneck on your CPU cluster.
@@ -811,7 +1027,7 @@ means more storage, and you often reassemble the parent context at retrieval tim
 
 ### Step 22: Create a chunked index
 
-**Why**  
+  
 The chunk data model is one document per chunk, each carrying its own
 `chunk_vector`, the `chunk_text`, and a `parent_id` (keyword) that ties chunks of
 the same source document together so you can regroup them after retrieval.
@@ -843,7 +1059,7 @@ PUT kb-chunks
 
 ### Step 23: Bulk-index the chunks
 
-**Why**  
+  
 Two knowledge-base articles are split into five chunks total. In a real pipeline a
 chunker produces these pieces and an embedding model (Chapter 2) fills each
 `chunk_vector`.
@@ -868,7 +1084,7 @@ POST kb-chunks/_refresh
 
 ### Step 24: Retrieve chunks, then regroup by parent
 
-**Why**  
+  
 A vector query returns individual chunks; the parent article is reassembled
 afterward. First retrieve the nearest chunks, then use a `terms` aggregation on
 `parent_id` to see which source documents the best chunks came from — the
@@ -919,7 +1135,7 @@ buckets group hits under `kb1` / `kb2`.
 
 ### Step 25: Shard sizing and ISM rollover
 
-**Why**  
+  
 Shard sizing is a balance: **smaller shards** parallelize better but add
 coordination overhead when there are too many; **larger shards** reduce overhead
 but raise per-query latency because each search scans more data. For data that
@@ -973,7 +1189,7 @@ accuracy cost. There are two ways to reduce dimensions:
 
 ### Step 26: Create the source vector index (256-dim)
 
-**Why**  
+  
 A 256-dimensional `faiss`/`hnsw` index stands in for a production embedding index.
 
 **Request**
@@ -1002,7 +1218,7 @@ PUT my-vector-index
 
 ### Step 27: Bulk-index the 256-dim vectors
 
-**Why**  
+  
 Vectors are large, so use the pre-generated bulk file rather than typing 256
 floats per document.
 
@@ -1026,7 +1242,7 @@ POST my-vector-index/_refresh
 
 ### Step 28: Create the destination index (128-dim)
 
-**Why**  
+  
 Halving the dimension roughly halves the per-vector memory and the HNSW graph
 footprint. This is the smaller "rebuild" target.
 
@@ -1056,7 +1272,7 @@ PUT my-optimized-vector-index
 
 ### Step 29: Reindex with Painless truncation
 
-**Why**  
+  
 `_reindex` copies each document server-side and a **Painless** script transforms it
 in flight. `subList(0, 128)` keeps the first 128 elements of each vector — a
 simple truncation from 256 to 128 dimensions. The destination mapping's
