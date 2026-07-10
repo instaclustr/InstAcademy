@@ -23,7 +23,7 @@ Lesson 4-2 deliberately rebuilds the index from scratch (with chunking and corre
 
 - Complete [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
 - A cluster with **ML Commons**, **k-NN**, and the **AI Search** plugin (the course 3-node Instaclustr cluster). See [cluster setup](../../CREATE_CLUSTER.md).
-- Open **OpenSearch Dashboards → Dev Tools** (learn mode) or the [Bruno `Chapter 4`](../../bruno/Chapter%204/) collection (fast mode — flat, numbered `01`…`51`).
+- Open **OpenSearch Dashboards → Dev Tools** (learn mode) or the [Bruno `Chapter 4`](../../bruno/Chapter%204/) collection (fast mode — flat, numbered up to `50`; the numbering has gaps where steps were consolidated).
 - **Save as you go:** `model_group_id`, `model_id`, `task_id`. In Bruno, set them as `modelGroupId`, `modelId`, `taskId`, `agentId` environment variables.
 - For k-NN / hybrid / profiling / rank-eval steps, open [`bookstore-rag-query-vector.json`](bookstore-rag-query-vector.json) in this folder — a pre-baked 768-dimensional query vector. Paste its array wherever a step shows `[ /* paste 768 floats … */ ]`.
 
@@ -37,43 +37,23 @@ Lesson 4-2 deliberately rebuilds the index from scratch (with chunking and corre
 
 **Why two levers?** RAG optimization is a trade-off between **performance** (retrieval latency) and **accuracy** (retrieval quality). Faster is not always better; the goal is to tune the balance for your use case.
 
-### Step 1: Enable URL model registration
+> **ML Commons prerequisites (already set in Chapter 2).** The persistent settings from [Chapter 2 · Step 2](../Chapter%202/README.md#step-2--enable-ml-commons-cluster-settings) — URL model registration, `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster), and the relaxed native-memory threshold — are still in effect. Starting fresh at this chapter? Run Chapter 2 Step 2 first, then come back.
 
-**Why** — lets the cluster fetch pre-trained model weights from a URL (needed to register the Hugging Face model).
+### Step 1: Reuse the model group from Chapter 2
 
-**Request**
-```http
-PUT _cluster/settings
-{
-  "persistent": { "plugins.ml_commons.allow_registering_model_via_url": true }
-}
-```
-**Expected** — `"acknowledged": true`.
-**Fast mode** — `01-enable-url-model-registration.bru`
-
-### Step 2: Register the model group
-
-**Why** — model groups scope access to a set of models. Reuse `huggingface-models` from earlier chapters if it already exists.
+**Why** — model groups scope access to a set of models. The `huggingface-models` group already exists from Chapter 2 Step 3 — reuse its `model_group_id` rather than creating another group. If you still have the id, skip to Step 2; if not, look it up:
 
 **Request**
 ```http
-POST _plugins/_ml/model_groups/_register
-{
-  "name": "huggingface-models",
-  "description": "A group for Hugging Face transformer models"
-}
+POST _plugins/_ml/model_groups/_search
+{ "query": { "match": { "name": "huggingface-models" } } }
 ```
-**Save** — `model_group_id`.
-**Fast mode** — `02-register-model-group.bru`
+**Save** — the group's `_id` as `model_group_id`.
+**Fast mode** — `02-find-model-group.bru`
 
-> **Re-run note.** If this returns a 400 with `"The name you provided is already being used by a model group with ID: ..."`, the group already exists (from this chapter or an earlier one) — that error message gives you the ID directly. You can also look it up explicitly:
-> ```http
-> POST _plugins/_ml/model_groups/_search
-> { "query": { "match": { "name": "huggingface-models" } } }
-> ```
-> Grab `_id` from the response and use it as `model_group_id` in Step 3. **Never delete this group** — it may contain models registered by other chapters/lessons; only remove models you personally registered into it.
+> **Never delete this group** — it contains models registered by other chapters; only remove models you personally registered into it. (On a fresh cluster with no group yet, create it with the `POST _plugins/_ml/model_groups/_register` body from Chapter 2 Step 3.)
 
-### Step 3: Register `all-mpnet-base-v2`
+### Step 2: Register `all-mpnet-base-v2`
 
 **Why** — embedding-model choice moves recall by 10–20% on domain data. `all-mpnet-base-v2` (768-dim) is a stronger general-English encoder than Chapter 2's DistilBERT — a good RAG default. Replace `YOUR_MODEL_GROUP_ID`.
 
@@ -91,7 +71,7 @@ POST _plugins/_ml/models/_register
 **Save** — `model_id`.
 **Fast mode** — `03-register-mpnet-model.bru` → `04-poll-register-task.bru`
 
-### Step 4: Deploy the model
+### Step 3: Deploy the model
 
 **Why** — deploying loads the model into memory for inference at ingest and query time.
 
@@ -102,7 +82,7 @@ POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 **Expected** — a `task_id`; poll until `COMPLETED`. Write down the returned `model_id` (in Bruno, set `modelId` in the **Local** environment).
 **Fast mode** — `05-deploy-model.bru` → `06-poll-deploy-task.bru`
 
-### Step 5: Create the RAG ingest pipeline
+### Step 4: Create the RAG ingest pipeline
 
 **Why** — the `text_embedding` processor embeds each document's `content` into a 768-dim `content_embedding` at index time, so clients send plain text only. Replace `YOUR_MODEL_ID`.
 
@@ -124,7 +104,7 @@ PUT _ingest/pipeline/bookstore-rag-ingest-pipeline
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `07-create-rag-ingest-pipeline.bru`
 
-### Step 6: Create `bookstore-rag-index` (FAISS HNSW)
+### Step 5: Create `bookstore-rag-index` (FAISS HNSW)
 
 **Why** — for production vector workloads **FAISS + HNSW** gives fast approximate nearest-neighbor search. `m` controls graph connectivity (higher = better recall, more memory); `ef_construction` controls how carefully the graph is built. `m=16, ef_construction=128` is a balanced starting point. `index.knn: true` enables k-NN; `default_pipeline` wires automatic embedding; metadata fields use `keyword`/`float`/`integer`/`boolean` so they filter exactly.
 
@@ -164,7 +144,7 @@ PUT bookstore-rag-index
 **Expected** — `"acknowledged": true`. If it exists, `DELETE bookstore-rag-index` first.
 **Fast mode** — `08-create-bookstore-rag-index.bru`
 
-### Step 7: Bulk-load the bookstore data
+### Step 6: Bulk-load the bookstore data
 
 **Why** — bulk indexing amortizes network overhead; each document runs the default pipeline and is embedded server-side. Expect several minutes on a trial cluster (one inference per document).
 
@@ -179,7 +159,7 @@ POST bookstore-rag-index/_refresh
 **Expected** — `"errors": false`. If any item errors, check the model is deployed and `ML_MODEL_ID` is correct.
 **Fast mode** — `09-bulk-bookstore-rag-index.bru` → `10-refresh-bookstore-rag-index.bru`
 
-### Step 8: k-NN search — the result-set-size lever
+### Step 7: k-NN search — the result-set-size lever
 
 **Why** — vector search returns the top-`k` neighbors. Ask for only what you need (`size: 10`) and fetch only the fields you use with `_source` — over thousands of queries per hour, lean responses add up. Paste the stored query vector.
 
@@ -199,7 +179,7 @@ GET bookstore-rag-index/_search
 **Expected** — 10 nearest-neighbor hits, each `_source` limited to the five listed fields.
 **Fast mode** — `11-knn-search.bru`
 
-### Step 9: Filtered k-NN search — the filtering lever
+### Step 8: Filtered k-NN search — the filtering lever
 
 **Why** — filtering is the biggest performance win: narrow the candidate set by exact metadata **before** the vector pass. FAISS supports filtered k-NN (efficient filtering), so a query for "mystery under $20 with good ratings" only scores books that already match. `must` drives scoring; `filter` clauses are cheap yes/no gates.
 
@@ -231,7 +211,7 @@ GET bookstore-rag-index/_search
 **Expected** — only mystery books priced ≤ $20 with rating ≥ 4.0 (six such books exist in the sample data).
 **Fast mode** — `12-knn-filtered-search.bru`
 
-### Step 10: Create the hybrid search pipeline
+### Step 9: Create the hybrid search pipeline
 
 **Why** — vector and BM25 scores live on different scales, so you cannot average them raw. A `normalization-processor` rescales both to 0–1 (`min_max`) and blends them with weights you control. Here `[0.3, 0.7]` maps in clause order to `[keyword, vector]` — semantic relevance matters more for a bookstore.
 
@@ -256,7 +236,7 @@ PUT _search/pipeline/bookstore-hybrid-pipeline
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `13-create-hybrid-pipeline.bru`
 
-### Step 11: Hybrid search
+### Step 10: Hybrid search
 
 **Why** — combines the exact-match precision of BM25 with the semantic reach of k-NN. The `hybrid` query clause order must match the pipeline's `weights` order.
 
@@ -279,7 +259,7 @@ GET bookstore-rag-index/_search?search_pipeline=bookstore-hybrid-pipeline
 **Expected** — hits with normalized, blended `_score` values; the embedding is excluded from `_source`.
 **Fast mode** — `14-hybrid-search.bru`
 
-### Step 12: Reranking with business signals
+### Step 11: Reranking with business signals
 
 **Why** — reranking reorders the candidate set using signals that were not part of similarity: recency, rating, availability. A `function_score` query boosts recent, highly-rated, in-stock books so business-relevant results float to the top.
 
@@ -308,9 +288,9 @@ GET bookstore-rag-index/_search
 **Expected** — the same candidate books, reordered so recent, highly-rated, in-stock titles rank higher.
 **Fast mode** — `15-rerank-function-score.bru`
 
-### Step 13: Caching — warm the k-NN cache and tune the circuit breaker
+### Step 12: Caching — warm the k-NN cache
 
-**Why** — the k-NN **native memory cache** holds HNSW graphs off-heap; if graphs are not resident, every search pays a disk-load penalty. Run the **warmup** API after a restart or a large load to preload graphs proactively. The **circuit breaker** caps k-NN off-heap usage (default 50% of available memory).
+**Why** — the k-NN **native memory cache** holds HNSW graphs off-heap; if graphs are not resident, every search pays a disk-load penalty. Run the **warmup** API after a restart or a large load to preload graphs proactively.
 
 **Request**
 ```http
@@ -319,14 +299,11 @@ GET _plugins/_knn/warmup/bookstore-rag-index
 ```http
 GET _plugins/_knn/stats
 ```
-```http
-PUT _cluster/settings
-{
-  "persistent": { "knn.memory.circuit_breaker.limit": "60%" }
-}
-```
 **Expected** — warmup returns `_shards` with `successful` > 0; in stats watch `graph_memory_usage_percentage`, `cache_hit_rate` (rises toward 1.0 after warming), and `graph_query_requests`.
-**Fast mode** — `16-knn-warmup.bru` → `17-knn-stats.bru` → `18-knn-circuit-breaker.bru`
+
+> **Circuit breaker — already configured.** You set `knn.memory.circuit_breaker.limit` to 50% in Chapter 2 Step 20; it's the same knob and still applies here. Raise it only if the stats above show `graph_memory_usage_percentage` pressing the limit — and remember it's a persistent, cluster-wide setting on a shared lab cluster.
+
+**Fast mode** — `16-knn-warmup.bru` → `17-knn-stats.bru`
 
 ---
 
@@ -334,13 +311,9 @@ PUT _cluster/settings
 
 **Goal:** rebuild the index the right way. Fix an unoptimized baseline, add native chunking, size shards intentionally, use the fast-bulk recipe, and warm/preload vector files. These are the choices that are hard to change later.
 
-### Step 14: Inspect the unoptimized baseline
+**The unoptimized baseline (read-along).** A common starting point: a flat index with `text` on fields you actually filter on (ISBN, genre), no vector field, and the default 1-second refresh. It works for keyword search but is not RAG-ready. There's no need to create a bad index just to read its mapping back — study it here and spot the problems:
 
-**Why** — a common starting point: a flat index with `text` on fields you actually filter on (ISBN, genre), no vector field, and the default 1-second refresh. It works for keyword search but is not RAG-ready.
-
-**Request**
-```http
-PUT books-unoptimized
+```json
 {
   "settings": { "index": { "number_of_shards": 2, "number_of_replicas": 1 } },
   "mappings": {
@@ -352,13 +325,10 @@ PUT books-unoptimized
   }
 }
 ```
-```http
-GET books-unoptimized/_mapping
-```
-**Expected** — the mapping shows the three problems: no `knn_vector`, `text` (not `keyword`) on `genre`/`isbn`, default refresh.
-**Fast mode** — `19-create-books-unoptimized.bru` → `20-get-books-unoptimized-mapping.bru`
 
-### Step 15: Create the chunking ingest pipeline
+The three problems: no `knn_vector` field, `text` (not `keyword`) on `genre`/`isbn` — so filters run full-text analysis instead of exact matches — and the default 1-second refresh. Steps 13–15 fix all three.
+
+### Step 13: Create the chunking ingest pipeline
 
 **Why** — a 2,000-word description is too long for one embedding; models truncate past ~512 tokens. The native `text_chunking` processor splits `content` into overlapping segments at ingest. `fixed_token_length` with `token_limit: 384` (~75% of a 512-token budget, leaving headroom) and `overlap_rate: 0.2` (20% overlap so boundary context is not lost — valid range is 0–0.5). A Painless step reshapes the raw chunk array into `{text, chunk_index}` objects for the nested field, then `text_embedding` embeds the whole `content` into `content_embedding`. Replace `YOUR_MODEL_ID`.
 
@@ -391,7 +361,7 @@ PUT _ingest/pipeline/bookstore-chunking-pipeline
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `21-create-chunking-pipeline.bru`
 
-### Step 16: Create the optimized `bookstore-rag` index
+### Step 14: Create the optimized `bookstore-rag` index
 
 **Why** — `content_chunks` is `nested` (required to keep each chunk's fields together), `content_embedding` uses FAISS HNSW, `genre` is `keyword` (exact filter, not full-text), and `refresh_interval` starts at `30s` — the catalog updates nightly, not per second.
 
@@ -423,7 +393,7 @@ PUT bookstore-rag
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `22-delete-bookstore-rag.bru` (optional) → `23-create-bookstore-rag.bru`
 
-### Step 17: Fast bulk load (refresh off → bulk → force-merge → refresh on)
+### Step 15: Fast bulk load (refresh off → bulk → force-merge → refresh on)
 
 **Why** — the default 1-second refresh creates a new Lucene segment on every cycle, adding merge overhead during a batch load. Disable refresh for the load, then force-merge to collapse many small segments into a few large ones (fewer files to scan = faster search), then restore the refresh and make docs visible.
 
@@ -446,7 +416,7 @@ POST bookstore-rag/_refresh
 **Expected** — bulk `"errors": false`; force-merge returns `_shards` success; refresh makes all docs searchable.
 **Fast mode** — `24-disable-refresh.bru` → `25-bulk-bookstore-rag.bru` → `26-force-merge.bru` → `27-restore-refresh.bru` → `28-refresh-bookstore-rag.bru`
 
-### Step 18: Inspect shard sizes
+### Step 16: Inspect shard sizes
 
 **Why** — shard count is a near-permanent, one-time decision. Too many tiny shards waste JVM heap; too few large shards hurt parallelism and slow recovery. Target **10–30 GB/shard** for search-heavy RAG, **30–50 GB** for write-heavy, and for pure vector start at **50 GB**, reducing toward **10 GB** if queries are hybrid and latency-sensitive. Formula: `number_of_shards = total_data_size_GB / target_shard_size_GB`. At ~5 GB for 500k books, one primary shard is plenty.
 
@@ -457,7 +427,7 @@ GET _cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=jso
 **Expected** — one row per shard with `docs` and `store` (size). Compare `store` against the targets above.
 **Fast mode** — `29-cat-shards.bru`
 
-### Step 19: Warm and preload the vector files
+### Step 17: Warm and preload the vector files
 
 **Why** — after a restart HNSW graphs sit on disk and the first queries pay a load penalty. **Warmup** loads graphs into native memory. `index.store.preload` mmaps the k-NN `vec` (vectors) and `vem` (vector metadata) files into the OS file cache on index open — which requires a close → set → open cycle. Make warmup part of your deploy checklist after index creation and any large load.
 
@@ -492,7 +462,7 @@ GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
 
 **Goal:** the fastest wins, because they need no re-indexing. Profile a query to find the bottleneck, measure retrieval quality with `_rank_eval`, and centralize query logic in search pipelines so application code never changes. Runs against `bookstore-rag`.
 
-### Step 20: Profile a hybrid query
+### Step 18: Profile a hybrid query
 
 **Why** — add `"profile": true` to any search for a per-component timing breakdown. For a hybrid query you get separate `time_in_nanos` for the BM25 `match` and the k-NN pass, so you know exactly which half is slow. Profiling adds overhead — use it in staging, not production.
 
@@ -518,7 +488,7 @@ GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
 
 > **Version gate (verified against a real OpenSearch 3.5.0 cluster).** `profile: true` combined with a `hybrid` query currently throws a 500 `null_pointer_exception` in the neural-search plugin (`HybridTopScoreDocCollector$HybridTopScoreLeafCollector.getCompoundQueryScorer()` returns null) — the hybrid collector does not support being wrapped by the profiler on this version. `profile: true` works fine on a plain `knn` or `match` query; it is specifically the `hybrid` + `profile` combination that fails. Workaround: profile the `match` and `knn` sub-queries independently (without `hybrid`) to get the same timing breakdown, or skip profiling for hybrid queries until this plugin issue is fixed upstream.
 
-### Step 21: Explain the scores
+### Step 19: Explain the scores
 
 **Why** — `explain=true` returns a per-hit `_explanation` tree of sub-scorers (BM25 term weights, vector similarity, normalization contributions). Expensive — debugging only.
 
@@ -541,7 +511,7 @@ GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline&explain=true
 **Expected** — each hit carries an `_explanation` tree.
 **Fast mode** — `37-explain-hybrid-search.bru`
 
-### Step 22: Measure quality with `_rank_eval`
+### Step 20: Measure quality with `_rank_eval`
 
 **Why** — a unit test for search quality. Provide test queries and the IDs you consider relevant (with ratings); OpenSearch returns a metric like `mean_reciprocal_rank` or precision@k. Use it to compare keyword vs hybrid, chunk sizes, or models with numbers instead of vibes. The IDs below are real books in the sample data (Moby Dick `2701`, Sherlock `1661`, Dracula `345`, Frankenstein `84`).
 
@@ -575,7 +545,7 @@ GET bookstore-rag/_rank_eval
 **Expected** — a top-level `metric_score` plus per-query `details`. Edit ratings or swap `match` for a `hybrid` query and re-run to watch the score move.
 **Fast mode** — `38-rank-eval.bru`
 
-### Step 23: A request-processor search pipeline
+### Step 21: A request-processor search pipeline
 
 **Why** — search pipelines run three processor types: **request** (transform the query before it runs), **phase-results** (between query and fetch — where normalization lives), and **response** (modify results). A `filter_query` request processor injects an `in_stock: true` filter into *every* search, so you can change search behavior without redeploying the app.
 
@@ -592,7 +562,7 @@ PUT _search/pipeline/bookstore-stock-filter
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `39-create-stock-filter-pipeline.bru`
 
-### Step 24: Set it as the index default
+### Step 22: Set it as the index default
 
 **Why** — `index.search.default_pipeline` applies a search pipeline to every query automatically (distinct from `index.default_pipeline`, which is ingest). Bypass it for one request with `?search_pipeline=_none`.
 
@@ -604,7 +574,7 @@ PUT bookstore-rag/_settings
 **Expected** — `"acknowledged": true`. Every subsequent search now hides out-of-stock books.
 **Fast mode** — `40-set-default-search-pipeline.bru`
 
-### Step 25: Combine filtering and normalization
+### Step 23: Combine filtering and normalization
 
 **Why** — one pipeline can do both: filter out-of-stock items at the request phase **and** normalize hybrid scores at the phase-results phase — business rules and relevance in one place.
 
@@ -645,7 +615,7 @@ GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
 **Expected** — only in-stock hits, with normalized blended scores.
 **Fast mode** — `41-create-full-pipeline.bru` → `42-hybrid-with-full-pipeline.bru`
 
-> **Version gate (verified against a real OpenSearch 3.5.0 cluster).** The filtering works (only in-stock hits return), but the blended scores are **not** normalized when a `filter_query` request processor and a `normalization-processor` phase-results processor are combined in the same pipeline — hits come back with raw, un-normalized `_score` values identical to a plain `knn` query's scores (e.g. `0.0074...` instead of the `0.0–1.0` range you get from `bookstore-hybrid-pipeline` alone in Step 11, `14-hybrid-search.bru`). Splitting the two processors into separate pipelines and running the `bookstore-stock-filter` request-processor pipeline and `bookstore-hybrid-pipeline` phase-results pipeline back-to-back does not help either, since only one search pipeline applies per request. Treat this combination as filtering-only until the neural-search plugin fixes the interaction; for now, do business-rule filtering with a `bool`/`must_not` clause inside the hybrid query itself if you need normalized scores **and** filtering together.
+> **Version gate (verified against a real OpenSearch 3.5.0 cluster).** The filtering works (only in-stock hits return), but the blended scores are **not** normalized when a `filter_query` request processor and a `normalization-processor` phase-results processor are combined in the same pipeline — hits come back with raw, un-normalized `_score` values identical to a plain `knn` query's scores (e.g. `0.0074...` instead of the `0.0–1.0` range you get from `bookstore-hybrid-pipeline` alone in Step 10, `14-hybrid-search.bru`). Splitting the two processors into separate pipelines and running the `bookstore-stock-filter` request-processor pipeline and `bookstore-hybrid-pipeline` phase-results pipeline back-to-back does not help either, since only one search pipeline applies per request. Treat this combination as filtering-only until the neural-search plugin fixes the interaction; for now, do business-rule filtering with a `bool`/`must_not` clause inside the hybrid query itself if you need normalized scores **and** filtering together.
 
 ---
 
@@ -653,9 +623,9 @@ GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
 
 **Goal:** expose the cluster to AI agents through the **Model Context Protocol (MCP)**. OpenSearch ships a built-in MCP server in ML Commons: flip one cluster setting and any MCP-compatible client can discover and call tools (list indexes, read mappings, run searches) without custom integration code.
 
-> **Version + environment.** The built-in MCP server APIs are recent: tool register/list were **introduced in 3.1**, the **Streamable HTTP** transport at `/_plugins/_ml/mcp` in **3.3**. Steps 26–27 (enable + register tools) are safe on any 3.3+ cluster. Steps 28–30 (external LLM connector + conversational agent) require an **external LLM API key** and outbound network access, which the managed course cluster may not permit — treat them as an **optional, read-along** section and substitute your own provider/credentials.
+> **Version + environment.** The built-in MCP server APIs are recent: tool register/list were **introduced in 3.1**, the **Streamable HTTP** transport at `/_plugins/_ml/mcp` in **3.3**. Steps 24–25 (enable + register tools) are safe on any 3.3+ cluster. Steps 26–28 (external LLM connector + conversational agent) require an **external LLM API key** and outbound network access, which the managed course cluster may not permit — treat them as an **optional, read-along** section and substitute your own provider/credentials.
 
-### Step 26: Enable the MCP server
+### Step 24: Enable the MCP server
 
 **Why** — turns the cluster into an MCP server exposed at `/_plugins/_ml/mcp` (Streamable HTTP) and `/_plugins/_ml/mcp/sse` (SSE). One setting, no restart.
 
@@ -669,7 +639,7 @@ PUT _cluster/settings
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `43-enable-mcp-server.bru`
 
-### Step 27: Register MCP tools
+### Step 25: Register MCP tools
 
 **Why** — registering tools lets clients discover and call them. The core tools map to the operations you have used all chapter: list indexes, read a mapping, run a search.
 
@@ -691,7 +661,7 @@ GET _plugins/_ml/mcp/tools/_list
 **Expected** — the registered tools appear in `_list`.
 **Fast mode** — `44-register-mcp-tools.bru` → `45-list-mcp-tools.bru`
 
-### Step 28 (optional): Connect an external LLM
+### Step 26 (optional): Connect an external LLM
 
 **Why** — the MCP server exposes tools, but an LLM decides which to call. ML Commons registers a remote model via a connector. Replace the credential with your own; this creates the connector and model in one call.
 
@@ -725,7 +695,7 @@ POST _plugins/_ml/models/_register
 **Save** — `model_id`.
 **Fast mode** — `46-register-llm-connector-model.bru`
 
-### Step 29 (optional): Register a conversational agent
+### Step 27 (optional): Register a conversational agent
 
 **Why** — an agent coordinates the LLM and tools using the ReAct pattern (Reason → Act → Observe). `memory.type: conversation_index` stores chat history for follow-ups; the tools array is what the LLM may call. Replace `YOUR_MODEL_ID`.
 
@@ -755,7 +725,7 @@ POST _plugins/_ml/agents/_register
 **Save** — `agent_id`.
 **Fast mode** — `47-register-conversational-agent.bru`
 
-### Step 30 (optional): Run the agent
+### Step 28 (optional): Run the agent
 
 **Why** — the agent discovers the index (`ListIndexTool`), reads its fields (`IndexMappingTool`), builds and runs a filtered query (`SearchIndexTool` / `QueryPlanningTool`), and answers. The response includes a `memory_id` for follow-up turns.
 
@@ -791,11 +761,10 @@ DELETE _search/pipeline/bookstore-stock-filter
 DELETE _search/pipeline/bookstore-full-pipeline
 DELETE bookstore-rag-index
 DELETE bookstore-rag
-DELETE books-unoptimized
 DELETE _ingest/pipeline/bookstore-rag-ingest-pipeline
 DELETE _ingest/pipeline/bookstore-chunking-pipeline
 ```
-Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. Index deletes have matching Bruno requests: `49-cleanup-delete-bookstore-rag-index.bru` → `50-cleanup-delete-bookstore-rag.bru` → `51-cleanup-delete-books-unoptimized.bru`.
+Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. Index deletes have matching Bruno requests: `49-cleanup-delete-bookstore-rag-index.bru` → `50-cleanup-delete-bookstore-rag.bru`. (If an earlier run of this workshop created `books-unoptimized`, delete it too — a `404` means it's already gone.)
 
 ## What you learned
 

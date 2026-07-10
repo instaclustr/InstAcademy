@@ -64,7 +64,7 @@ down into three resources: **CPU, RAM, and storage**. Two structural knobs
 dominate:
 
 - **Shards** — more shards means smaller shards and more parallelism, but each
-  shard adds coordination overhead. You'll size these in [Lesson 1-4](#step-25-shard-sizing-and-ism-rollover).
+  shard adds coordination overhead. You'll size these in [Lesson 1-4](#step-23-shard-sizing-and-ism-rollover).
 - **Segments** — Lucene stores each shard as a set of immutable segments. More
   segments means higher search latency, so merging segments is a core tuning
   lever (Step 5 below).
@@ -506,51 +506,11 @@ PUT vector-disk-demo
 
 **Fast mode** — `08-create-disk-index.bru`
 
-### Step 7: Memory-optimized storage
-
-Memory-optimized search is the other low-footprint option the video describes:
-instead of loading the whole index into RAM, OpenSearch memory-maps the index
-files and lets the operating system page vector data in and out on demand. This
-is what you reach for when the index doesn't fit in memory or you want to shrink
-the footprint and can accept slightly higher latency. In OpenSearch 3.1+ it is
-activated by combining **`mode: on_disk`** with **`compression_level: 1x`** (i.e.
-on-disk layout with no quantization).
-
-**Request**
-
-```http
-PUT vector-memopt-demo
-{
-  "settings": { "index": { "knn": true } },
-  "mappings": {
-    "properties": {
-      "my_vector": {
-        "type": "knn_vector",
-        "dimension": 8,
-        "space_type": "l2",
-        "mode": "on_disk",
-        "compression_level": "1x"
-      }
-    }
-  }
-}
-```
-
-**Expected** — `"acknowledged": true`.
-
-> **Trade-offs recap.** Across every setting here you are balancing **speed, cost,
-> and accuracy**. In-memory HNSW is fastest but costs the most RAM; `on_disk` with
-> compression trades a little recall for large memory savings; memory-optimized
-> mapping trades latency for the ability to run on smaller nodes. Match the knob
-> to your business priority (uptime, cost, scale), not to raw benchmark numbers.
-
-**Fast mode** — `09-create-memopt-index.bru`
-
 ---
 
 ## Lesson 1-2 — Choosing the right type of vector search
 
-**Concept — kNN vs aNN.** Two families of vector search:
+**Concept — kNN vs aNN.** 
 
 - **Exact k-nearest-neighbor (kNN)** compares the query against *every* indexed
   vector. It has perfect recall but its cost grows linearly with the dataset, so
@@ -571,15 +531,14 @@ PUT vector-memopt-demo
 
 You'll run all three against the same 10 product vectors and compare.
 
-### Step 8: Create the products index (HNSW)
+### Step 7: Create the products index (HNSW)
 
-  
 This `faiss`/`hnsw` index is both the HNSW demo and the source of training data
 for IVF later. The `category` keyword field lets us demonstrate filtered exact
 search. We set `m` and `ef_construction` explicitly so you can see the knobs from
-Lesson 1-1 in a realistic index.
+Lesson 1-1 in a realistic index. Noticed the method name here and the engine being used...
 
-**Request**
+**Request**:
 
 ```http
 PUT products-hnsw
@@ -604,33 +563,58 @@ PUT products-hnsw
 }
 ```
 
-**Expected** — `"acknowledged": true`.
+**Expected**: 
+```
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "products-hnsw"
+}
+```
 
 **Fast mode** — `10-create-products-hnsw.bru`
 
-### Step 9: Bulk-index the product vectors
+### Step 8: Bulk-index the product vectors
 
-  
 Ten small products (three rough clusters: electronics, books, outdoor) give the
 search methods something to distinguish.
 
-**Request** — run the line, then paste
-[`rest/bulk/chapter-1-lesson-2-vectors.ndjson`](../../rest/bulk/chapter-1-lesson-2-vectors.ndjson),
-ending with a blank line:
+**Request** — run the following command to index 10 products
 
 ```http
 POST _bulk
+{"index": {"_index": "products-hnsw", "_id": "p1"}}
+{"title": "Wireless Headphones", "category": "electronics", "product_vector": [0.92, 0.88, 0.1, 0.12, 0.05, 0.08, 0.11, 0.09]}
+{"index": {"_index": "products-hnsw", "_id": "p2"}}
+{"title": "Bluetooth Speaker", "category": "electronics", "product_vector": [0.88, 0.91, 0.14, 0.09, 0.07, 0.1, 0.08, 0.12]}
+{"index": {"_index": "products-hnsw", "_id": "p3"}}
+{"title": "Smart Watch", "category": "electronics", "product_vector": [0.85, 0.83, 0.2, 0.15, 0.1, 0.12, 0.14, 0.1]}
+{"index": {"_index": "products-hnsw", "_id": "p4"}}
+{"title": "Hardcover Novel", "category": "books", "product_vector": [0.1, 0.12, 0.9, 0.88, 0.11, 0.09, 0.13, 0.08]}
+{"index": {"_index": "products-hnsw", "_id": "p5"}}
+{"title": "Cookbook Deluxe", "category": "books", "product_vector": [0.14, 0.09, 0.86, 0.91, 0.08, 0.12, 0.1, 0.11]}
+{"index": {"_index": "products-hnsw", "_id": "p6"}}
+{"title": "Poetry Collection", "category": "books", "product_vector": [0.09, 0.15, 0.83, 0.85, 0.13, 0.1, 0.09, 0.14]}
+{"index": {"_index": "products-hnsw", "_id": "p7"}}
+{"title": "Camping Tent", "category": "outdoor", "product_vector": [0.12, 0.1, 0.11, 0.09, 0.9, 0.88, 0.13, 0.1]}
+{"index": {"_index": "products-hnsw", "_id": "p8"}}
+{"title": "Hiking Backpack", "category": "outdoor", "product_vector": [0.1, 0.13, 0.09, 0.12, 0.87, 0.9, 0.11, 0.09]}
+{"index": {"_index": "products-hnsw", "_id": "p9"}}
+{"title": "Trekking Poles", "category": "outdoor", "product_vector": [0.13, 0.09, 0.14, 0.1, 0.84, 0.86, 0.15, 0.12]}
+{"index": {"_index": "products-hnsw", "_id": "p10"}}
+{"title": "Portable Charger", "category": "electronics", "product_vector": [0.8, 0.86, 0.18, 0.14, 0.2, 0.16, 0.1, 0.11]}
+
 ```
 
-**Expected** — `"errors": false`, ten created items.
-
-**Fast mode** — `11-bulk-products.bru`
-
-### Step 10: Refresh
-
-  
-OpenSearch is near-real-time; a refresh makes the new documents immediately
-searchable (and visible to `_reindex` later).
+**Expected**: ten items created and "errors: false"
+```
+{
+  "took": 36,
+  "errors": false,
+  "items": [...
+```
+ Your response should look similar to the image below.
+![response](../../screenshots/OpenSearch%202026-07-10%20at%202.54.21 PM.png)
 
 **Request**
 
@@ -638,22 +622,32 @@ searchable (and visible to `_reindex` later).
 POST products-hnsw/_refresh
 ```
 
-**Expected** — `"_shards"` with `"failed": 0` (on the 3-node course cluster,
-`"total": 2, "successful": 2` — one primary plus one replica). The ten products
-from Step 9 are now searchable; a quick `GET products-hnsw/_count` should return
-`"count": 10`.
+**Expected**: 2 successful shards refresh
 
-**Fast mode** — `12-refresh-products-hnsw.bru`
+```
+{
+  "_shards": {
+    "total": 2,
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
 
-### Step 11: Exact k-NN with a scoring script
+**Fast mode** — `11-bulk-products.bru`, `12-refresh-products-hnsw.bru`
 
-  
+### Step 9: Exact k-NN with a scoring script
+
 Exact kNN is done with a **scoring script**, not the `knn` query. The special
 `knn_score` script (note `"lang": "knn"`) computes the true distance from the
-query vector to every matched document — a brute-force scan with perfect recall.
-Use it for small datasets where accuracy is non-negotiable. `space_type` is chosen
-at query time here, and `query_value` must match the field's `dimension`.
+query vector to every matched document — It's essentially a brute-force scan 
+with perfect recall. Use it for small datasets where accuracy is non-negotiable. 
+`space_type` is chosen at query time here, and `query_value` must match the 
+field's `dimension`.
 
+In this example, we are giving you a pre-computed query_value, but in chapter 2
+your environment will be configured to compute it's own. Here we'll assume our 
+query_value comes from '**portable wireless gadgets**'.
 **Request**
 
 ```http
@@ -677,15 +671,14 @@ GET products-hnsw/_search
 }
 ```
 
-**Expected** — the three electronics products (`Wireless Headphones`,
-`Bluetooth Speaker`, `Smart Watch`) rank highest, because the query vector sits in
-the electronics cluster.
+**Expected**: based on the input query_value the three electronics products 
+(`Wireless Headphones`, `Bluetooth Speaker`, and `Smart Watch`) rank highest, 
+because the query vector sits in the electronics cluster.
 
 **Fast mode** — `13-exact-knn-score-script.bru`
 
-### Step 12: Exact k-NN with a pre-filter
+### Step 10: Exact k-NN with a pre-filter
 
-  
 The scoring-script approach shines when you need **heavy pre-filtering**: you
 restrict the candidate set *first* with a normal query, then compute exact
 distances only over what survives. Here we score exact distance only across the
@@ -722,9 +715,8 @@ outdoor are excluded by the filter.
 
 **Fast mode** — `14-exact-knn-prefilter.bru`
 
-### Step 13: Approximate search with HNSW
+### Step 11: Approximate search with HNSW
 
-  
 The `knn` query runs the approximate HNSW search you configured on the index — it
 walks the graph instead of scanning every vector. `k` is how many neighbors to
 return; `method_parameters.ef_search` widens the search list at query time
@@ -749,11 +741,11 @@ GET products-hnsw/_search
 }
 ```
 
-**Expected** — the same electronics products as Step 11, this time via the graph.
+**Expected** — the same electronics products as Step 9, this time via the graph.
 
 **Fast mode** — `15-hnsw-knn-query.bru`
 
-### Step 14: Train an IVF model
+### Step 12: Train an IVF model
 
   
 IVF must learn its centroids before it can index anything, so you **train a
@@ -810,7 +802,7 @@ in the **Local** environment instead — requests 17, 18, and 40 reference it.
 > cluster and still see this, it is a genuine anomaly worth investigating rather
 > than an expected quirk.
 
-### Step 15: Poll the model until it's ready
+### Step 13: Poll the model until it's ready
 
   
 Training runs in the background. Poll the model until its `state` is `created`
@@ -833,7 +825,7 @@ training vectors for `nlist`).
 
 **Fast mode** — `17-poll-ivf-model.bru`
 
-### Step 16: Create the IVF index from the model
+### Step 14: Create the IVF index from the model
 
   
 An IVF-backed field references the trained model with **`model_id`** instead of a
@@ -862,7 +854,7 @@ PUT products-ivf
 
 **Fast mode** — `18-create-products-ivf.bru`
 
-### Step 17: Copy the data into the IVF index
+### Step 15: Copy the data into the IVF index
 
   
 `_reindex` copies every document from `products-hnsw` into `products-ivf`
@@ -886,7 +878,7 @@ POST products-ivf/_refresh
 
 **Fast mode** — `19-reindex-to-ivf.bru`, `20-refresh-products-ivf.bru`
 
-### Step 18: Search the IVF index
+### Step 16: Search the IVF index
 
   
 The same `knn` query now runs against IVF. `method_parameters.nprobes` controls
@@ -955,7 +947,7 @@ about your own cluster's compute.
   or iterating rapidly on index configuration. Otherwise CPU is the reliable,
   cost-effective default. It's "right tool for the job," not "GPU good, CPU bad."
 
-### Step 19: Confirm the k-NN plugin is installed
+### Step 17: Confirm the k-NN plugin is installed
 
   
 Vector search depends on the k-NN plugin. This lists installed plugins per node so
@@ -972,7 +964,7 @@ GET _cat/plugins?v
 
 **Fast mode** — `22-cat-plugins.bru`
 
-### Step 20: Inspect node CPU
+### Step 18: Inspect node CPU
 
   
 GPU-vs-CPU decisions start with knowing your CPU capacity. This returns the
@@ -989,7 +981,7 @@ GET _nodes/os?filter_path=nodes.*.os.available_processors,nodes.*.os.name
 
 **Fast mode** — `23-nodes-os.bru`
 
-### Step 21: Inspect k-NN engine statistics
+### Step 19: Inspect k-NN engine statistics
 
   
 The k-NN stats endpoint reports graph-build and query activity (cache hits, graph
@@ -1025,7 +1017,7 @@ parent. Benefits: every chunk fits the model (better embeddings) and smaller
 chunks give sharper semantic matches. Costs: more chunks means more embeddings
 means more storage, and you often reassemble the parent context at retrieval time.
 
-### Step 22: Create a chunked index
+### Step 20: Create a chunked index
 
   
 The chunk data model is one document per chunk, each carrying its own
@@ -1057,7 +1049,7 @@ PUT kb-chunks
 
 **Fast mode** — `25-create-kb-chunks.bru`
 
-### Step 23: Bulk-index the chunks
+### Step 21: Bulk-index the chunks
 
   
 Two knowledge-base articles are split into five chunks total. In a real pipeline a
@@ -1082,7 +1074,7 @@ POST kb-chunks/_refresh
 
 **Fast mode** — `26-bulk-chunks.bru`, `27-refresh-kb-chunks.bru`
 
-### Step 24: Retrieve chunks, then regroup by parent
+### Step 22: Retrieve chunks, then regroup by parent
 
   
 A vector query returns individual chunks; the parent article is reassembled
@@ -1133,7 +1125,7 @@ buckets group hits under `kb1` / `kb2`.
 
 **Fast mode** — `28-search-chunks.bru`, `29-aggregate-by-parent.bru`
 
-### Step 25: Shard sizing and ISM rollover
+### Step 23: Shard sizing and ISM rollover
 
   
 Shard sizing is a balance: **smaller shards** parallelize better but add
@@ -1187,7 +1179,7 @@ accuracy cost. There are two ways to reduce dimensions:
   data into it. Safer, easy to roll back, and the recommended approach — which is
   exactly what the next steps do (256 → 128 dimensions).
 
-### Step 26: Create the source vector index (256-dim)
+### Step 24: Create the source vector index (256-dim)
 
   
 A 256-dimensional `faiss`/`hnsw` index stands in for a production embedding index.
@@ -1216,7 +1208,7 @@ PUT my-vector-index
 
 **Fast mode** — `31-create-source-256.bru`
 
-### Step 27: Bulk-index the 256-dim vectors
+### Step 25: Bulk-index the 256-dim vectors
 
   
 Vectors are large, so use the pre-generated bulk file rather than typing 256
@@ -1240,7 +1232,7 @@ POST my-vector-index/_refresh
 
 **Fast mode** — `32-bulk-source-256.bru`, `33-refresh-source-256.bru`
 
-### Step 28: Create the destination index (128-dim)
+### Step 26: Create the destination index (128-dim)
 
   
 Halving the dimension roughly halves the per-vector memory and the HNSW graph
@@ -1270,7 +1262,7 @@ PUT my-optimized-vector-index
 
 **Fast mode** — `34-create-dest-128.bru`
 
-### Step 29: Reindex with Painless truncation
+### Step 27: Reindex with Painless truncation
 
   
 `_reindex` copies each document server-side and a **Painless** script transforms it

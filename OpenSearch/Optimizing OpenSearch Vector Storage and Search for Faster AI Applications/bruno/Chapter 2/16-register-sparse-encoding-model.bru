@@ -5,7 +5,7 @@ meta {
 }
 
 docs {
-Optional (Lesson 2-3). Poll with 05, save model_id to sparseModelId.
+Optional (Lesson 2-3). Poll with 05, save model_id to sparseModelId. Chapter 3 reuses this exact model - keep it deployed and skip Chapter 3 requests 03-06.
 }
 
 post {
@@ -21,8 +21,8 @@ auth:basic {
 
 body:json {
 {
-  "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v2-distill",
-  "version": "1.0.0",
+  "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v1",
+  "version": "1.0.1",
   "model_group_id": "{{modelGroupId}}",
   "model_format": "TORCH_SCRIPT"
 }

@@ -33,7 +33,7 @@ Written for **OpenSearch 3.5+**. Where the video script simplifies or predates c
 |----------|------|---------|
 | `model_group_id` | Lesson 2-1 Step 3 | Register model |
 | `model_id` (dense) | Lesson 2-1 Step 4/5 | Pipeline, queries; save as `ML_MODEL_ID` |
-| `sparse_model_id` | Lesson 2-3 (optional) | Sparse `_predict` |
+| `sparse_model_id` | Lesson 2-3 (optional) | Sparse `_predict`; **reused by Chapter 3** |
 | `task_id` | any register/deploy/undeploy | Poll with `GET _plugins/_ml/tasks/{task_id}` |
 
 **ML task polling.** Register, deploy, and undeploy return a `task_id` immediately and finish **asynchronously**. Poll `GET _plugins/_ml/tasks/YOUR_TASK_ID` every 2–3 seconds until `state` is `COMPLETED` (or `FAILED`). This pattern repeats throughout the chapter.
@@ -496,13 +496,15 @@ POST _plugins/_ml/_predict/text_embedding/YOUR_MODEL_ID
 **Why**
 Sparse encoding uses a different pretrained model and the `sparse_encoding` algorithm. This is optional because it loads a second model into memory — skip if your trial cluster is tight, and just read Step 16's expected output.
 
+This is the **same model Chapter 3 uses** as its main encoder. If you run this step, save `sparse_model_id` — Chapter 3 reuses the deployed model directly and you skip its Steps 2–3.
+
 **Request** — register:
 
 ```http
 POST _plugins/_ml/models/_register
 {
-  "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v2-distill",
-  "version": "1.0.0",
+  "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v1",
+  "version": "1.0.1",
   "model_group_id": "YOUR_MODEL_GROUP_ID",
   "model_format": "TORCH_SCRIPT"
 }
@@ -662,25 +664,7 @@ POST vector-search-index/_forcemerge?max_num_segments=1
 
 **Fast mode** `bruno/Chapter 2/23-set-refresh-interval.bru`, then `24-force-merge.bru`.
 
-> **Index modes & dimensionality (teaching + optional hands-on).** OpenSearch supports **`in_memory`** (default — ANN graphs resident in native memory, fastest) and **`on_disk`** (Introduced 2.17 — graphs offloaded with 32× compression + rescoring, far less RAM for large datasets). Mode is fixed at index creation, so to try it, create a *separate* index:
->
-> ```http
-> PUT vector-search-index-disk
-> {
->   "settings": { "index.knn": true },
->   "mappings": {
->     "properties": {
->       "passage_embedding": {
->         "type": "knn_vector",
->         "dimension": 768,
->         "space_type": "l2",
->         "data_type": "float",
->         "mode": "on_disk"
->       }
->     }
->   }
-> }
-> ```
+> **Index modes & dimensionality (teaching).** OpenSearch supports **`in_memory`** (default — ANN graphs resident in native memory, fastest) and **`on_disk`** (introduced 2.17 — graphs offloaded with 32× compression + rescoring, far less RAM for large datasets). Mode is fixed at index creation. You already built and inspected an `on_disk` index in **Chapter 1 Step 6** (`vector-disk-demo`) — the mechanics are identical at production scale; only the `dimension` changes, so there is no need to create another demo index here.
 >
 > Higher vector **dimensionality** improves nuance but raises index size and query latency — choosing the embedding dimension (768 here) is one of the most consequential pipeline decisions. ([docs](https://docs.opensearch.org/latest/vector-search/optimizing-storage/disk-based-vector-search/))
 
@@ -763,7 +747,7 @@ Optional: set `cluster.routing.allocation.allow_rebalance` to `indices_all_activ
 
 ## Cleanup
 
-Run this **last**, once you are done with the chapter. Order matters: delete the index and pipelines, then **undeploy before delete** on any model (the cluster refuses to delete a deployed model). **Skip the model deletes** if you plan to reuse `ML_MODEL_ID` in Chapter 3.
+Run this **last**, once you are done with the chapter. Order matters: delete the index and pipelines, then **undeploy before delete** on any model (the cluster refuses to delete a deployed model). **Skip the model deletes** if you are continuing to Chapter 3 — it reuses the dense model (`ML_MODEL_ID`) for its comparison step and, if you registered it, the sparse model (`sparse_model_id`) as its main encoder.
 
 ### C1 — Delete the search pipeline
 

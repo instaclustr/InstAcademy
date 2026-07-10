@@ -1,0 +1,26 @@
+meta {
+  name: Find model group
+  type: http
+  seq: 2
+}
+
+docs {
+Reuse the huggingface-models group created in Chapter 2. Save the hit's _id into modelGroupId. On a fresh cluster with no group, create it with Chapter 2 request 03.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/model_groups/_search
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "query": { "match": { "name": "huggingface-models" } }
+}
+}

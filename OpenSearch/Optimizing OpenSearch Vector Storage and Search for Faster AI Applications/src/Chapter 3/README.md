@@ -19,7 +19,7 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 ## Prerequisites
 
 - [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
-- [Chapter 2](../Chapter%202/README.md) — you deployed a **dense** model (`msmarco-distilbert-base-tas-b`) and built **`vector-search-index`**. **Keep both in place** — the dense comparison in Lesson 3-1 (Step 10) reuses them. If you tore them down, that one step is optional.
+- [Chapter 2](../Chapter%202/README.md) — you deployed a **dense** model (`msmarco-distilbert-base-tas-b`) and built **`vector-search-index`**. **Keep both in place** — the dense comparison in Lesson 3-1 (Step 9) reuses them. If you tore them down, that one step is optional.
 - A 3-node Instaclustr cluster with **ML Commons / AI Search** enabled.
 - Open **OpenSearch Dashboards → Dev Tools** (Learn mode) or the **[Bruno `Chapter 3`](../../bruno/Chapter%203/)** collection (Fast mode).
 
@@ -27,9 +27,9 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 
 | Variable | Set after | Used in |
 |----------|-----------|---------|
-| `model_group_id` | Step 2 | Step 3 (register sparse model) |
-| `sparse_model_id` (`ML_MODEL_ID`) | Step 4 deploy | Steps 5, 9 (ingest + sparse/hybrid queries) |
-| `dense_model_id` | Chapter 2 Lesson 1 | Step 10 (dense comparison only) |
+| `model_group_id` | Chapter 2 Step 3 (looked up in Step 1) | Step 2 (register sparse model) |
+| `sparse_model_id` (`ML_MODEL_ID`) | Step 3 deploy | Steps 4, 8 (ingest + sparse/hybrid queries) |
+| `dense_model_id` | Chapter 2 Lesson 1 | Step 9 (dense comparison only) |
 | `task_id` | register / deploy | Polling |
 
 > **Two models, two ids.** Chapter 3 uses a **sparse** encoding model; Chapter 2 used a **dense** one. Keep both ids straight (in Bruno: `sparseModelId` vs `modelId`).
@@ -57,50 +57,30 @@ OpenSearch offers **two** processors to merge hybrid results, and this chapter u
 > - **Bi-encoder** (e.g. `opensearch-neural-sparse-encoding-v1` / `-v2-distill`) runs the model at **both** index and query time — you must pass a `model_id` on every query. **This workshop uses the bi-encoder v1** for continuity with the existing lab assets.
 > - **Doc-only** (e.g. `opensearch-neural-sparse-encoding-doc-v2-distill`, `-doc-v3-distill`, `-doc-v3-gte`) runs the model only at **index** time; at query time it just tokenizes with a lightweight analyzer, so search is cheaper. Doc-only queries use `query_text` + an `analyzer` (default `bert-uncased`) **instead of** `model_id`.
 >
-> The video mentions `opensearch-neural-sparse-encoding-doc-v3` — that is a doc-only model. Everything below works with either family; only the **query** clause in Step 9 changes (`model_id` for bi-encoder vs `analyzer` for doc-only). We keep v1 bi-encoder so the query stays explicit and easy to trace.
+> The video mentions `opensearch-neural-sparse-encoding-doc-v3` — that is a doc-only model. Everything below works with either family; only the **query** clause in Step 8 changes (`model_id` for bi-encoder vs `analyzer` for doc-only). We keep v1 bi-encoder so the query stays explicit and easy to trace.
 
-### **Step 1: Enable URL model registration**
+> **ML Commons prerequisites (already set in Chapter 2).** The persistent cluster settings from [Chapter 2 · Step 2](../Chapter%202/README.md#step-2--enable-ml-commons-cluster-settings) — URL model registration and `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster) — survive until explicitly changed, so they are still on. Unsure, or on a fresh cluster? Verify with `GET _cluster/settings?filter_path=persistent.plugins*`; if the keys are missing, run Chapter 2 Step 2 before continuing.
+
+### **Step 1: Reuse the model group from Chapter 2**
 
 **Why**
-ML Commons blocks fetching model artifacts from a URL until you opt in. This is a one-time persistent cluster setting (already on if you did Chapter 2).
+Every registered model belongs to a group for access control and versioning. You created the `huggingface-models` group in Chapter 2 Step 3 — **reuse that `model_group_id`** rather than creating a second group. If you still have the id saved, skip straight to Step 2. If you lost it, look it up:
 
 **Request** — paste into Dev Tools:
 
 ```http
-PUT _cluster/settings
-{
-  "persistent": {
-    "plugins.ml_commons.allow_registering_model_via_url": true
-  }
-}
+POST _plugins/_ml/model_groups/_search
+{ "query": { "match": { "name": "huggingface-models" } } }
 ```
 
-**Expected** `"acknowledged": true`
+**Save** the group's `_id` from the response as your `model_group_id`.
 
-**Fast mode** `bruno/Chapter 3/01-enable-url-model-registration.bru`
-
-
-### **Step 2: Register a model group (skip if you have one)**
-
-**Why**
-Every registered model belongs to a group for access control and versioning. **Reuse the `huggingface-models` group from Chapter 2** if it exists — copy its `model_group_id` and skip to Step 3.
-
-**Request** — paste into Dev Tools:
-
-```http
-POST _plugins/_ml/model_groups/_register
-{
-  "name": "huggingface-models",
-  "description": "A group for Hugging Face transformer models"
-}
-```
-
-**Save** `model_group_id` from the response.
-
-**Fast mode** `bruno/Chapter 3/02-register-model-group.bru`
+**Fast mode** `bruno/Chapter 3/02-find-model-group.bru`
 
 
-### **Step 3: Register the neural sparse encoding model**
+### **Step 2: Register the neural sparse encoding model**
+
+> **Did Chapter 2's optional sparse steps (Lesson 2-3)?** You already registered and deployed this exact model (`opensearch-neural-sparse-encoding-v1`). Reuse that `sparse_model_id` and skip ahead to Step 4.
 
 **Why**
 This model turns text into sparse token→weight maps (not 768-dim dense vectors). Registration downloads the artifact asynchronously and returns a `task_id`.
@@ -134,7 +114,7 @@ Repeat every few seconds until `"state": "COMPLETED"`. On `FAILED`, check cluste
 **Fast mode** `bruno/Chapter 3/03-register-sparse-model.bru` → `bruno/Chapter 3/04-poll-register-task.bru`
 
 
-### **Step 4: Deploy the sparse model**
+### **Step 3: Deploy the sparse model**
 
 **Why**
 Deploy loads the model weights into ML-node memory so ingest pipelines and `neural_sparse` queries can call it.
@@ -158,7 +138,7 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 **Fast mode** `bruno/Chapter 3/05-deploy-sparse-model.bru` → `bruno/Chapter 3/06-poll-deploy-task.bru`
 
 
-### **Step 5: Create the sparse ingest pipeline**
+### **Step 4: Create the sparse ingest pipeline**
 
 **Why**
 This pipeline runs on every document at index time. It **chunks** long `passage_text` into small token windows, then **sparse-encodes** each chunk into a nested `passage_embedding` object. Create it **before** the index so the index can reference it.
@@ -209,7 +189,7 @@ PUT _ingest/pipeline/nlp-ingest-pipeline
 **Fast mode** `bruno/Chapter 3/07-create-sparse-ingest-pipeline.bru`
 
 
-### **Step 6: Create the sparse index**
+### **Step 5: Create the sparse index**
 
 **Why each mapping choice:**
 
@@ -257,7 +237,7 @@ PUT my-sparse-neural-index
 **Fast mode** `bruno/Chapter 3/08-delete-sparse-index.bru` (optional) → `bruno/Chapter 3/09-create-sparse-index.bru`
 
 
-### **Step 7: Bulk index the sample books**
+### **Step 6: Bulk index the sample books**
 
 **Why**
 Each document triggers chunking + sparse encoding **inside** the cluster (one model inference per chunk), so this is slower than a plain bulk. Allow several minutes for the full file.
@@ -282,9 +262,9 @@ POST _bulk
 { "id": "2701", "title": "Moby Dick; Or, The Whale", "passage_text": "\"Moby Dick; Or, The Whale\" by Herman Melville is an epic novel published in 1851. Sailor Ishmael narrates the obsessive quest of Captain Ahab, who commands the whaling ship Pequod on a dangerous sea voyage in pursuit of the giant white whale that destroyed his leg, blending realistic whaling detail with meditations on fate, vengeance, and human nature." }
 ```
 
-**Expected** `"errors": false`. If any item errors, the usual causes are an **undeployed model**, wrong **`model_id`** in Step 5, or the sparse field mapped as `sparse_vector` instead of `rank_features`.
+**Expected** `"errors": false`. If any item errors, the usual causes are an **undeployed model**, wrong **`model_id`** in Step 4, or the sparse field mapped as `sparse_vector` instead of `rank_features`.
 
-> **If items fail with `Model not ready yet` or `Failed to get data object from index .plugins-ml-model`:** the model is not fully deployed on every ML node — common on trial clusters under load or after node churn. Check `GET _plugins/_ml/models/YOUR_SPARSE_MODEL_ID` and confirm `model_state` is `DEPLOYED` (not `PARTIALLY_DEPLOYED` or `DEPLOY_FAILED`). If it isn't, re-run the deploy from Step 5, wait for the task to reach `COMPLETED`, then delete and recreate the index (Steps 6–7 ordering) and retry the bulk. This is standard ML Commons behavior, not a problem with your request.
+> **If items fail with `Model not ready yet` or `Failed to get data object from index .plugins-ml-model`:** the model is not fully deployed on every ML node — common on trial clusters under load or after node churn. Check `GET _plugins/_ml/models/YOUR_SPARSE_MODEL_ID` and confirm `model_state` is `DEPLOYED` (not `PARTIALLY_DEPLOYED` or `DEPLOY_FAILED`). If it isn't, re-run the deploy from Step 3, wait for the task to reach `COMPLETED`, then delete and recreate the index (Steps 5–6 ordering) and retry the bulk. This is standard ML Commons behavior, not a problem with your request.
 
 Refresh so hits are immediately searchable:
 
@@ -295,7 +275,7 @@ POST my-sparse-neural-index/_refresh
 **Fast mode** `bruno/Chapter 3/10-bulk-sparse-index.bru` → `bruno/Chapter 3/11-refresh-sparse-index.bru`
 
 
-### **Step 8: Lexical-only baseline (BM25)**
+### **Step 7: Lexical-only baseline (BM25)**
 
 **Why**
 Establish the keyword-only ranking first. A plain `match` scores documents purely on term overlap — no model involved.
@@ -322,7 +302,7 @@ GET my-sparse-neural-index/_search
 **Fast mode** `bruno/Chapter 3/12-lexical-search.bru`
 
 
-### **Step 9: Sparse-only (`neural_sparse`)**
+### **Step 8: Sparse-only (`neural_sparse`)**
 
 **Why**
 Now retrieve by *meaning* using the sparse model. `neural_sparse` encodes the query text with your `sparse_model_id` and matches it against the `rank_features` field. The `nested` wrapper with `score_mode: max` gives each book the score of its single best-matching chunk.
@@ -355,14 +335,14 @@ GET my-sparse-neural-index/_search
 
 > **Doc-only variant.** If you registered a `...-encoding-doc-*` model, drop `model_id` and use `"analyzer": "bert-uncased"` instead — the two are mutually exclusive.
 
-**Expected** Up to 5 hits. Ranking differs from Step 8: books that are *about* perilous journeys or heroism rank well even when they don't use those exact words.
+**Expected** Up to 5 hits. Ranking differs from Step 7: books that are *about* perilous journeys or heroism rank well even when they don't use those exact words.
 
 **Save** the **top-5 order** and compare to the lexical list. Note which books appear in one list but not the other — that gap is exactly what hybrid search closes.
 
 **Fast mode** `bruno/Chapter 3/13-sparse-search.bru`
 
 
-### **Step 10: Dense-only comparison (optional — reuses Chapter 2)**
+### **Step 9: Dense-only comparison (optional — reuses Chapter 2)**
 
 **Why**
 Round out the picture with dense k-NN. This runs against **Chapter 2's** `vector-search-index` and dense model, so you can see all three retrieval styles on the same query. **Skip if you tore Chapter 2 down.**
@@ -486,7 +466,7 @@ GET my-sparse-neural-index/_search?search_pipeline=nlp-search-normalization-pipe
 }
 ```
 
-**Expected** Up to 5 hits ranked by the **combined normalized** score. Compare this order to your Step 8 (lexical) and Step 9 (sparse) lists: hybrid typically pulls the best of both — keyword-exact hits *and* thematically relevant ones — toward the top.
+**Expected** Up to 5 hits ranked by the **combined normalized** score. Compare this order to your Step 7 (lexical) and Step 8 (sparse) lists: hybrid typically pulls the best of both — keyword-exact hits *and* thematically relevant ones — toward the top.
 
 **Save** the **top-5 order**; you will compare it against the RRF ranking in Lesson 3-3.
 
@@ -601,7 +581,7 @@ GET my-sparse-neural-index/_search?search_pipeline=rrf-search-pipeline
 
 **Expected** Up to 5 hits ranked by fused reciprocal rank. `_score` values are small (RRF sums of `1/(k+rank)`), unlike the [0,1]-ish normalized scores. The **order** may match or diverge from Step 2 of Lesson 3-2 — RRF is less sensitive to outlier scores, so a document that ranks decently in *both* lists can overtake one that scored very high in only one.
 
-**Compare all five:** line up your saved top-5 lists — **lexical** (3-1 Step 8), **sparse** (3-1 Step 9), **dense** (3-1 Step 10), **hybrid-normalized** (3-2), **hybrid-RRF** (3-3). This side-by-side is the whole lesson: no single method is complete, and the two fusion strategies produce meaningfully different rankings.
+**Compare all five:** line up your saved top-5 lists — **lexical** (3-1 Step 7), **sparse** (3-1 Step 8), **dense** (3-1 Step 9), **hybrid-normalized** (3-2), **hybrid-RRF** (3-3). This side-by-side is the whole lesson: no single method is complete, and the two fusion strategies produce meaningfully different rankings.
 
 **Fast mode** `bruno/Chapter 3/18-hybrid-rrf-search.bru`
 
@@ -643,7 +623,7 @@ DELETE _plugins/_ml/models/YOUR_SPARSE_MODEL_ID
 
 **Fast mode** `bruno/Chapter 3/19-cleanup.bru` (delete pipelines + index).
 
-Leave Chapter 2's `vector-search-index` and dense model in place if you plan to continue to Chapter 4.
+Chapter 4 does **not** reuse Chapter 2's index or dense model — it registers its own embedding model (`all-mpnet-base-v2`) and builds fresh indexes. Once you're done with the dense comparison here, run Chapter 2's cleanup (including undeploying the dense model) to free node memory before Chapter 4 loads its larger model. Keep the `huggingface-models` **model group** — Chapter 4 registers into it.
 
 ## Next chapter
 
