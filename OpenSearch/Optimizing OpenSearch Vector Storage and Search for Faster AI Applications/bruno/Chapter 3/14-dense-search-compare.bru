@@ -9,7 +9,7 @@ Reuses Chapter 2's vector-search-index and dense model (modelId). Skip if Chapte
 }
 
 get {
-  url: {{baseUrl}}/vector-search-index/_search
+  url: {{baseUrl}}/vector-search-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
   body: json
   auth: basic
 }
@@ -21,7 +21,9 @@ auth:basic {
 
 body:json {
 {
-  "_source": { "excludes": ["passage_embedding"] },
+  "_source": [
+    "title"
+  ],
   "size": 5,
   "query": {
     "neural": {
@@ -29,6 +31,19 @@ body:json {
         "query_text": "a hero on a dangerous sea voyage",
         "model_id": "{{modelId}}",
         "k": 10
+      }
+    }
+  },
+  "highlight": {
+    "fields": {
+      "passage_text": {
+        "fragment_size": 120,
+        "number_of_fragments": 1
+      }
+    },
+    "highlight_query": {
+      "match": {
+        "passage_text": "a hero on a dangerous sea voyage"
       }
     }
   }

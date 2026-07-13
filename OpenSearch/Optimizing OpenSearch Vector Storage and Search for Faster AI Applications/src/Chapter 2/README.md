@@ -1418,7 +1418,14 @@ Step back and look at what you just built. At the start of this chapter, your cl
 
 ## Cleanup
 
-Run this **last**, once you are done with the chapter. Order matters: delete the index and pipelines, then **undeploy before delete** on any model (the cluster refuses to delete a deployed model). **Skip the model deletes** if you are continuing to Chapter 3 — it reuses the dense model (`ML_MODEL_ID`) for its comparison step.
+> **Continuing to Chapter 3? Skip this entire section for now.** Chapter 3's dense
+> comparison (its Lesson 3-1, Step 9) runs a query against `vector-search-index`
+> using your deployed dense model — and the index routes searches through the
+> `default-model-pipeline`, so *every* item below is still in use. Chapter 3's own
+> cleanup section includes these same teardown requests at the point where they
+> become safe, so you won't need to come back.
+
+Run this **last**, once you are fully done with Chapter 2's assets. Order matters: delete the index and pipelines, then **undeploy before delete** on any model (the cluster refuses to delete a deployed model).
 
 ### C1 — Delete the search pipeline
 

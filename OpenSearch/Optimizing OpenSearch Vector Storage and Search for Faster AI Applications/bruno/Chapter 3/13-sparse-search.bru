@@ -9,7 +9,7 @@ Semantic sparse retrieval. Doc-only models: drop model_id and use "analyzer": "b
 }
 
 get {
-  url: {{baseUrl}}/my-sparse-neural-index/_search
+  url: {{baseUrl}}/my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
   body: json
   auth: basic
 }
@@ -21,7 +21,9 @@ auth:basic {
 
 body:json {
 {
-  "_source": { "excludes": ["passage_embedding", "passage_chunk"] },
+  "_source": [
+    "title"
+  ],
   "size": 5,
   "query": {
     "nested": {
@@ -34,6 +36,19 @@ body:json {
             "model_id": "{{sparseModelId}}"
           }
         }
+      }
+    }
+  },
+  "highlight": {
+    "fields": {
+      "passage_text": {
+        "fragment_size": 120,
+        "number_of_fragments": 1
+      }
+    },
+    "highlight_query": {
+      "match": {
+        "passage_text": "a hero on a dangerous sea voyage"
       }
     }
   }
