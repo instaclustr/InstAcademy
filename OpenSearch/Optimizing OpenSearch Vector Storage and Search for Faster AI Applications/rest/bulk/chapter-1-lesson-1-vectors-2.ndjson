@@ -1,0 +1,38 @@
+{"index": {"_index": "vector-fundamentals", "_id": "32"}}
+{"title": "Replica Placement Rules", "my_vector": [0.31, 0.41, 0.51, 0.61, 0.71, 0.81, 0.91, 0.06]}
+{"index": {"_index": "vector-fundamentals", "_id": "33"}}
+{"title": "Cluster Health Basics", "my_vector": [0.59, 0.49, 0.39, 0.29, 0.19, 0.09, 0.14, 0.24]}
+{"index": {"_index": "vector-fundamentals", "_id": "34"}}
+{"title": "Bulk API Performance", "my_vector": [0.13, 0.23, 0.33, 0.43, 0.53, 0.63, 0.73, 0.83]}
+{"index": {"_index": "vector-fundamentals", "_id": "35"}}
+{"title": "Refresh Interval Tradeoffs", "my_vector": [0.79, 0.69, 0.59, 0.49, 0.39, 0.29, 0.19, 0.09]}
+{"index": {"_index": "vector-fundamentals", "_id": "36"}}
+{"title": "Near Real-Time Search", "my_vector": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]}
+{"index": {"_index": "vector-fundamentals", "_id": "37"}}
+{"title": "Lucene Segment Internals", "my_vector": [0.62, 0.52, 0.42, 0.32, 0.22, 0.12, 0.02, 0.11]}
+{"index": {"_index": "vector-fundamentals", "_id": "38"}}
+{"title": "Compound File Format", "my_vector": [0.36, 0.46, 0.56, 0.66, 0.76, 0.86, 0.96, 0.06]}
+{"index": {"_index": "vector-fundamentals", "_id": "39"}}
+{"title": "Doc Values vs Postings", "my_vector": [0.74, 0.64, 0.54, 0.44, 0.34, 0.24, 0.14, 0.04]}
+{"index": {"_index": "vector-fundamentals", "_id": "40"}}
+{"title": "k-NN Plugin Architecture", "my_vector": [0.09, 0.19, 0.29, 0.39, 0.49, 0.59, 0.69, 0.79]}
+{"index": {"_index": "vector-fundamentals", "_id": "41"}}
+{"title": "Filtering with k-NN Queries", "my_vector": [0.96, 0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.26]}
+{"index": {"_index": "vector-fundamentals", "_id": "42"}}
+{"title": "Pre-filter vs Post-filter", "my_vector": [0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]}
+{"index": {"_index": "vector-fundamentals", "_id": "43"}}
+{"title": "Painless Scripting Tips", "my_vector": [0.66, 0.56, 0.46, 0.36, 0.26, 0.16, 0.06, 0.16]}
+{"index": {"_index": "vector-fundamentals", "_id": "44"}}
+{"title": "ISM Policies for Retention", "my_vector": [0.17, 0.27, 0.37, 0.47, 0.57, 0.67, 0.77, 0.87]}
+{"index": {"_index": "vector-fundamentals", "_id": "45"}}
+{"title": "Rollover Index Patterns", "my_vector": [0.84, 0.74, 0.64, 0.54, 0.44, 0.34, 0.24, 0.14]}
+{"index": {"_index": "vector-fundamentals", "_id": "46"}}
+{"title": "Security Roles and Users", "my_vector": [0.06, 0.16, 0.26, 0.36, 0.46, 0.56, 0.66, 0.76]}
+{"index": {"_index": "vector-fundamentals", "_id": "47"}}
+{"title": "Hybrid Weighted Scoring", "my_vector": [0.92, 0.82, 0.72, 0.62, 0.52, 0.42, 0.32, 0.22]}
+{"index": {"_index": "vector-fundamentals", "_id": "48"}}
+{"title": "Min-Max Normalization", "my_vector": [0.29, 0.39, 0.49, 0.59, 0.69, 0.79, 0.89, 0.99]}
+{"index": {"_index": "vector-fundamentals", "_id": "49"}}
+{"title": "Arithmetic Mean Combination", "my_vector": [0.53, 0.43, 0.33, 0.23, 0.13, 0.03, 0.15, 0.25]}
+{"index": {"_index": "vector-fundamentals", "_id": "50"}}
+{"title": "Cluster Settings Deep Dive", "my_vector": [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.05]}

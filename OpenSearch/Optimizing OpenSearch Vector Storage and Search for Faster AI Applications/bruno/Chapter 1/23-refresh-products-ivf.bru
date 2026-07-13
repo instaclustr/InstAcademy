@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Refresh products-ivf
   type: http
-  seq: 3
+  seq: 23
 }
 
-get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+post {
+  url: {{baseUrl}}/products-ivf/_refresh
   body: none
   auth: basic
 }

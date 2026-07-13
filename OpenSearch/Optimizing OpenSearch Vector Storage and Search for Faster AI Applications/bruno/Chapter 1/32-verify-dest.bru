@@ -1,11 +1,11 @@
 meta {
-  name: Profile a query
+  name: Verify destination index
   type: http
-  seq: 61
+  seq: 32
 }
 
 get {
-  url: {{baseUrl}}/my-index/_search
+  url: {{baseUrl}}/my-optimized-vector-index/_search
   body: json
   auth: basic
 }
@@ -16,10 +16,5 @@ auth:basic {
 }
 
 body:json {
-{
-  "profile": true,
-  "query": {
-    "match_all": {}
-  }
-}
+{ "size": 20, "_source": ["title"] }
 }

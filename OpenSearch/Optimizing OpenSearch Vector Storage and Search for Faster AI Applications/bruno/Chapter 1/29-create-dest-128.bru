@@ -1,0 +1,33 @@
+meta {
+  name: Create 128-dim destination index
+  type: http
+  seq: 29
+}
+
+put {
+  url: {{baseUrl}}/my-optimized-vector-index
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index": { "knn": true } },
+  "mappings": {
+    "properties": {
+      "title": { "type": "text" },
+      "my_vector": {
+        "type": "knn_vector",
+        "dimension": 128,
+        "space_type": "l2",
+        "method": { "name": "hnsw", "engine": "faiss" }
+      }
+    }
+  }
+}
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Bulk index 20 256-dim vectors
+  type: http
+  seq: 26
+}
+
+post {
+  url: {{baseUrl}}/_bulk
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+file: ../../rest/bulk/chapter-1-lesson-4-vector-index.ndjson
+  contentType: application/x-ndjson
+}

@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Poll IVF model status
   type: http
-  seq: 3
+  seq: 20
 }
 
 get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+  url: {{baseUrl}}/_plugins/_knn/models/{{ivfModelId}}?filter_path=state,error
   body: none
   auth: basic
 }

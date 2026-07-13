@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Cat shards
   type: http
-  seq: 3
+  seq: 8
 }
 
 get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+  url: {{baseUrl}}/_cat/shards/vector-fundamentals?v
   body: none
   auth: basic
 }

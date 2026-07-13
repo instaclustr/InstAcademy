@@ -1,0 +1,33 @@
+meta {
+  name: Create 256-dim source index
+  type: http
+  seq: 25
+}
+
+put {
+  url: {{baseUrl}}/my-vector-index
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index": { "knn": true } },
+  "mappings": {
+    "properties": {
+      "title": { "type": "text" },
+      "my_vector": {
+        "type": "knn_vector",
+        "dimension": 256,
+        "space_type": "l2",
+        "method": { "name": "hnsw", "engine": "faiss" }
+      }
+    }
+  }
+}
+}

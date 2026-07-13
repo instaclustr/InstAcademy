@@ -1,0 +1,20 @@
+meta {
+  name: Cat segments
+  type: http
+  seq: 9
+}
+
+docs {
+Run before AND after the force merge (10-11) to see segments collapse to one.
+}
+
+get {
+  url: {{baseUrl}}/_cat/segments/vector-fundamentals?v
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

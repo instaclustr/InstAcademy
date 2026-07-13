@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Refresh products-hnsw
   type: http
-  seq: 3
+  seq: 15
 }
 
-get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+post {
+  url: {{baseUrl}}/products-hnsw/_refresh
   body: none
   auth: basic
 }

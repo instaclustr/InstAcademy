@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Refresh destination index
   type: http
-  seq: 3
+  seq: 31
 }
 
-get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+post {
+  url: {{baseUrl}}/my-optimized-vector-index/_refresh
   body: none
   auth: basic
 }

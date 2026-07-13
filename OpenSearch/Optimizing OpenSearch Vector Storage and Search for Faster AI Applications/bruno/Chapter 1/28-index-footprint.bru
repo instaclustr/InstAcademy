@@ -1,0 +1,20 @@
+meta {
+  name: Measure 256-dim index footprint
+  type: http
+  seq: 28
+}
+
+docs {
+Baseline before dimension reduction. Note pri.store.size - Step 16 compares against it.
+}
+
+get {
+  url: {{baseUrl}}/_cat/indices/my-vector-index?v&h=index,docs.count,pri.store.size,store.size
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

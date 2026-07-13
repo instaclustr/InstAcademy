@@ -1,0 +1,35 @@
+meta {
+  name: Train IVF model
+  type: http
+  seq: 19
+}
+
+docs {
+Save the returned model_id into the ivfModelId environment variable.
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_knn/models/_train
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "training_index": "products-hnsw",
+  "training_field": "product_vector",
+  "dimension": 8,
+  "description": "IVF model for Chapter 1 products",
+  "space_type": "l2",
+  "method": {
+    "name": "ivf",
+    "engine": "faiss",
+    "parameters": { "nlist": 4, "nprobes": 2 }
+  }
+}
+}

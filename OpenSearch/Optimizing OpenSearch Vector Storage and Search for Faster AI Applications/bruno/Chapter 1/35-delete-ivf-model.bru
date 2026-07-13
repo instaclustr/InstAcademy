@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Cleanup: delete IVF model
   type: http
-  seq: 3
+  seq: 35
 }
 
-get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+delete {
+  url: {{baseUrl}}/_plugins/_knn/models/{{ivfModelId}}
   body: none
   auth: basic
 }

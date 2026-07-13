@@ -1,0 +1,20 @@
+meta {
+  name: Compare 256-dim vs 128-dim footprints
+  type: http
+  seq: 33
+}
+
+docs {
+Both indexes show docs.count 20; the 128-dim destination has a noticeably smaller pri.store.size.
+}
+
+get {
+  url: {{baseUrl}}/_cat/indices/my-vector-index,my-optimized-vector-index?v&h=index,docs.count,pri.store.size,store.size
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

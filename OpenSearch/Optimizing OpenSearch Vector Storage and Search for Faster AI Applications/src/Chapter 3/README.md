@@ -80,8 +80,6 @@ POST _plugins/_ml/model_groups/_search
 
 ### **Step 2: Register the neural sparse encoding model**
 
-> **Did Chapter 2's optional sparse steps (Lesson 2-3)?** You already registered and deployed this exact model (`opensearch-neural-sparse-encoding-v1`). Reuse that `sparse_model_id` and skip ahead to Step 4.
-
 **Why**
 This model turns text into sparse token→weight maps (not 768-dim dense vectors). Registration downloads the artifact asynchronously and returns a `task_id`.
 

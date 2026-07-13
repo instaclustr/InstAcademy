@@ -16,7 +16,7 @@ Raw text ─▶ Ingest pipeline (text_embedding) ─▶ 768-dim vector ─▶ k-
 Natural-language query ─▶ same model ─▶ query vector ─▶ ANN search ─▶ semantic results
 ```
 
-By the end you will have registered and deployed a sentence-transformer model with ML Commons, wired it into an ingest pipeline, bulk-loaded books, run semantic and hybrid queries, compared dense vs. sparse embeddings hands-on, inspected the model lifecycle, and tuned the cluster/index/query layers for neural search.
+By the end you will have registered and deployed a sentence-transformer model with ML Commons, wired it into an ingest pipeline, bulk-loaded books, run semantic and hybrid queries, compared dense vs. sparse embeddings, inspected the model lifecycle, and tuned the cluster/index/query layers for neural search.
 
 ## Target version
 
@@ -33,7 +33,6 @@ Written for **OpenSearch 3.5+**. Where the video script simplifies or predates c
 |----------|------|---------|
 | `model_group_id` | Lesson 2-1 Step 3 | Register model |
 | `model_id` (dense) | Lesson 2-1 Step 4/5 | Pipeline, queries; save as `ML_MODEL_ID` |
-| `sparse_model_id` | Lesson 2-3 (optional) | Sparse `_predict`; **reused by Chapter 3** |
 | `task_id` | any register/deploy/undeploy | Poll with `GET _plugins/_ml/tasks/{task_id}` |
 
 **ML task polling.** Register, deploy, and undeploy return a `task_id` immediately and finish **asynchronously**. Poll `GET _plugins/_ml/tasks/YOUR_TASK_ID` every 2–3 seconds until `state` is `COMPLETED` (or `FAILED`). This pattern repeats throughout the chapter.
@@ -458,7 +457,7 @@ GET vector-search-index/_search
 
 ## Lesson 2-3 — Choosing your text embedding processor
 
-*Compare dense and sparse embeddings hands-on, then use a decision framework to pick the right processor.*
+*Compare dense and sparse embedding shapes, then use a decision framework to pick the right processor.*
 
 A text embedding processor turns raw text into a vector inside an ingest pipeline. The big choice is **dense vs. sparse**:
 
@@ -469,74 +468,13 @@ A text embedding processor turns raw text into a vector inside an ingest pipelin
 | Best for | Semantic search, recommendations, RAG | Massive datasets, low latency, hybrid/lexical-leaning search |
 | Cost | Heavier compute at ingest and query | Lighter, cheaper to store, scales horizontally |
 
-You already produced a **dense** vector in Step 6 (768 non-zero floats). Now see a **sparse** vector for contrast.
+You already produced a **dense** vector in Step 6 — a flat list of 768 floating-point numbers, every position populated (the "compact, filled" vector from the video's split-screen). For contrast, a **sparse** encoder run on the same text (`"today is sunny"`) returns a **token → weight** map instead:
 
-### Step 14 — Inspect the dense output shape (recap)
-
-**Why**
-Re-run the dense predict and look at the response: a flat list of 768 floating-point numbers, all populated. This is the "compact, filled" vector from the video's split-screen.
-
-**Request**
-
-```http
-POST _plugins/_ml/_predict/text_embedding/YOUR_MODEL_ID
-{
-  "text_docs": ["today is sunny"],
-  "return_number": true,
-  "target_response": ["sentence_embedding"]
-}
+```json
+{ "today": 1.42, "sunny": 1.31, "weather": 0.44, "...": 0.12 }
 ```
 
-**Expected** One `sentence_embedding` of 768 floats.
-
-**Fast mode** reuse `bruno/Chapter 2/08-text-embedding-predict.bru`.
-
-### Step 15 — (Optional) Register + deploy a sparse encoding model
-
-**Why**
-Sparse encoding uses a different pretrained model and the `sparse_encoding` algorithm. This is optional because it loads a second model into memory — skip if your trial cluster is tight, and just read Step 16's expected output.
-
-This is the **same model Chapter 3 uses** as its main encoder. If you run this step, save `sparse_model_id` — Chapter 3 reuses the deployed model directly and you skip its Steps 2–3.
-
-**Request** — register:
-
-```http
-POST _plugins/_ml/models/_register
-{
-  "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v1",
-  "version": "1.0.1",
-  "model_group_id": "YOUR_MODEL_GROUP_ID",
-  "model_format": "TORCH_SCRIPT"
-}
-```
-
-Poll the task, **save `sparse_model_id`**, then deploy:
-
-```http
-POST _plugins/_ml/models/YOUR_SPARSE_MODEL_ID/_deploy
-```
-
-**Expected** `state: COMPLETED` for both tasks. ([sparse model list](https://docs.opensearch.org/latest/ml-commons-plugin/pretrained-models/))
-
-**Fast mode** `bruno/Chapter 2/16-register-sparse-encoding-model.bru`, poll `05-poll-ml-task.bru`, then `17-deploy-sparse-encoding-model.bru`.
-
-### Step 16 — Inspect the sparse output shape
-
-**Why**
-Sparse encoding is dispatched via `/_predict/sparse_encoding/{model_id}`. The output is a **token → weight** map (only meaningful terms appear) — the "very tall, mostly zeros" vector from the video, represented compactly.
-
-**Request**
-
-```http
-POST _plugins/_ml/_predict/sparse_encoding/YOUR_SPARSE_MODEL_ID
-{
-  "text_docs": ["today is sunny"]
-}
-```
-
-**Expected** `inference_results` containing a map like `{"today": 1.42, "sunny": 1.31, "weather": 0.44, ...}` — a handful of weighted tokens rather than a fixed-length float array. Contrast this directly with Step 14's 768 dense floats.
-
-**Fast mode** `bruno/Chapter 2/18-sparse-encoding-predict.bru`
+Only meaningful terms appear — the "very tall, mostly zeros" vector represented compactly. You'll register, deploy, and search with a sparse model hands-on in **Chapter 3** (its Steps 2–3 register `opensearch-neural-sparse-encoding-v1`, and its `neural_sparse` queries use it against real data), so there's no need to load a second model into this chapter's memory budget just to look at its output.
 
 ### Decision framework
 
@@ -556,50 +494,32 @@ There is no one-size-fits-all processor. For the course bookstore, matching **bo
 
 ML Commons manages the whole lifecycle — **register → deploy → infer → undeploy → delete** — inside the cluster. You have already registered, deployed, and run inference. These APIs let you observe and operate a running model.
 
-### Step 17 — Get model metadata
+### Step 14 — Inspect the model: metadata, profile, and stats
 
 **Why**
-Returns the model's registered metadata and current `model_state` (e.g. `DEPLOYED`), dimension, and group — the source of truth for what is loaded.
+Three read-only views of a running model. **Get** returns the registered metadata and current `model_state` (e.g. `DEPLOYED`), dimension, and group — the source of truth for what is loaded. The **Profile API** returns runtime data — which worker nodes host the model and per-request latency (min/max/avg, p50/p90/p99) — so you can confirm inference routing and see where time goes ([docs](https://docs.opensearch.org/latest/ml-commons-plugin/api/profile/)). **Stats** aggregates ML request counts and failures across nodes — a quick health check for the ML layer.
 
-**Request**
+**Request** — model metadata:
 
 ```http
 GET _plugins/_ml/models/YOUR_MODEL_ID
 ```
 
-**Expected** JSON with `model_state: "DEPLOYED"`, `model_format`, and `model_config` (including `embedding_dimension: 768`).
-
-**Fast mode** `bruno/Chapter 2/19-get-model.bru`
-
-### Step 18 — Profile the deployed model
-
-**Why**
-The **Profile API** returns runtime data — which worker nodes host the model and per-request latency (min/max/avg, p50/p90/p99). This is how you confirm inference is routed and see where time goes. ([docs](https://docs.opensearch.org/latest/ml-commons-plugin/api/profile/))
-
-**Request**
+**Request** — runtime profile:
 
 ```http
 GET _plugins/_ml/profile/models/YOUR_MODEL_ID
 ```
 
-**Expected** A `models` object keyed by model id, with `worker_nodes` and `model_inference_stats`. (An empty response is normal until the model has served at least one request — run Step 12 first.)
-
-**Fast mode** `bruno/Chapter 2/20-model-profile.bru`
-
-### Step 19 — Cluster ML stats
-
-**Why**
-`_plugins/_ml/stats` aggregates ML request counts and failures across nodes — a quick health check for the ML layer.
-
-**Request**
+**Request** — cluster-wide ML stats:
 
 ```http
 GET _plugins/_ml/stats
 ```
 
-**Expected** Per-node counters such as `ml_request_count` and executing-task gauges.
+**Expected** Metadata with `model_state: "DEPLOYED"` and `model_config` (including `embedding_dimension: 768`); a `models` object with `worker_nodes` and `model_inference_stats` (empty is normal until the model has served at least one request — run Step 12 first); and per-node counters such as `ml_request_count`.
 
-**Fast mode** `bruno/Chapter 2/21-ml-stats.bru`
+**Fast mode** `bruno/Chapter 2/19-get-model.bru` → `20-model-profile.bru` → `21-ml-stats.bru`
 
 > **Why in-cluster management matters.** Because register/deploy/infer/undeploy all happen where your data lives, you avoid hosting, load-balancing, and monitoring an external model server. Inference stays low-latency and the whole lifecycle is a few REST calls. External/remote models (via connectors) follow the same lifecycle and are covered in Chapter 4.
 
@@ -615,7 +535,7 @@ Run these against the live `vector-search-index` from Lesson 2-2.
 
 **ANN indexing parallelism (teaching).** OpenSearch auto-scales ANN graph-build threads by CPU: clusters with **< 32 cores** default to **1** indexing thread; **≥ 32 cores** step up to **4**, so large instances build vector indexes faster. You can also set `knn.algo_param.index_thread_qty` explicitly, but the automatic default is usually right.
 
-#### Step 20 — Set the k-NN memory circuit breaker
+#### Step 15 — Set the k-NN memory circuit breaker
 
 **Why**
 The k-NN plugin holds ANN graphs in **native** memory (outside the JVM heap). Its circuit breaker caps that usage and evicts least-recently-used graphs before the node OOMs. Default is **50%** of the memory left after the heap. ([docs](https://docs.opensearch.org/latest/vector-search/settings/)) Setting it explicitly makes the guardrail visible; lower it on memory-tight nodes, raise it (carefully) on vector-heavy ones.
@@ -636,11 +556,11 @@ PUT _cluster/settings
 
 **Fast mode** `bruno/Chapter 2/22-knn-circuit-breaker-limit.bru`
 
-**Shards & replicas (teaching).** Keep shard sizes **10–30 GiB** when search latency matters, **30–50 GiB** for write-heavy/log workloads. Over-sharding wastes CPU on metadata; under-sharding kills parallelism. Each **replica** can serve ANN queries in parallel (lower latency) but multiplies vector storage and graph size (higher cost). ANN graphs are expensive to move, so favor stable placement — see Step 24.
+**Shards & replicas (teaching).** Keep shard sizes **10–30 GiB** when search latency matters, **30–50 GiB** for write-heavy/log workloads. Over-sharding wastes CPU on metadata; under-sharding kills parallelism. Each **replica** can serve ANN queries in parallel (lower latency) but multiplies vector storage and graph size (higher cost). ANN graphs are expensive to move, so favor stable placement — see the routing note at the end of this lesson.
 
 ### Index layer
 
-#### Step 21 — Raise the refresh interval, then force-merge
+#### Step 16 — Raise the refresh interval, then force-merge
 
 **Why**
 Every refresh creates Lucene segments, and many small segments slow ANN traversal. During heavy ingest, raise `refresh_interval` (30s is common, or `-1` to disable) to cut segment churn, then **force-merge** afterward so the k-NN graph lives in fewer, larger segments.
@@ -670,25 +590,9 @@ POST vector-search-index/_forcemerge?max_num_segments=1
 
 ### Query layer
 
-#### Step 22 — Tune ANN search breadth (`ef_search`)
+> **ANN search breadth — `ef_search` (teaching).** `index.knn.algo_param.ef_search` is the size of the dynamic candidate list explored per query (default **100**). Higher = better recall, slower search; lower = faster, less accurate. It is a **dynamic** index setting — tune it live via `PUT vector-search-index/_settings` with no reindex ([docs](https://docs.opensearch.org/latest/vector-search/settings/)). Since 100 is already the default, there is nothing to change here.
 
-**Why**
-`index.knn.algo_param.ef_search` is the size of the dynamic candidate list explored per query (default **100**). Higher = better recall, slower search; lower = faster, less accurate. It is dynamic, so tune without reindexing. ([docs](https://docs.opensearch.org/latest/vector-search/settings/))
-
-**Request**
-
-```http
-PUT vector-search-index/_settings
-{
-  "index.knn.algo_param.ef_search": 100
-}
-```
-
-**Expected** `acknowledged: true`.
-
-**Fast mode** `bruno/Chapter 2/25-set-ef-search.bru`
-
-#### Step 23 — Filter before vectors (metadata filtering)
+#### Step 17 — Filter before vectors (metadata filtering)
 
 **Why**
 The single most effective query optimization: apply a metadata filter so ANN only scores a small, relevant subset instead of millions of vectors. The `neural` query accepts a `filter`; the Lucene/Faiss engines pick pre-filtering vs. efficient filtering during HNSW traversal automatically based on selectivity.
@@ -719,35 +623,14 @@ GET vector-search-index/_search
 
 > **Batching (teaching).** Applications that fire many tiny neural queries (autocomplete, chat-agent steps) can raise ingest throughput with the processor's `batch_size` (Step 7 Note) and reduce repeated graph traversal by batching requests — one traversal serves many inputs.
 
-#### Step 24 — Stabilize shard routing
-
-**Why**
-Performance and resilience go together. Routing settings decide when shards allocate and rebalance. For vector workloads, avoid unnecessary rebalancing — ANN graphs are costly to relocate, and movement during peak query or bulk ingest hurts latency. For normal operation both knobs stay `all`; operators set `allocation.enable: none` before a rolling restart, then restore `all`.
-
-**Request**
-
-```http
-PUT _cluster/settings
-{
-  "persistent": {
-    "cluster.routing.allocation.enable": "all",
-    "cluster.routing.rebalance.enable": "all"
-  }
-}
-```
-
-**Expected** `acknowledged: true` with both keys echoed.
-
-Optional: set `cluster.routing.allocation.allow_rebalance` to `indices_all_active` to rebalance only after all shards of an index are active.
-
-**Fast mode** `bruno/Chapter 2/27-cluster-routing-settings.bru`. Verify with `28-get-cluster-settings.bru` (`GET _cluster/settings?include_defaults=false&flat_settings=true`).
+> **Stable shard routing (teaching).** Performance and resilience go together: routing settings (`cluster.routing.allocation.enable`, `cluster.routing.rebalance.enable`) decide when shards allocate and rebalance. For vector workloads, avoid unnecessary rebalancing — ANN graphs are costly to relocate, and movement during peak query or bulk ingest hurts latency. Both knobs default to `all`, which is correct for normal operation, so there is nothing to set here; operators flip `allocation.enable: none` before a rolling restart, then restore `all`. (Optional refinement: `cluster.routing.allocation.allow_rebalance: indices_all_active` rebalances only after all shards of an index are active.)
 
 
 ---
 
 ## Cleanup
 
-Run this **last**, once you are done with the chapter. Order matters: delete the index and pipelines, then **undeploy before delete** on any model (the cluster refuses to delete a deployed model). **Skip the model deletes** if you are continuing to Chapter 3 — it reuses the dense model (`ML_MODEL_ID`) for its comparison step and, if you registered it, the sparse model (`sparse_model_id`) as its main encoder.
+Run this **last**, once you are done with the chapter. Order matters: delete the index and pipelines, then **undeploy before delete** on any model (the cluster refuses to delete a deployed model). **Skip the model deletes** if you are continuing to Chapter 3 — it reuses the dense model (`ML_MODEL_ID`) for its comparison step.
 
 ### C1 — Delete the search pipeline
 
@@ -781,9 +664,9 @@ DELETE _ingest/pipeline/vector-search-embeddings-pipeline
 POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy
 ```
 
-If you deployed the sparse model in Lesson 2-3, undeploy it too (`YOUR_SPARSE_MODEL_ID`). Poll `GET _plugins/_ml/tasks/YOUR_TASK_ID` until `state` is terminal. A `400` (not deployed) or `404` (missing) means undeploy isn't needed.
+Poll `GET _plugins/_ml/tasks/YOUR_TASK_ID` until `state` is terminal. A `400` (not deployed) or `404` (missing) means undeploy isn't needed.
 
-**Fast mode** `bruno/Chapter 2/32-undeploy-model.bru` (+ `33-undeploy-sparse-model.bru`), poll `34-poll-ml-task-undeploy.bru`.
+**Fast mode** `bruno/Chapter 2/32-undeploy-model.bru`, poll `34-poll-ml-task-undeploy.bru`.
 
 ### C5 — Delete models (optional)
 
@@ -791,7 +674,7 @@ If you deployed the sparse model in Lesson 2-3, undeploy it too (`YOUR_SPARSE_MO
 DELETE _plugins/_ml/models/YOUR_MODEL_ID
 ```
 
-Repeat for `YOUR_SPARSE_MODEL_ID` if used. **Fast mode** `bruno/Chapter 2/35-delete-model.bru` (+ `36-delete-sparse-model.bru`).
+**Fast mode** `bruno/Chapter 2/35-delete-model.bru`
 
 ---
 
@@ -799,7 +682,7 @@ Repeat for `YOUR_SPARSE_MODEL_ID` if used. **Fast mode** `bruno/Chapter 2/35-del
 
 - The ML Commons lifecycle: **enable settings → model group → register → poll → deploy → poll → predict**.
 - How the **`text_embedding`** processor and **`default_pipeline`** generate vectors automatically at ingest, and how **`neural_query_enricher`** sets a default query model.
-- **Neural** (semantic) vs. **hybrid** neural + lexical queries, and **dense vs. sparse** embeddings by inspecting real output shapes.
+- **Neural** (semantic) vs. **hybrid** neural + lexical queries, and the **dense vs. sparse** decision framework (Chapter 3 goes hands-on with sparse).
 - Model management with **get / profile / stats**, and teardown with **undeploy → delete**.
 - Optimizing every layer: circuit breaker, shard/replica strategy, `on_disk` mode, refresh interval + force-merge, `ef_search`, metadata filtering, and stable routing.
 

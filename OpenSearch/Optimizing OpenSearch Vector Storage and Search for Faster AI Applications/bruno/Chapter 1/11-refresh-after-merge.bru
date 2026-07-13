@@ -1,11 +1,11 @@
 meta {
-  name: Get mapping
+  name: Refresh after force merge
   type: http
-  seq: 3
+  seq: 11
 }
 
-get {
-  url: {{baseUrl}}/vector-fundamentals/_mapping
+post {
+  url: {{baseUrl}}/vector-fundamentals/_refresh
   body: none
   auth: basic
 }

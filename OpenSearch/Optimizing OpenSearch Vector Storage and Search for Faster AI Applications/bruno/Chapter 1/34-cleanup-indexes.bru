@@ -1,0 +1,16 @@
+meta {
+  name: Cleanup: delete all lab indexes
+  type: http
+  seq: 34
+}
+
+delete {
+  url: {{baseUrl}}/vector-fundamentals,vector-disk-demo,products-hnsw,products-ivf,my-vector-index,my-optimized-vector-index
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

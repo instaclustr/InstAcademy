@@ -6,18 +6,11 @@
 
 Take a working RAG pipeline and make it production-ready, layer by layer: tune the **pipeline** (Lesson 4-1), the **index** (Lesson 4-2), and the **query** (Lesson 4-3), then expose it all to AI agents through the **built-in MCP server** (Lesson 4-4). Everything runs against one bookstore dataset so you can watch each optimization change the numbers.
 
-## Two indexes, one story
+## One index, built right the first time
 
-This chapter builds two indexes on purpose:
+This chapter builds a single chunked index — **`bookstore-rag`** (nested `content_chunks` + a 768-dim `content_embedding` on FAISS HNSW + exact-typed metadata) — up front, then pulls every pipeline, index, and query lever against it. **Index-time decisions are hard to undo**, so Lesson 4-2 examines what an unoptimized first attempt looks like and why this index is shaped the way it is.
 
-| Index | Built in | Shape | Used for |
-|-------|----------|-------|----------|
-| `bookstore-rag-index` | Lesson 4-1 | Flat: `content` + `content_embedding` (FAISS HNSW) + metadata | Pipeline-level levers (engine, filtering, caching, hybrid, rerank) |
-| `bookstore-rag` | Lesson 4-2 → 4-4 | Chunked: nested `content_chunks` + `content_embedding` + metadata | Index design, query optimization, and the MCP agent |
-
-Lesson 4-2 deliberately rebuilds the index from scratch (with chunking and correct field types) because **index-time decisions are hard to undo** — that is the whole point of the lesson.
-
-> **Data note.** The course bulk files ([`rest/bulk/chapter-4-bookstore-rag-index.ndjson`](../../rest/bulk/chapter-4-bookstore-rag-index.ndjson), [`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson)) are 256 real book summaries enriched with deterministic `genre`, `price`, `rating`, `publication_year`, and `in_stock` fields so the filtering, reranking, and rank-evaluation steps return meaningful results. Values are stable across runs (derived from `book_id`).
+> **Data note.** The course bulk file ([`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson)) is 256 real book summaries enriched with deterministic `genre`, `price`, `rating`, `publication_year`, and `in_stock` fields so the filtering, reranking, and rank-evaluation steps return meaningful results. Values are stable across runs (derived from `book_id`).
 
 ## Prerequisites
 
@@ -33,7 +26,7 @@ Lesson 4-2 deliberately rebuilds the index from scratch (with chunking and corre
 
 # Lesson 4-1 — Optimizing RAG pipelines
 
-**Goal:** build the bookstore RAG pipeline, then pull the levers that matter most — engine selection (FAISS HNSW), result-set size and filtering, caching (k-NN warmup + circuit breaker), hybrid search, and reranking.
+**Goal:** build the bookstore RAG pipeline — chunked at ingest, embedded server-side — then pull the levers that matter most: engine selection (FAISS HNSW), result-set size and filtering, hybrid search, and reranking.
 
 **Why two levers?** RAG optimization is a trade-off between **performance** (retrieval latency) and **accuracy** (retrieval quality). Faster is not always better; the goal is to tune the balance for your use case.
 
@@ -82,253 +75,7 @@ POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 **Expected** — a `task_id`; poll until `COMPLETED`. Write down the returned `model_id` (in Bruno, set `modelId` in the **Local** environment).
 **Fast mode** — `05-deploy-model.bru` → `06-poll-deploy-task.bru`
 
-### Step 4: Create the RAG ingest pipeline
-
-**Why** — the `text_embedding` processor embeds each document's `content` into a 768-dim `content_embedding` at index time, so clients send plain text only. Replace `YOUR_MODEL_ID`.
-
-**Request**
-```http
-PUT _ingest/pipeline/bookstore-rag-ingest-pipeline
-{
-  "description": "Embed book content for RAG retrieval",
-  "processors": [
-    {
-      "text_embedding": {
-        "model_id": "YOUR_MODEL_ID",
-        "field_map": { "content": "content_embedding" }
-      }
-    }
-  ]
-}
-```
-**Expected** — `"acknowledged": true`.
-**Fast mode** — `07-create-rag-ingest-pipeline.bru`
-
-### Step 5: Create `bookstore-rag-index` (FAISS HNSW)
-
-**Why** — for production vector workloads **FAISS + HNSW** gives fast approximate nearest-neighbor search. `m` controls graph connectivity (higher = better recall, more memory); `ef_construction` controls how carefully the graph is built. `m=16, ef_construction=128` is a balanced starting point. `index.knn: true` enables k-NN; `default_pipeline` wires automatic embedding; metadata fields use `keyword`/`float`/`integer`/`boolean` so they filter exactly.
-
-**Request**
-```http
-PUT bookstore-rag-index
-{
-  "settings": {
-    "index": { "knn": true, "number_of_shards": 2, "number_of_replicas": 1 },
-    "default_pipeline": "bookstore-rag-ingest-pipeline"
-  },
-  "mappings": {
-    "properties": {
-      "book_id": { "type": "keyword" },
-      "title":   { "type": "text" },
-      "author":  { "type": "text" },
-      "content": { "type": "text" },
-      "genre":   { "type": "keyword" },
-      "price":   { "type": "float" },
-      "rating":  { "type": "float" },
-      "publication_year": { "type": "integer" },
-      "in_stock": { "type": "boolean" },
-      "content_embedding": {
-        "type": "knn_vector",
-        "dimension": 768,
-        "method": {
-          "engine": "faiss",
-          "name": "hnsw",
-          "space_type": "l2",
-          "parameters": { "m": 16, "ef_construction": 128 }
-        }
-      }
-    }
-  }
-}
-```
-**Expected** — `"acknowledged": true`. If it exists, `DELETE bookstore-rag-index` first.
-**Fast mode** — `08-create-bookstore-rag-index.bru`
-
-### Step 6: Bulk-load the bookstore data
-
-**Why** — bulk indexing amortizes network overhead; each document runs the default pipeline and is embedded server-side. Expect several minutes on a trial cluster (one inference per document).
-
-**Request** — run `POST _bulk?timeout=600s`, then on the next lines paste the full contents of [`rest/bulk/chapter-4-bookstore-rag-index.ndjson`](../../rest/bulk/chapter-4-bookstore-rag-index.ndjson) (end with a blank line). For a quick smoke test, paste just a couple of action/source line pairs.
-```http
-POST _bulk?timeout=600s
-```
-Then make the docs searchable:
-```http
-POST bookstore-rag-index/_refresh
-```
-**Expected** — `"errors": false`. If any item errors, check the model is deployed and `ML_MODEL_ID` is correct.
-**Fast mode** — `09-bulk-bookstore-rag-index.bru` → `10-refresh-bookstore-rag-index.bru`
-
-### Step 7: k-NN search — the result-set-size lever
-
-**Why** — vector search returns the top-`k` neighbors. Ask for only what you need (`size: 10`) and fetch only the fields you use with `_source` — over thousands of queries per hour, lean responses add up. Paste the stored query vector.
-
-**Request**
-```http
-GET bookstore-rag-index/_search
-{
-  "size": 10,
-  "_source": ["title", "author", "genre", "price", "rating"],
-  "query": {
-    "knn": {
-      "content_embedding": { "vector": [ /* paste 768 floats from bookstore-rag-query-vector.json */ ], "k": 10 }
-    }
-  }
-}
-```
-**Expected** — 10 nearest-neighbor hits, each `_source` limited to the five listed fields.
-**Fast mode** — `11-knn-search.bru`
-
-### Step 8: Filtered k-NN search — the filtering lever
-
-**Why** — filtering is the biggest performance win: narrow the candidate set by exact metadata **before** the vector pass. FAISS supports filtered k-NN (efficient filtering), so a query for "mystery under $20 with good ratings" only scores books that already match. `must` drives scoring; `filter` clauses are cheap yes/no gates.
-
-**Request**
-```http
-GET bookstore-rag-index/_search
-{
-  "size": 10,
-  "_source": ["title", "author", "genre", "price", "rating"],
-  "query": {
-    "knn": {
-      "content_embedding": {
-        "vector": [ /* paste 768 floats */ ],
-        "k": 10,
-        "filter": {
-          "bool": {
-            "must": [ { "term": { "genre": "mystery" } } ],
-            "filter": [
-              { "range": { "price": { "lte": 20 } } },
-              { "range": { "rating": { "gte": 4.0 } } }
-            ]
-          }
-        }
-      }
-    }
-  }
-}
-```
-**Expected** — only mystery books priced ≤ $20 with rating ≥ 4.0 (six such books exist in the sample data).
-**Fast mode** — `12-knn-filtered-search.bru`
-
-### Step 9: Create the hybrid search pipeline
-
-**Why** — vector and BM25 scores live on different scales, so you cannot average them raw. A `normalization-processor` rescales both to 0–1 (`min_max`) and blends them with weights you control. Here `[0.3, 0.7]` maps in clause order to `[keyword, vector]` — semantic relevance matters more for a bookstore.
-
-**Request**
-```http
-PUT _search/pipeline/bookstore-hybrid-pipeline
-{
-  "description": "Hybrid search pipeline for bookstore RAG",
-  "phase_results_processors": [
-    {
-      "normalization-processor": {
-        "normalization": { "technique": "min_max" },
-        "combination": {
-          "technique": "arithmetic_mean",
-          "parameters": { "weights": [0.3, 0.7] }
-        }
-      }
-    }
-  ]
-}
-```
-**Expected** — `"acknowledged": true`.
-**Fast mode** — `13-create-hybrid-pipeline.bru`
-
-### Step 10: Hybrid search
-
-**Why** — combines the exact-match precision of BM25 with the semantic reach of k-NN. The `hybrid` query clause order must match the pipeline's `weights` order.
-
-**Request**
-```http
-GET bookstore-rag-index/_search?search_pipeline=bookstore-hybrid-pipeline
-{
-  "size": 10,
-  "_source": { "excludes": ["content_embedding"] },
-  "query": {
-    "hybrid": {
-      "queries": [
-        { "match": { "content": { "query": "mystery novel with an unreliable narrator" } } },
-        { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } }
-      ]
-    }
-  }
-}
-```
-**Expected** — hits with normalized, blended `_score` values; the embedding is excluded from `_source`.
-**Fast mode** — `14-hybrid-search.bru`
-
-### Step 11: Reranking with business signals
-
-**Why** — reranking reorders the candidate set using signals that were not part of similarity: recency, rating, availability. A `function_score` query boosts recent, highly-rated, in-stock books so business-relevant results float to the top.
-
-> **Reconciling note.** The video shows this as a Painless response processor that mutates `hit._score` and re-sorts `ctx._source`. That snippet is illustrative — OpenSearch has no response processor that re-sorts hits by an arbitrary Painless score. The runnable, supported equivalent is a `function_score` query (below), which produces the same "boost recent + highly-rated + in-stock" ranking.
-
-**Request**
-```http
-GET bookstore-rag-index/_search
-{
-  "size": 10,
-  "_source": ["title", "author", "genre", "rating", "publication_year", "in_stock"],
-  "query": {
-    "function_score": {
-      "query": { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } },
-      "functions": [
-        { "field_value_factor": { "field": "rating", "factor": 0.1, "missing": 3.0 } },
-        { "filter": { "range": { "publication_year": { "gte": 2020 } } }, "weight": 1.2 },
-        { "filter": { "term": { "in_stock": true } }, "weight": 1.15 }
-      ],
-      "score_mode": "sum",
-      "boost_mode": "sum"
-    }
-  }
-}
-```
-**Expected** — the same candidate books, reordered so recent, highly-rated, in-stock titles rank higher.
-**Fast mode** — `15-rerank-function-score.bru`
-
-### Step 12: Caching — warm the k-NN cache
-
-**Why** — the k-NN **native memory cache** holds HNSW graphs off-heap; if graphs are not resident, every search pays a disk-load penalty. Run the **warmup** API after a restart or a large load to preload graphs proactively.
-
-**Request**
-```http
-GET _plugins/_knn/warmup/bookstore-rag-index
-```
-```http
-GET _plugins/_knn/stats
-```
-**Expected** — warmup returns `_shards` with `successful` > 0; in stats watch `graph_memory_usage_percentage`, `cache_hit_rate` (rises toward 1.0 after warming), and `graph_query_requests`.
-
-> **Circuit breaker — already configured.** You set `knn.memory.circuit_breaker.limit` to 50% in Chapter 2 Step 20; it's the same knob and still applies here. Raise it only if the stats above show `graph_memory_usage_percentage` pressing the limit — and remember it's a persistent, cluster-wide setting on a shared lab cluster.
-
-**Fast mode** — `16-knn-warmup.bru` → `17-knn-stats.bru`
-
----
-
-# Lesson 4-2 — Optimizing indexes for RAG
-
-**Goal:** rebuild the index the right way. Fix an unoptimized baseline, add native chunking, size shards intentionally, use the fast-bulk recipe, and warm/preload vector files. These are the choices that are hard to change later.
-
-**The unoptimized baseline (read-along).** A common starting point: a flat index with `text` on fields you actually filter on (ISBN, genre), no vector field, and the default 1-second refresh. It works for keyword search but is not RAG-ready. There's no need to create a bad index just to read its mapping back — study it here and spot the problems:
-
-```json
-{
-  "settings": { "index": { "number_of_shards": 2, "number_of_replicas": 1 } },
-  "mappings": {
-    "properties": {
-      "book_id": { "type": "text" }, "title": { "type": "text" }, "author": { "type": "text" },
-      "isbn": { "type": "text" }, "genre": { "type": "text" }, "published_year": { "type": "integer" },
-      "price": { "type": "float" }, "rating": { "type": "integer" }, "content": { "type": "text" }
-    }
-  }
-}
-```
-
-The three problems: no `knn_vector` field, `text` (not `keyword`) on `genre`/`isbn` — so filters run full-text analysis instead of exact matches — and the default 1-second refresh. Steps 13–15 fix all three.
-
-### Step 13: Create the chunking ingest pipeline
+### Step 4: Create the chunking ingest pipeline
 
 **Why** — a 2,000-word description is too long for one embedding; models truncate past ~512 tokens. The native `text_chunking` processor splits `content` into overlapping segments at ingest. `fixed_token_length` with `token_limit: 384` (~75% of a 512-token budget, leaving headroom) and `overlap_rate: 0.2` (20% overlap so boundary context is not lost — valid range is 0–0.5). A Painless step reshapes the raw chunk array into `{text, chunk_index}` objects for the nested field, then `text_embedding` embeds the whole `content` into `content_embedding`. Replace `YOUR_MODEL_ID`.
 
@@ -361,9 +108,9 @@ PUT _ingest/pipeline/bookstore-chunking-pipeline
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `21-create-chunking-pipeline.bru`
 
-### Step 14: Create the optimized `bookstore-rag` index
+### Step 5: Create the `bookstore-rag` index (FAISS HNSW, chunked)
 
-**Why** — `content_chunks` is `nested` (required to keep each chunk's fields together), `content_embedding` uses FAISS HNSW, `genre` is `keyword` (exact filter, not full-text), and `refresh_interval` starts at `30s` — the catalog updates nightly, not per second.
+**Why** — for production vector workloads **FAISS + HNSW** gives fast approximate nearest-neighbor search: `m` controls graph connectivity (higher = better recall, more memory) and `ef_construction` controls how carefully the graph is built — `m=16, ef_construction=128` is a balanced starting point. `content_chunks` is `nested` (required to keep each chunk's fields together), `genre` is `keyword` (exact filter, not full-text), and `refresh_interval` starts at `30s` — the catalog updates nightly, not per second.
 
 **Request** — delete first if re-running: `DELETE bookstore-rag`.
 ```http
@@ -393,9 +140,9 @@ PUT bookstore-rag
 **Expected** — `"acknowledged": true`.
 **Fast mode** — `22-delete-bookstore-rag.bru` (optional) → `23-create-bookstore-rag.bru`
 
-### Step 15: Fast bulk load (refresh off → bulk → force-merge → refresh on)
+### Step 6: Fast bulk load (refresh off → bulk → force-merge → refresh on)
 
-**Why** — the default 1-second refresh creates a new Lucene segment on every cycle, adding merge overhead during a batch load. Disable refresh for the load, then force-merge to collapse many small segments into a few large ones (fewer files to scan = faster search), then restore the refresh and make docs visible.
+**Why** — the default 1-second refresh creates a new Lucene segment on every cycle, adding merge overhead during a batch load. Disable refresh for the load, then force-merge to collapse many small segments into a few large ones (fewer files to scan = faster search), then restore the refresh and make docs visible. Expect several minutes on a trial cluster — each document is chunked and embedded server-side (one inference per document).
 
 **Request**
 ```http
@@ -413,21 +160,159 @@ PUT bookstore-rag/_settings
 ```http
 POST bookstore-rag/_refresh
 ```
-**Expected** — bulk `"errors": false`; force-merge returns `_shards` success; refresh makes all docs searchable.
-**Fast mode** — `24-disable-refresh.bru` → `25-bulk-bookstore-rag.bru` → `26-force-merge.bru` → `27-restore-refresh.bru` → `28-refresh-bookstore-rag.bru`
-
-### Step 16: Inspect shard sizes
-
-**Why** — shard count is a near-permanent, one-time decision. Too many tiny shards waste JVM heap; too few large shards hurt parallelism and slow recovery. Target **10–30 GB/shard** for search-heavy RAG, **30–50 GB** for write-heavy, and for pure vector start at **50 GB**, reducing toward **10 GB** if queries are hybrid and latency-sensitive. Formula: `number_of_shards = total_data_size_GB / target_shard_size_GB`. At ~5 GB for 500k books, one primary shard is plenty.
-
-**Request**
+Then check the shard picture — shard count is a near-permanent, one-time decision. Target **10–30 GB/shard** for search-heavy RAG, **30–50 GB** for write-heavy, and for pure vector start at **50 GB**, reducing toward **10 GB** if queries are hybrid and latency-sensitive (`number_of_shards = total_data_size_GB / target_shard_size_GB`; at ~5 GB for 500k books, one primary shard is plenty):
 ```http
 GET _cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=json
 ```
-**Expected** — one row per shard with `docs` and `store` (size). Compare `store` against the targets above.
-**Fast mode** — `29-cat-shards.bru`
+**Expected** — bulk `"errors": false` (if any item errors, check the model is deployed and `ML_MODEL_ID` is correct); force-merge returns `_shards` success; refresh makes all docs searchable; one row per shard with `docs` and `store`.
+**Fast mode** — `24-disable-refresh.bru` → `25-bulk-bookstore-rag.bru` → `26-force-merge.bru` → `27-restore-refresh.bru` → `28-refresh-bookstore-rag.bru` → `29-cat-shards.bru`
 
-### Step 17: Warm and preload the vector files
+### Step 7: k-NN search — the result-set-size lever
+
+**Why** — vector search returns the top-`k` neighbors. Ask for only what you need (`size: 10`) and fetch only the fields you use with `_source` — over thousands of queries per hour, lean responses add up. Paste the stored query vector.
+
+**Request**
+```http
+GET bookstore-rag/_search
+{
+  "size": 10,
+  "_source": ["title", "author", "genre", "price", "rating"],
+  "query": {
+    "knn": {
+      "content_embedding": { "vector": [ /* paste 768 floats from bookstore-rag-query-vector.json */ ], "k": 10 }
+    }
+  }
+}
+```
+**Expected** — 10 nearest-neighbor hits, each `_source` limited to the five listed fields.
+**Fast mode** — `11-knn-search.bru`
+
+### Step 8: Filtered k-NN search — the filtering lever
+
+**Why** — filtering is the biggest performance win: narrow the candidate set by exact metadata **before** the vector pass. FAISS supports filtered k-NN (efficient filtering), so a query for "mystery under $20 with good ratings" only scores books that already match. `must` drives scoring; `filter` clauses are cheap yes/no gates.
+
+**Request**
+```http
+GET bookstore-rag/_search
+{
+  "size": 10,
+  "_source": ["title", "author", "genre", "price", "rating"],
+  "query": {
+    "knn": {
+      "content_embedding": {
+        "vector": [ /* paste 768 floats */ ],
+        "k": 10,
+        "filter": {
+          "bool": {
+            "must": [ { "term": { "genre": "mystery" } } ],
+            "filter": [
+              { "range": { "price": { "lte": 20 } } },
+              { "range": { "rating": { "gte": 4.0 } } }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+```
+**Expected** — only mystery books priced ≤ $20 with rating ≥ 4.0 (six such books exist in the sample data).
+**Fast mode** — `12-knn-filtered-search.bru`
+
+### Step 9: Hybrid search — create the pipeline and run it
+
+**Why** — vector and BM25 scores live on different scales, so you cannot average them raw. A `normalization-processor` rescales both to 0–1 (`min_max`) and blends them with weights you control. Here `[0.3, 0.7]` maps in clause order to `[keyword, vector]` — semantic relevance matters more for a bookstore. The `hybrid` query then combines the exact-match precision of BM25 with the semantic reach of k-NN; its clause order must match the pipeline's `weights` order.
+
+**Request** — create the pipeline:
+```http
+PUT _search/pipeline/bookstore-hybrid-pipeline
+{
+  "description": "Hybrid search pipeline for bookstore RAG",
+  "phase_results_processors": [
+    {
+      "normalization-processor": {
+        "normalization": { "technique": "min_max" },
+        "combination": {
+          "technique": "arithmetic_mean",
+          "parameters": { "weights": [0.3, 0.7] }
+        }
+      }
+    }
+  ]
+}
+```
+**Request** — run the hybrid query through it:
+```http
+GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
+{
+  "size": 10,
+  "_source": { "excludes": ["content_embedding", "content_chunks"] },
+  "query": {
+    "hybrid": {
+      "queries": [
+        { "match": { "content": { "query": "mystery novel with an unreliable narrator" } } },
+        { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } }
+      ]
+    }
+  }
+}
+```
+**Expected** — `"acknowledged": true`, then hits with normalized, blended `_score` values; the embedding and chunks are excluded from `_source`.
+**Fast mode** — `13-create-hybrid-pipeline.bru` → `14-hybrid-search.bru`
+
+### Step 10: Reranking with business signals
+
+**Why** — reranking reorders the candidate set using signals that were not part of similarity: recency, rating, availability. A `function_score` query boosts recent, highly-rated, in-stock books so business-relevant results float to the top.
+
+> **Reconciling note.** The video shows this as a Painless response processor that mutates `hit._score` and re-sorts `ctx._source`. That snippet is illustrative — OpenSearch has no response processor that re-sorts hits by an arbitrary Painless score. The runnable, supported equivalent is a `function_score` query (below), which produces the same "boost recent + highly-rated + in-stock" ranking.
+
+**Request**
+```http
+GET bookstore-rag/_search
+{
+  "size": 10,
+  "_source": ["title", "author", "genre", "rating", "publication_year", "in_stock"],
+  "query": {
+    "function_score": {
+      "query": { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } },
+      "functions": [
+        { "field_value_factor": { "field": "rating", "factor": 0.1, "missing": 3.0 } },
+        { "filter": { "range": { "publication_year": { "gte": 2020 } } }, "weight": 1.2 },
+        { "filter": { "term": { "in_stock": true } }, "weight": 1.15 }
+      ],
+      "score_mode": "sum",
+      "boost_mode": "sum"
+    }
+  }
+}
+```
+**Expected** — the same candidate books, reordered so recent, highly-rated, in-stock titles rank higher.
+**Fast mode** — `15-rerank-function-score.bru`
+
+---
+
+# Lesson 4-2 — Optimizing indexes for RAG
+
+**Goal:** understand the index-design choices that are hard to change later — and see that the index you built in Lesson 4-1 already makes them: correct field types, native chunking, intentional shard sizing, and the fast-bulk recipe. One hands-on lever remains: warming and preloading the vector files.
+
+**The unoptimized baseline (read-along).** A common starting point: a flat index with `text` on fields you actually filter on (ISBN, genre), no vector field, and the default 1-second refresh. It works for keyword search but is not RAG-ready. There's no need to create a bad index just to read its mapping back — study it here and spot the problems:
+
+```json
+{
+  "settings": { "index": { "number_of_shards": 2, "number_of_replicas": 1 } },
+  "mappings": {
+    "properties": {
+      "book_id": { "type": "text" }, "title": { "type": "text" }, "author": { "type": "text" },
+      "isbn": { "type": "text" }, "genre": { "type": "text" }, "published_year": { "type": "integer" },
+      "price": { "type": "float" }, "rating": { "type": "integer" }, "content": { "type": "text" }
+    }
+  }
+}
+```
+
+The three problems: no `knn_vector` field, `text` (not `keyword`) on `genre`/`isbn` — so filters run full-text analysis instead of exact matches — and the default 1-second refresh. The index you built in Steps 4–6 fixes all three.
+
+### Step 11: Warm and preload the vector files
 
 **Why** — after a restart HNSW graphs sit on disk and the first queries pay a load penalty. **Warmup** loads graphs into native memory. `index.store.preload` mmaps the k-NN `vec` (vectors) and `vem` (vector metadata) files into the OS file cache on index open — which requires a close → set → open cycle. Make warmup part of your deploy checklist after index creation and any large load.
 
@@ -451,7 +336,9 @@ POST bookstore-rag/_open
 ```http
 GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
 ```
-**Expected** — warmup reports warmed shards; after `_open`, health reaches `yellow` (or `green`).
+**Expected** — warmup reports warmed shards; after `_open`, health reaches `yellow` (or `green`). In the k-NN stats watch `graph_memory_usage_percentage`, `cache_hit_rate` (rises toward 1.0 after warming), and `graph_query_requests`.
+
+> **Circuit breaker — already configured.** You set `knn.memory.circuit_breaker.limit` to 50% in Chapter 2 Step 15; it's the same knob and still applies here. Raise it only if the stats above show `graph_memory_usage_percentage` pressing the limit — and remember it's a persistent, cluster-wide setting on a shared lab cluster.
 **Fast mode** — `30-knn-warmup-bookstore-rag.bru` → `31-knn-stats-bookstore-rag.bru` → `32-close-index.bru` → `33-set-preload.bru` → `34-open-index.bru` → `35-cluster-health.bru`
 
 > **Production checklist (runbook).** 1) create chunking pipeline → 2) create index → 3) disable refresh → 4) bulk load → 5) force-merge + restore refresh → 6) warm k-NN → 7) verify shards + stats. Seven repeatable, verifiable steps.
@@ -462,56 +349,12 @@ GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
 
 **Goal:** the fastest wins, because they need no re-indexing. Profile a query to find the bottleneck, measure retrieval quality with `_rank_eval`, and centralize query logic in search pipelines so application code never changes. Runs against `bookstore-rag`.
 
-### Step 18: Profile a hybrid query
+> **Profiling and explain (read-along).** Two debugging tools worth knowing, neither worth running here:
+>
+> - `"profile": true` on any search returns a per-component timing breakdown (`query`/`collector` in nanoseconds) — the tool for finding which clause is slow. **But on OpenSearch 3.5.0, `profile` + a `hybrid` query throws a 500 `null_pointer_exception`** in the neural-search plugin (verified live — the hybrid collector doesn't support the profiler wrapper). Profile the `match` and `knn` sub-queries independently instead; Chapter 5 profiles a plain query hands-on.
+> - `explain=true` returns a per-hit `_explanation` tree of sub-scorers (BM25 term weights, vector similarity, normalization contributions). Expensive — debugging only, never in production.
 
-**Why** — add `"profile": true` to any search for a per-component timing breakdown. For a hybrid query you get separate `time_in_nanos` for the BM25 `match` and the k-NN pass, so you know exactly which half is slow. Profiling adds overhead — use it in staging, not production.
-
-**Request**
-```http
-GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
-{
-  "profile": true,
-  "size": 10,
-  "_source": { "excludes": ["content_embedding", "content_chunks"] },
-  "query": {
-    "hybrid": {
-      "queries": [
-        { "match": { "content": { "query": "mystery novel unreliable narrator" } } },
-        { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } }
-      ]
-    }
-  }
-}
-```
-**Expected** — normal hits plus a `profile` object → `shards[].searches[]` with `query`/`collector` timings in nanoseconds.
-**Fast mode** — `36-profile-hybrid-search.bru`
-
-> **Version gate (verified against a real OpenSearch 3.5.0 cluster).** `profile: true` combined with a `hybrid` query currently throws a 500 `null_pointer_exception` in the neural-search plugin (`HybridTopScoreDocCollector$HybridTopScoreLeafCollector.getCompoundQueryScorer()` returns null) — the hybrid collector does not support being wrapped by the profiler on this version. `profile: true` works fine on a plain `knn` or `match` query; it is specifically the `hybrid` + `profile` combination that fails. Workaround: profile the `match` and `knn` sub-queries independently (without `hybrid`) to get the same timing breakdown, or skip profiling for hybrid queries until this plugin issue is fixed upstream.
-
-### Step 19: Explain the scores
-
-**Why** — `explain=true` returns a per-hit `_explanation` tree of sub-scorers (BM25 term weights, vector similarity, normalization contributions). Expensive — debugging only.
-
-**Request**
-```http
-GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline&explain=true
-{
-  "size": 3,
-  "_source": { "excludes": ["content_embedding", "content_chunks"] },
-  "query": {
-    "hybrid": {
-      "queries": [
-        { "match": { "content": { "query": "whale" } } },
-        { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } }
-      ]
-    }
-  }
-}
-```
-**Expected** — each hit carries an `_explanation` tree.
-**Fast mode** — `37-explain-hybrid-search.bru`
-
-### Step 20: Measure quality with `_rank_eval`
+### Step 12: Measure quality with `_rank_eval`
 
 **Why** — a unit test for search quality. Provide test queries and the IDs you consider relevant (with ratings); OpenSearch returns a metric like `mean_reciprocal_rank` or precision@k. Use it to compare keyword vs hybrid, chunk sizes, or models with numbers instead of vibes. The IDs below are real books in the sample data (Moby Dick `2701`, Sherlock `1661`, Dracula `345`, Frankenstein `84`).
 
@@ -545,11 +388,11 @@ GET bookstore-rag/_rank_eval
 **Expected** — a top-level `metric_score` plus per-query `details`. Edit ratings or swap `match` for a `hybrid` query and re-run to watch the score move.
 **Fast mode** — `38-rank-eval.bru`
 
-### Step 21: A request-processor search pipeline
+### Step 13: A request-processor search pipeline, set as the index default
 
-**Why** — search pipelines run three processor types: **request** (transform the query before it runs), **phase-results** (between query and fetch — where normalization lives), and **response** (modify results). A `filter_query` request processor injects an `in_stock: true` filter into *every* search, so you can change search behavior without redeploying the app.
+**Why** — search pipelines run three processor types: **request** (transform the query before it runs), **phase-results** (between query and fetch — where normalization lives), and **response** (modify results). A `filter_query` request processor injects an `in_stock: true` filter into *every* search, so you can change search behavior without redeploying the app. Setting it as `index.search.default_pipeline` applies it to every query automatically (distinct from `index.default_pipeline`, which is ingest); bypass it for one request with `?search_pipeline=_none`.
 
-**Request**
+**Request** — create the pipeline:
 ```http
 PUT _search/pipeline/bookstore-stock-filter
 {
@@ -559,63 +402,15 @@ PUT _search/pipeline/bookstore-stock-filter
   ]
 }
 ```
-**Expected** — `"acknowledged": true`.
-**Fast mode** — `39-create-stock-filter-pipeline.bru`
-
-### Step 22: Set it as the index default
-
-**Why** — `index.search.default_pipeline` applies a search pipeline to every query automatically (distinct from `index.default_pipeline`, which is ingest). Bypass it for one request with `?search_pipeline=_none`.
-
-**Request**
+**Request** — make it the index default:
 ```http
 PUT bookstore-rag/_settings
 { "index.search.default_pipeline": "bookstore-stock-filter" }
 ```
-**Expected** — `"acknowledged": true`. Every subsequent search now hides out-of-stock books.
-**Fast mode** — `40-set-default-search-pipeline.bru`
+**Expected** — `"acknowledged": true` for both. Every subsequent search now hides out-of-stock books.
+**Fast mode** — `39-create-stock-filter-pipeline.bru` → `40-set-default-search-pipeline.bru`
 
-### Step 23: Combine filtering and normalization
-
-**Why** — one pipeline can do both: filter out-of-stock items at the request phase **and** normalize hybrid scores at the phase-results phase — business rules and relevance in one place.
-
-**Request**
-```http
-PUT _search/pipeline/bookstore-full-pipeline
-{
-  "description": "Full bookstore search pipeline: stock filter + hybrid normalization",
-  "request_processors": [
-    { "filter_query": { "query": { "term": { "in_stock": true } }, "tag": "stock_filter" } }
-  ],
-  "phase_results_processors": [
-    {
-      "normalization-processor": {
-        "normalization": { "technique": "min_max" },
-        "combination": { "technique": "arithmetic_mean", "parameters": { "weights": [0.3, 0.7] } }
-      }
-    }
-  ]
-}
-```
-Use it on a hybrid query:
-```http
-GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
-{
-  "size": 10,
-  "_source": { "excludes": ["content_embedding", "content_chunks"] },
-  "query": {
-    "hybrid": {
-      "queries": [
-        { "match": { "content": { "query": "whale" } } },
-        { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } }
-      ]
-    }
-  }
-}
-```
-**Expected** — only in-stock hits, with normalized blended scores.
-**Fast mode** — `41-create-full-pipeline.bru` → `42-hybrid-with-full-pipeline.bru`
-
-> **Version gate (verified against a real OpenSearch 3.5.0 cluster).** The filtering works (only in-stock hits return), but the blended scores are **not** normalized when a `filter_query` request processor and a `normalization-processor` phase-results processor are combined in the same pipeline — hits come back with raw, un-normalized `_score` values identical to a plain `knn` query's scores (e.g. `0.0074...` instead of the `0.0–1.0` range you get from `bookstore-hybrid-pipeline` alone in Step 10, `14-hybrid-search.bru`). Splitting the two processors into separate pipelines and running the `bookstore-stock-filter` request-processor pipeline and `bookstore-hybrid-pipeline` phase-results pipeline back-to-back does not help either, since only one search pipeline applies per request. Treat this combination as filtering-only until the neural-search plugin fixes the interaction; for now, do business-rule filtering with a `bool`/`must_not` clause inside the hybrid query itself if you need normalized scores **and** filtering together.
+> **Combining filtering and normalization (read-along).** In principle one pipeline can do both — a `filter_query` request processor for business rules plus a `normalization-processor` for hybrid relevance. **Don't build it on OpenSearch 3.5.0:** verified live, the filtering works but the blended scores come back raw and un-normalized when the two processor types share a pipeline (identical to a plain `knn` query's scores instead of the 0.0–1.0 range `bookstore-hybrid-pipeline` produces alone in Step 9). Running two separate pipelines back-to-back doesn't help either — only one search pipeline applies per request. Until the neural-search plugin fixes the interaction, put business-rule filters in a `bool` clause inside the hybrid query itself when you need normalized scores **and** filtering together.
 
 ---
 
@@ -623,27 +418,20 @@ GET bookstore-rag/_search?search_pipeline=bookstore-full-pipeline
 
 **Goal:** expose the cluster to AI agents through the **Model Context Protocol (MCP)**. OpenSearch ships a built-in MCP server in ML Commons: flip one cluster setting and any MCP-compatible client can discover and call tools (list indexes, read mappings, run searches) without custom integration code.
 
-> **Version + environment.** The built-in MCP server APIs are recent: tool register/list were **introduced in 3.1**, the **Streamable HTTP** transport at `/_plugins/_ml/mcp` in **3.3**. Steps 24–25 (enable + register tools) are safe on any 3.3+ cluster. Steps 26–28 (external LLM connector + conversational agent) require an **external LLM API key** and outbound network access, which the managed course cluster may not permit — treat them as an **optional, read-along** section and substitute your own provider/credentials.
+> **Version + environment.** The built-in MCP server APIs are recent: tool register/list were **introduced in 3.1**, the **Streamable HTTP** transport at `/_plugins/_ml/mcp` in **3.3**. Step 14 (enable + register tools) is safe on any 3.3+ cluster. The **appendix** steps (A1–A3: external LLM connector + conversational agent) require an **external LLM API key** and outbound network access, which the managed course cluster may not permit — treat them as an optional, read-along section and substitute your own provider/credentials.
 
-### Step 24: Enable the MCP server
+### Step 14: Enable the MCP server and register tools
 
-**Why** — turns the cluster into an MCP server exposed at `/_plugins/_ml/mcp` (Streamable HTTP) and `/_plugins/_ml/mcp/sse` (SSE). One setting, no restart.
+**Why** — one persistent setting turns the cluster into an MCP server exposed at `/_plugins/_ml/mcp` (Streamable HTTP) and `/_plugins/_ml/mcp/sse` (SSE) — no restart. Registering tools then lets clients discover and call them; the core tools map to the operations you have used all chapter: list indexes, read a mapping, run a search.
 
-**Request**
+**Request** — enable the server:
 ```http
 PUT _cluster/settings
 {
   "persistent": { "plugins.ml_commons.mcp_server_enabled": "true" }
 }
 ```
-**Expected** — `"acknowledged": true`.
-**Fast mode** — `43-enable-mcp-server.bru`
-
-### Step 25: Register MCP tools
-
-**Why** — registering tools lets clients discover and call them. The core tools map to the operations you have used all chapter: list indexes, read a mapping, run a search.
-
-**Request**
+**Request** — register the tools:
 ```http
 POST _plugins/_ml/mcp/tools/_register
 {
@@ -658,10 +446,12 @@ Confirm:
 ```http
 GET _plugins/_ml/mcp/tools/_list
 ```
-**Expected** — the registered tools appear in `_list`.
-**Fast mode** — `44-register-mcp-tools.bru` → `45-list-mcp-tools.bru`
+**Expected** — `"acknowledged": true` for the setting; the registered tools appear in `_list`.
+**Fast mode** — `43-enable-mcp-server.bru` → `44-register-mcp-tools.bru` → `45-list-mcp-tools.bru`
 
-### Step 26 (optional): Connect an external LLM
+## Appendix (optional): LLM-driven agents
+
+### A1: Connect an external LLM
 
 **Why** — the MCP server exposes tools, but an LLM decides which to call. ML Commons registers a remote model via a connector. Replace the credential with your own; this creates the connector and model in one call.
 
@@ -695,7 +485,7 @@ POST _plugins/_ml/models/_register
 **Save** — `model_id`.
 **Fast mode** — `46-register-llm-connector-model.bru`
 
-### Step 27 (optional): Register a conversational agent
+### A2: Register a conversational agent
 
 **Why** — an agent coordinates the LLM and tools using the ReAct pattern (Reason → Act → Observe). `memory.type: conversation_index` stores chat history for follow-ups; the tools array is what the LLM may call. Replace `YOUR_MODEL_ID`.
 
@@ -725,7 +515,7 @@ POST _plugins/_ml/agents/_register
 **Save** — `agent_id`.
 **Fast mode** — `47-register-conversational-agent.bru`
 
-### Step 28 (optional): Run the agent
+### A3: Run the agent
 
 **Why** — the agent discovers the index (`ListIndexTool`), reads its fields (`IndexMappingTool`), builds and runs a filtered query (`SearchIndexTool` / `QueryPlanningTool`), and answers. The response includes a `memory_id` for follow-up turns.
 
@@ -758,13 +548,10 @@ Remove what this chapter created (order: search pipelines, indexes, ingest pipel
 ```http
 DELETE _search/pipeline/bookstore-hybrid-pipeline
 DELETE _search/pipeline/bookstore-stock-filter
-DELETE _search/pipeline/bookstore-full-pipeline
-DELETE bookstore-rag-index
 DELETE bookstore-rag
-DELETE _ingest/pipeline/bookstore-rag-ingest-pipeline
 DELETE _ingest/pipeline/bookstore-chunking-pipeline
 ```
-Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. Index deletes have matching Bruno requests: `49-cleanup-delete-bookstore-rag-index.bru` → `50-cleanup-delete-bookstore-rag.bru`. (If an earlier run of this workshop created `books-unoptimized`, delete it too — a `404` means it's already gone.)
+Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. The index delete has a matching Bruno request: `50-cleanup-delete-bookstore-rag.bru`. (Earlier revisions of this workshop also created `bookstore-rag-index`, `books-unoptimized`, and the `bookstore-rag-ingest-pipeline` — delete them too if present; a `404` means they're already gone.)
 
 ## What you learned
 

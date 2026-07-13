@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/bookstore-rag-index/_search?search_pipeline=bookstore-hybrid-pipeline
+  url: {{baseUrl}}/bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
   body: json
   auth: basic
 }
@@ -20,7 +20,8 @@ body:json {
   "size": 10,
   "_source": {
     "excludes": [
-      "content_embedding"
+      "content_embedding",
+      "content_chunks"
     ]
   },
   "query": {
