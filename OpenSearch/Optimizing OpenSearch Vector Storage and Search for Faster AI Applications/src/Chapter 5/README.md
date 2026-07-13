@@ -57,8 +57,7 @@ A **shard** is a self-contained Lucene index. **Primaries** hold your data; **re
 
 ### Step 1: Create a deliberately over-sharded index and watch the cluster go yellow
 
-**Why**  
-This demonstrates the failure mode. A node cannot hold both a primary and its own replica, so once you ask for more shard *copies* than there are data nodes to hold distinct copies, some replicas stay unassigned and the cluster turns **yellow**. Delete first so the step is repeatable.
+The best way to learn cluster triage is to break a cluster you're allowed to break. In this step you deliberately create the most common allocation failure in the wild: asking for more shard *copies* than there are data nodes to hold them. A node will never host both a primary and its own replica (that would defeat the point of a replica), so the extra copies simply have nowhere to go, they sit unassigned, and the cluster turns **yellow**. You'll see the symptom now and fix it in Step 2. Delete first so the step is repeatable.
 
 > **Fixed for a 3-data-node cluster.** With `number_of_replicas: 1` (2 copies per shard) a 3-data-node cluster can place every copy without collision — verified live: the cluster stayed **green**, 100% active shards, nothing unassigned. The failure mode only appears once a shard needs **more copies than there are data nodes**. This cluster has 3 data nodes, so `number_of_replicas: 3` (4 copies per shard: 1 primary + 3 replicas) reliably forces at least one unassigned replica per shard. Verified live: `"status": "yellow"`, `"unassigned_shards": 6` (one per primary shard), `allocation/explain` shows the `same_shard` decider.
 
@@ -92,8 +91,7 @@ GET _cluster/health
 
 ### Step 2: Reduce replicas to fix allocation, then verify
 
-**Why**  
-With too few nodes to place replicas, the lab fix is to lower `number_of_replicas` (production keeps ≥ 1 for HA — the real fix there is adding nodes). Replica count is a **live** setting; no reindex needed.
+Now play the on-call engineer and bring the cluster back to green. Since the problem is more replica copies than nodes to hold them, the lab fix is to lower `number_of_replicas`. Note that replica count is a **live** setting: one API call, no reindex, and the cluster heals in seconds. (In production you'd keep at least 1 replica for high availability; the real fix there is adding nodes, not shedding redundancy.)
 
 **Request**
 
@@ -120,8 +118,7 @@ GET _cat/shards?v&h=index,shard,prirep,state,node,unassigned.reason
 
 ### Step 3: Diagnose allocation: per-node disk and allocation explain
 
-**Why**  
-Unassigned shards in production are often a **disk** problem. `_cat/allocation` shows how full each node is, and `allocation/explain` returns plain-language decisions per node — the single best tool for "why won't this shard allocate?" (out of disk, awareness violation, filtered out, etc.).
+You fixed this incident because you caused it and knew the answer. Real incidents don't come with an explanation attached, so meet the two tools that provide one. `_cat/allocation` shows how full each node's disk is, which matters because unassigned shards in production are very often a disk problem in disguise. And `allocation/explain` is the closest thing OpenSearch has to a "why" button: it returns plain-language, per-node decisions for exactly why a shard can or cannot allocate (out of disk, awareness violation, filtered out, and so on). Learn this pair now and your next 3 a.m. yellow cluster becomes a five-minute diagnosis.
 
 **Request**
 
@@ -152,8 +149,7 @@ Indexes contain shards; segments live inside shards. Good index design plans for
 
 ### Step 4: Create `my-index` with an optimized mapping, then read it back
 
-**Why**  
-Mappings are largely immutable, so decide up front. **`index: false`** stores a field for retrieval but not search (saves space and indexing cost) — good for `internal_notes`. **`enabled: false`** stores an object as-is without indexing any of its sub-fields — good for opaque `inventory_metadata`. This recreates a clean single-shard index for the mapping and lifecycle demos.
+Here's an index-design principle that saves real money at scale: **only index what you search**. By default OpenSearch builds search structures for every field, but plenty of fields are only ever *retrieved*, never queried. This mapping shows the two opt-outs. **`index: false`** stores a field's value but builds no search structures for it, perfect for `internal_notes` that staff read but nobody queries. **`enabled: false`** goes further and stores an object completely as-is without indexing any sub-field, perfect for opaque blobs like `inventory_metadata`. Decide these up front, because mappings are largely immutable once documents land. This also recreates a clean single-shard `my-index` for the lifecycle demos ahead.
 
 **Request**
 
@@ -203,12 +199,11 @@ GET my-index/_mapping
 
 **Fast mode** — `16-delete-my-index-mapping.bru` → `17-create-my-index-bookstore.bru` → `18-get-mapping.bru`
 
-> **Refresh interval (already covered).** `refresh_interval` is the live, no-reindex setting you tuned in Chapter 2 Step 16 and toggled off/on around Chapter 4's fast bulk load (Step 6). The index-design takeaway: decide it per index, alongside the mapping, based on how fresh search results must be — the default `1s` suits interactive writes; `30s` (or `-1`) suits batch loads. For the two sample documents below, the default is fine.
+> **Refresh interval (already covered).** `refresh_interval` is the live, no-reindex setting you tuned in Chapter 2 Step 15 and toggled off/on around Chapter 4's fast bulk load (Step 6). The index-design takeaway: decide it per index, alongside the mapping, based on how fresh search results must be — the default `1s` suits interactive writes; `30s` (or `-1`) suits batch loads. For the two sample documents below, the default is fine.
 
 ### Step 5: Bulk sample documents into `my-index`
 
-**Why**  
-The caching, profiling, and slow-log steps in Lesson 5-5 run against this index, so give it real documents.
+Two quick documents and one refresh. It's a small step, but the caching, profiling, and slow-log work in Lesson 5-5 all runs against this index, and observability demos are far more convincing when there's real data behind them.
 
 **Request**
 
@@ -232,10 +227,7 @@ POST my-index/_refresh
 
 ### Reference: Shrink an over-sharded read-only index (the canonical recipe)
 
-**Read-along — nothing to run.** This recipe would reshape and ultimately delete Chapter 4's `bookstore-rag`; on the lab cluster the payoff doesn't justify rebuilding that index, but in production this is *the* zero-downtime resharding pattern. Study the sequence:
-
-**Why**  
-**Shrink** rebuilds an index with **fewer primary shards** (target must divide the source count). Use it after time-series roll-off or a bulk load left you over-sharded. The recipe: (1) pin every shard to one node and block writes, (2) `_shrink`, (3) remove the pin so it rebalances, (4) force-merge, (5) atomic alias swap, (6) delete the source.
+**Read-along — nothing to run.** This recipe would reshape and ultimately delete Chapter 4's `bookstore-rag`; on the lab cluster the payoff doesn't justify rebuilding that index, but in production this is *the* zero-downtime resharding pattern. **Shrink** rebuilds an index with **fewer primary shards** (the target count must evenly divide the source count), and you reach for it after time-series roll-off or when a bulk load left you over-sharded. The full sequence: (1) pin every shard to one node and block writes, (2) `_shrink`, (3) remove the pin so it rebalances, (4) force-merge, (5) atomic alias swap, (6) delete the source. Study each move below:
 
 > **Workshop bug found on the real cluster — `bookstore-rag` has only 1 primary shard.** Chapter 4 · Lesson 4-2 creates `bookstore-rag` without an explicit `number_of_shards`, which defaults to **1**. `_shrink` requires the source to have **more than one** primary shard — verified live: `POST bookstore-rag/_shrink/bookstore-rag-shrunk` returns `400 illegal_argument_exception: can't shrink an index with only one shard`. The fix below first uses the **`_split`** API (the inverse of shrink) to reshape `bookstore-rag` into a 2-shard `bookstore-rag-split`, then runs the canonical shrink recipe against that. This keeps the demo fully runnable against the exact prerequisite index the course builds, and additionally demonstrates `_split`.
 
@@ -338,8 +330,7 @@ DELETE bookstore-rag-split
 
 ### Step 6: Automate the index lifecycle: write alias, rollover, and ISM
 
-**Why**  
-For logs/metrics/search-history, create **time-based indexes** (`searches-000001`, …) behind a **write alias** (`is_write_index: true`). Deleting or moving old data is then a whole-index operation — no expensive delete-by-query. Your app writes to the alias and never knows the physical index. `_rollover` then creates the next backing index and moves the write alias when the current one hits a size/age/doc threshold — and an **ISM policy** automates the whole cycle so no one has to remember to run it.
+Some data never stops arriving: logs, metrics, search history. Let it pile into one index and that index grows without bound until it becomes a problem someone inherits. This step builds the standard escape hatch in three moves that hand off to each other. First, a **time-based index** (`searches-000001`) behind a **write alias** (`is_write_index: true`), so your app writes to the alias and never knows which physical index is current, and aging out old data becomes a cheap whole-index delete instead of an expensive delete-by-query. Second, `_rollover`, which creates the next backing index and moves the write alias whenever the current one hits a size, age, or doc-count threshold. Third, an **ISM policy** that runs the whole cycle automatically, because any maintenance that depends on a human remembering it will eventually be forgotten.
 
 **Request**
 
@@ -410,8 +401,7 @@ Vectors are memory hogs by design. A 768-dim `float` vector is `768 × 4 = 3072`
 
 ### Step 7: Cut memory in half with fp16 scalar quantization
 
-**Why (and a script correction)**  
-The script's `data_type: "float16"` does not exist in OpenSearch. fp16 (**SQfp16**) is a **Faiss scalar-quantization encoder**: set `method.parameters.encoder = { "name": "sq" }`. It stores each dimension as a 16-bit float — **~2× memory reduction** (our bookstore shard drops from ~2.25 GB to ~1.1 GB) with typically < 1% recall loss. Values must be within `[-65504, 65504]`.
+If someone offered to cut your vector memory bill in half for under 1% recall loss, you'd take that trade every time, and that's exactly what fp16 quantization is: each dimension stored as a 16-bit float instead of 32, dropping our bookstore shard math from ~2.25 GB to ~1.1 GB. One correction to the video script before you run it: `data_type: "float16"` does not exist in OpenSearch. The real mechanism is a **Faiss scalar-quantization encoder**, set via `method.parameters.encoder = { "name": "sq" }`. Values must fit within `[-65504, 65504]`, which normalized embeddings always do.
 
 > **Second script correction, found on the real cluster.** The `sq` encoder does **not** accept a `bits` parameter — `"encoder": { "name": "sq", "parameters": { "bits": 16 } }` fails live with `mapper_parsing_exception: parameter validation failed for MethodComponentContext parameter [encoder]`. OpenSearch 3.5's Faiss `sq` encoder only implements one quantization type (fp16) and its only valid sub-parameter is the optional boolean `clip` (whether to clip out-of-range values instead of erroring). Verified live: `{ "name": "sq" }` alone, and `{ "name": "sq", "parameters": { "clip": false } }`, both succeed; adding `bits` always 400s.
 
@@ -448,8 +438,7 @@ PUT book-embeddings-fp16
 
 ### Step 8: Inspect index stats (memory footprint)
 
-**Why**  
-The script's homework: run the stats API to see an index's current load. `_stats` reports doc counts, store size, and (for k-NN) segment info. Compare `book-embeddings-fp16` against a full-precision index (e.g. Chapter 4's populated `bookstore-rag`) to see the savings once real data is loaded.
+A claim like "half the memory" deserves verification, and this is the API you'd verify it with. `_stats` reports doc counts, store size, and (for k-NN indexes) segment info, making it the go-to for answering "what is this index actually costing me right now?" Run it against `book-embeddings-fp16`, and when you want a real before/after, compare against a full-precision index like Chapter 4's populated `bookstore-rag` once data is loaded.
 
 **Request**
 
@@ -503,8 +492,7 @@ Under peak load, all queries competing equally means a checkout can stall behind
 
 ### Step 9: Enable shard request caching
 
-**Why**  
-The shard request cache stores results of aggregation/`size:0` queries so hot, repeated requests (current prices, order status) stay fast under load. Enable it per index; higher-value shards effectively stay cached longer than low-priority ones. We use the populated `my-index` from Lesson 5-2.
+Think about how much of your search traffic is the *same* few requests fired over and over: current prices, order status, the dashboard someone keeps refreshing. Recomputing those from scratch every time is pure waste. The shard request cache stores the results of aggregation and `size: 0` queries at the shard level, so hot, repeated requests get answered from memory while the cluster's compute goes to queries that are genuinely new. Enable it per index, and note the practical effect: your highest-value, most-hammered shards end up staying cached the longest. We use the populated `my-index` from Lesson 5-2.
 
 **Request**
 
@@ -531,8 +519,7 @@ GET my-index/_search?request_cache=true
 
 ### Step 10: Profile a query
 
-**Why**  
-`"profile": true` returns a per-shard, per-component timing breakdown — the tool for finding why a query is slow (which clause, rewrite, or collector dominates). Essential before optimizing anything. (Chapter 4 noted the one exception: `profile` + a `hybrid` query 500s on OpenSearch 3.5.0 — plain queries like this one work fine.)
+Never optimize a slow query on a hunch. Adding `"profile": true` to any search returns a per-shard, per-component timing breakdown, showing exactly which clause, rewrite, or collector is eating the time, so you fix the actual bottleneck instead of the suspected one. Make it the first move whenever someone reports "search is slow." (One caveat from Chapter 4: `profile` combined with a `hybrid` query 500s on OpenSearch 3.5.0; plain queries like this one work fine.)
 
 **Request**
 
@@ -550,8 +537,7 @@ GET my-index/_search
 
 ### Step 11: Configure slow logs (per index)
 
-**Why**  
-Slow logs record queries/fetches exceeding a threshold to the node logs so you can catch pathological requests in production. These are **index-level** settings (safe to set on your demo index) with separate query and fetch thresholds per severity.
+Profiling works when you already know which query is slow, but in production the pathological query usually strikes while nobody is watching. Slow logs are the tripwire: any query or fetch that exceeds your thresholds gets recorded to the node logs with its full body, so the evidence is waiting for you instead of vanished. These are **index-level** settings (safe to set on your demo index) with separate query and fetch thresholds per severity, letting you decide per index what counts as "worryingly slow."
 
 **Request**
 

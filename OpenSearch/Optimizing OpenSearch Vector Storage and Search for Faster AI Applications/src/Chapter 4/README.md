@@ -30,11 +30,11 @@ This chapter builds a single chunked index — **`bookstore-rag`** (nested `cont
 
 **Why two levers?** RAG optimization is a trade-off between **performance** (retrieval latency) and **accuracy** (retrieval quality). Faster is not always better; the goal is to tune the balance for your use case.
 
-> **ML Commons prerequisites (already set in Chapter 2).** The persistent settings from [Chapter 2 · Step 2](../Chapter%202/README.md#step-2--enable-ml-commons-cluster-settings) — URL model registration, `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster), and the relaxed native-memory threshold — are still in effect. Starting fresh at this chapter? Run Chapter 2 Step 2 first, then come back.
+> **ML Commons prerequisites (already set in Chapter 2).** The persistent settings from [Chapter 2 · Step 1](../Chapter%202/README.md#step-1--enable-ml-commons-cluster-settings) — URL model registration, `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster), and the relaxed native-memory threshold — are still in effect. Starting fresh at this chapter? Run Chapter 2 Step 1 first, then come back.
 
 ### Step 1: Reuse the model group from Chapter 2
 
-**Why** — model groups scope access to a set of models. The `huggingface-models` group already exists from Chapter 2 Step 3 — reuse its `model_group_id` rather than creating another group. If you still have the id, skip to Step 2; if not, look it up:
+You know the drill by now: models live in groups, and your `huggingface-models` group from Chapter 2 Step 2 is still sitting on the cluster, ready to hold one more. Reuse its `model_group_id` rather than creating a duplicate. If you still have the id, skip to Step 2; if not, one lookup gets it back:
 
 **Request**
 ```http
@@ -44,11 +44,11 @@ POST _plugins/_ml/model_groups/_search
 **Save** — the group's `_id` as `model_group_id`.
 **Fast mode** — `02-find-model-group.bru`
 
-> **Never delete this group** — it contains models registered by other chapters; only remove models you personally registered into it. (On a fresh cluster with no group yet, create it with the `POST _plugins/_ml/model_groups/_register` body from Chapter 2 Step 3.)
+> **Never delete this group** — it contains models registered by other chapters; only remove models you personally registered into it. (On a fresh cluster with no group yet, create it with the `POST _plugins/_ml/model_groups/_register` body from Chapter 2 Step 2.)
 
 ### Step 2: Register `all-mpnet-base-v2`
 
-**Why** — embedding-model choice moves recall by 10–20% on domain data. `all-mpnet-base-v2` (768-dim) is a stronger general-English encoder than Chapter 2's DistilBERT — a good RAG default. Replace `YOUR_MODEL_GROUP_ID`.
+Here's a decision that matters more than most tuning knobs combined: which embedding model you use. Swapping models can move recall by 10 to 20% on domain data, dwarfing what any single index setting buys you. For this chapter you're upgrading from Chapter 2's DistilBERT to `all-mpnet-base-v2` (also 768-dim), a stronger general-English encoder and a solid default for RAG workloads. The registration flow is the familiar one. Replace `YOUR_MODEL_GROUP_ID`.
 
 **Request**
 ```http
@@ -66,7 +66,7 @@ POST _plugins/_ml/models/_register
 
 ### Step 3: Deploy the model
 
-**Why** — deploying loads the model into memory for inference at ingest and query time.
+Same second half of the lifecycle you've run twice before: registration put the artifact on disk, and deploying loads it into memory so it can serve inference at ingest and query time.
 
 **Request**
 ```http
@@ -77,7 +77,7 @@ POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 
 ### Step 4: Create the chunking ingest pipeline
 
-**Why** — a 2,000-word description is too long for one embedding; models truncate past ~512 tokens. The native `text_chunking` processor splits `content` into overlapping segments at ingest. `fixed_token_length` with `token_limit: 384` (~75% of a 512-token budget, leaving headroom) and `overlap_rate: 0.2` (20% overlap so boundary context is not lost — valid range is 0–0.5). A Painless step reshapes the raw chunk array into `{text, chunk_index}` objects for the nested field, then `text_embedding` embeds the whole `content` into `content_embedding`. Replace `YOUR_MODEL_ID`.
+This is the most sophisticated pipeline in the course, and it exists to solve a problem that quietly ruins RAG systems: a 2,000-word book description is far too long for one embedding, because models truncate past ~512 tokens and everything after that vanishes from search. Three processors work together to fix it. First, `text_chunking` splits `content` into overlapping segments; `token_limit: 384` uses about 75% of a 512-token budget (leaving headroom), and `overlap_rate: 0.2` keeps 20% overlap so a sentence straddling a boundary survives in at least one chunk (valid range is 0 to 0.5). Second, a small Painless script reshapes the raw chunk array into `{text, chunk_index}` objects so they fit the nested field you'll create next. Third, `text_embedding` embeds the whole `content` into `content_embedding` for vector search. Replace `YOUR_MODEL_ID`.
 
 **Request**
 ```http
@@ -110,7 +110,7 @@ PUT _ingest/pipeline/bookstore-chunking-pipeline
 
 ### Step 5: Create the `bookstore-rag` index (FAISS HNSW, chunked)
 
-**Why** — for production vector workloads **FAISS + HNSW** gives fast approximate nearest-neighbor search: `m` controls graph connectivity (higher = better recall, more memory) and `ef_construction` controls how carefully the graph is built — `m=16, ef_construction=128` is a balanced starting point. `content_chunks` is `nested` (required to keep each chunk's fields together), `genre` is `keyword` (exact filter, not full-text), and `refresh_interval` starts at `30s` — the catalog updates nightly, not per second.
+Now build the index this whole chapter revolves around. Every mapping choice here is deliberate, and together they're a checklist of the index-design lessons so far: **FAISS + HNSW** for fast approximate search, with `m=16, ef_construction=128` as a balanced starting point (`m` controls graph connectivity, `ef_construction` controls build care; both trade recall against memory and build time). `content_chunks` is `nested` so each chunk's text and index stay glued together as one queryable unit. `genre` is `keyword`, not `text`, because filters need exact matches, not full-text analysis. And `refresh_interval` starts at `30s` because a bookstore catalog updates nightly, not per second, so there's no reason to pay for one-second freshness.
 
 **Request** — delete first if re-running: `DELETE bookstore-rag`.
 ```http
@@ -142,7 +142,7 @@ PUT bookstore-rag
 
 ### Step 6: Fast bulk load (refresh off → bulk → force-merge → refresh on)
 
-**Why** — the default 1-second refresh creates a new Lucene segment on every cycle, adding merge overhead during a batch load. Disable refresh for the load, then force-merge to collapse many small segments into a few large ones (fewer files to scan = faster search), then restore the refresh and make docs visible. Expect several minutes on a trial cluster — each document is chunked and embedded server-side (one inference per document).
+Chapter 2 taught you the theory of this recipe; now run it for real. Turning refresh off during the load stops Lucene from cutting a new segment every second, the force merge afterward collapses the segment debris into a few large files, and restoring refresh makes everything visible in one shot. This four-move sequence (refresh off, bulk, force-merge, refresh on) is the standard production pattern for any large vector load, worth committing to memory. Expect several minutes on a trial cluster, since each of the 256 documents is chunked and embedded server-side on arrival.
 
 **Request**
 ```http
@@ -169,7 +169,7 @@ GET _cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=jso
 
 ### Step 7: k-NN search — the result-set-size lever
 
-**Why** — vector search returns the top-`k` neighbors. Ask for only what you need (`size: 10`) and fetch only the fields you use with `_source` — over thousands of queries per hour, lean responses add up. Paste the stored query vector.
+Your first lever is the least glamorous and the easiest to ship today: ask for less. Vector search returns the top-`k` neighbors, and every extra result plus every unused field in `_source` is payload your cluster computes, serializes, and sends for nothing. One wasteful query is invisible; thousands per hour become real latency and real bandwidth. So request only what the page will show: `size: 10` and the five fields you actually display. Paste the stored query vector where marked.
 
 **Request**
 ```http
@@ -189,7 +189,7 @@ GET bookstore-rag/_search
 
 ### Step 8: Filtered k-NN search — the filtering lever
 
-**Why** — filtering is the biggest performance win: narrow the candidate set by exact metadata **before** the vector pass. FAISS supports filtered k-NN (efficient filtering), so a query for "mystery under $20 with good ratings" only scores books that already match. `must` drives scoring; `filter` clauses are cheap yes/no gates.
+Now the biggest single performance win in RAG retrieval. A real customer question is rarely "find me anything similar"; it's "mystery, under $20, decently rated." Those constraints are exact metadata, and handing them to the engine **before** the vector pass means FAISS only scores books that already qualify instead of ranking the whole catalog and discarding most of the work. This is where those `keyword`, `float`, and `boolean` metadata fields from Step 5 pay off. Note the structure: `must` drives scoring, while `filter` clauses are cheap yes/no gates that never touch the score.
 
 **Request**
 ```http
@@ -221,7 +221,7 @@ GET bookstore-rag/_search
 
 ### Step 9: Hybrid search — create the pipeline and run it
 
-**Why** — vector and BM25 scores live on different scales, so you cannot average them raw. A `normalization-processor` rescales both to 0–1 (`min_max`) and blends them with weights you control. Here `[0.3, 0.7]` maps in clause order to `[keyword, vector]` — semantic relevance matters more for a bookstore. The `hybrid` query then combines the exact-match precision of BM25 with the semantic reach of k-NN; its clause order must match the pipeline's `weights` order.
+This should feel familiar from Chapter 3, and that's the point: hybrid search is the same recipe no matter what the index looks like underneath. Vector and BM25 scores live on different scales, so a `normalization-processor` rescales both to 0-1 with `min_max` and blends them with weights you control. Here `[0.3, 0.7]` maps in clause order to `[keyword, vector]`, leaning semantic because bookstore shoppers describe what a book is *about* more often than they quote its title. The `hybrid` query then pairs BM25's exact-match precision with k-NN's semantic reach. Same rule as always: clause order must match the pipeline's `weights` order.
 
 **Request** — create the pipeline:
 ```http
@@ -262,7 +262,7 @@ GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
 
 ### Step 10: Reranking with business signals
 
-**Why** — reranking reorders the candidate set using signals that were not part of similarity: recency, rating, availability. A `function_score` query boosts recent, highly-rated, in-stock books so business-relevant results float to the top.
+Similarity is not the same thing as "the result the business wants shown first." A semantically perfect match might be out of stock, poorly rated, or a decade old, and no embedding knows that. Reranking is where those business signals get their say: a `function_score` query takes the semantically retrieved candidates and boosts the recent, highly rated, in-stock ones toward the top. Relevance finds the candidates, business logic orders them, and each function below is one business rule you can read on its own.
 
 > **Reconciling note.** The video shows this as a Painless response processor that mutates `hit._score` and re-sorts `ctx._source`. That snippet is illustrative — OpenSearch has no response processor that re-sorts hits by an arbitrary Painless score. The runnable, supported equivalent is a `function_score` query (below), which produces the same "boost recent + highly-rated + in-stock" ranking.
 
@@ -314,7 +314,7 @@ The three problems: no `knn_vector` field, `text` (not `keyword`) on `genre`/`is
 
 ### Step 11: Warm and preload the vector files
 
-**Why** — after a restart HNSW graphs sit on disk and the first queries pay a load penalty. **Warmup** loads graphs into native memory. `index.store.preload` mmaps the k-NN `vec` (vectors) and `vem` (vector metadata) files into the OS file cache on index open — which requires a close → set → open cycle. Make warmup part of your deploy checklist after index creation and any large load.
+Ever noticed how the first search after a restart is mysteriously slow, then everything speeds up? That's cold HNSW graphs: after a restart they sit on disk, and whoever searches first pays the loading bill. In production, "whoever searches first" is a customer. These two techniques make sure it never is: the **warmup** API proactively pulls graphs into native memory, and `index.store.preload` goes further by mmapping the k-NN `vec` (vectors) and `vem` (vector metadata) files into the OS file cache whenever the index opens, which is why it needs the close, set, open cycle below. Make warmup part of your deploy checklist after index creation and any large load.
 
 **Request**
 ```http
@@ -338,7 +338,7 @@ GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
 ```
 **Expected** — warmup reports warmed shards; after `_open`, health reaches `yellow` (or `green`). In the k-NN stats watch `graph_memory_usage_percentage`, `cache_hit_rate` (rises toward 1.0 after warming), and `graph_query_requests`.
 
-> **Circuit breaker — already configured.** You set `knn.memory.circuit_breaker.limit` to 50% in Chapter 2 Step 15; it's the same knob and still applies here. Raise it only if the stats above show `graph_memory_usage_percentage` pressing the limit — and remember it's a persistent, cluster-wide setting on a shared lab cluster.
+> **Circuit breaker — already configured.** You set `knn.memory.circuit_breaker.limit` to 50% in Chapter 2 Step 14; it's the same knob and still applies here. Raise it only if the stats above show `graph_memory_usage_percentage` pressing the limit — and remember it's a persistent, cluster-wide setting on a shared lab cluster.
 **Fast mode** — `30-knn-warmup-bookstore-rag.bru` → `31-knn-stats-bookstore-rag.bru` → `32-close-index.bru` → `33-set-preload.bru` → `34-open-index.bru` → `35-cluster-health.bru`
 
 > **Production checklist (runbook).** 1) create chunking pipeline → 2) create index → 3) disable refresh → 4) bulk load → 5) force-merge + restore refresh → 6) warm k-NN → 7) verify shards + stats. Seven repeatable, verifiable steps.
@@ -356,7 +356,7 @@ GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
 
 ### Step 12: Measure quality with `_rank_eval`
 
-**Why** — a unit test for search quality. Provide test queries and the IDs you consider relevant (with ratings); OpenSearch returns a metric like `mean_reciprocal_rank` or precision@k. Use it to compare keyword vs hybrid, chunk sizes, or models with numbers instead of vibes. The IDs below are real books in the sample data (Moby Dick `2701`, Sherlock `1661`, Dracula `345`, Frankenstein `84`).
+How do you know a tuning change actually made search *better* and not just different? Eyeballing results doesn't scale, and "it looks right to me" is not a metric. `_rank_eval` is the unit test for search quality: you declare test queries along with the document IDs a good search should return (with relevance ratings), and OpenSearch scores the ranking with a metric like `mean_reciprocal_rank` or precision@k. Run it before and after any change (keyword vs hybrid, a new chunk size, a new model) and you have numbers instead of vibes. The IDs below are real books in the sample data (Moby Dick `2701`, Sherlock `1661`, Dracula `345`, Frankenstein `84`).
 
 **Request**
 ```http
@@ -390,7 +390,7 @@ GET bookstore-rag/_rank_eval
 
 ### Step 13: A request-processor search pipeline, set as the index default
 
-**Why** — search pipelines run three processor types: **request** (transform the query before it runs), **phase-results** (between query and fetch — where normalization lives), and **response** (modify results). A `filter_query` request processor injects an `in_stock: true` filter into *every* search, so you can change search behavior without redeploying the app. Setting it as `index.search.default_pipeline` applies it to every query automatically (distinct from `index.default_pipeline`, which is ingest); bypass it for one request with `?search_pipeline=_none`.
+Imagine the merchandising team decides out-of-stock books should never appear in search. Would you rather update every query in every service, or change one object on the cluster? Search pipelines make it the latter. They run three processor types: **request** (transform the query before it runs), **phase-results** (between query and fetch, where normalization lives), and **response** (modify results on the way out). Here a `filter_query` request processor injects `in_stock: true` into *every* search, and setting it as `index.search.default_pipeline` applies it automatically with no application deploy (note this is distinct from `index.default_pipeline`, which is ingest). Need one query to see everything anyway? Bypass with `?search_pipeline=_none`.
 
 **Request** — create the pipeline:
 ```http
@@ -422,7 +422,7 @@ PUT bookstore-rag/_settings
 
 ### Step 14: Enable the MCP server and register tools
 
-**Why** — one persistent setting turns the cluster into an MCP server exposed at `/_plugins/_ml/mcp` (Streamable HTTP) and `/_plugins/_ml/mcp/sse` (SSE) — no restart. Registering tools then lets clients discover and call them; the core tools map to the operations you have used all chapter: list indexes, read a mapping, run a search.
+Here's a fitting finale: everything you built this chapter becomes usable by AI agents, and it takes exactly two requests. One persistent setting turns the cluster into an MCP server exposed at `/_plugins/_ml/mcp` (Streamable HTTP) and `/_plugins/_ml/mcp/sse` (SSE), no restart needed. Registering tools then gives connecting agents a menu of what they may do, and the core tools map to operations you've been running by hand all chapter: list indexes, read a mapping, run a search. Any MCP-compatible client (Claude Desktop, Cursor, a LangChain agent) can now discover your bookstore index and query it without a line of custom integration code.
 
 **Request** — enable the server:
 ```http
@@ -453,7 +453,7 @@ GET _plugins/_ml/mcp/tools/_list
 
 ### A1: Connect an external LLM
 
-**Why** — the MCP server exposes tools, but an LLM decides which to call. ML Commons registers a remote model via a connector. Replace the credential with your own; this creates the connector and model in one call.
+The MCP server exposes tools, but tools don't use themselves: an LLM is the brain that decides which one to call and when. ML Commons connects to one through a **connector**, the same register/deploy lifecycle you know, pointed at a remote API instead of a local artifact. Replace the credential with your own; this creates the connector and model in one call.
 
 **Request**
 ```http
@@ -487,7 +487,7 @@ POST _plugins/_ml/models/_register
 
 ### A2: Register a conversational agent
 
-**Why** — an agent coordinates the LLM and tools using the ReAct pattern (Reason → Act → Observe). `memory.type: conversation_index` stores chat history for follow-ups; the tools array is what the LLM may call. Replace `YOUR_MODEL_ID`.
+Now wire the brain to the hands. An agent coordinates the LLM and the tools using the ReAct pattern (Reason, Act, Observe): the model thinks about what it needs, calls a tool, looks at the result, and repeats until it can answer. `memory.type: conversation_index` stores chat history so follow-up questions have context, and the tools array is the complete list of what the LLM is *allowed* to call, which is your safety boundary as much as its capability list. Replace `YOUR_MODEL_ID`.
 
 **Request**
 ```http
@@ -517,7 +517,7 @@ POST _plugins/_ml/agents/_register
 
 ### A3: Run the agent
 
-**Why** — the agent discovers the index (`ListIndexTool`), reads its fields (`IndexMappingTool`), builds and runs a filtered query (`SearchIndexTool` / `QueryPlanningTool`), and answers. The response includes a `memory_id` for follow-up turns.
+Ask your question and watch the reasoning trace that comes back: the agent discovers the index (`ListIndexTool`), reads its fields (`IndexMappingTool`), then builds and runs a filtered query (`SearchIndexTool` / `QueryPlanningTool`) before answering. Every one of those moves is something you did manually this chapter; the agent just chains them on its own. The response includes a `memory_id`, and passing it back in the second request is what turns "a query" into "a conversation."
 
 **Request**
 ```http

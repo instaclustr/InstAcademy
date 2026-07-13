@@ -27,7 +27,7 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 
 | Variable | Set after | Used in |
 |----------|-----------|---------|
-| `model_group_id` | Chapter 2 Step 3 (looked up in Step 1) | Step 2 (register sparse model) |
+| `model_group_id` | Chapter 2 Step 2 (looked up in Step 1) | Step 2 (register sparse model) |
 | `sparse_model_id` (`ML_MODEL_ID`) | Step 3 deploy | Steps 4, 8 (ingest + sparse/hybrid queries) |
 | `dense_model_id` | Chapter 2 Lesson 1 | Step 9 (dense comparison only) |
 | `task_id` | register / deploy | Polling |
@@ -59,12 +59,11 @@ OpenSearch offers **two** processors to merge hybrid results, and this chapter u
 >
 > The video mentions `opensearch-neural-sparse-encoding-doc-v3` — that is a doc-only model. Everything below works with either family; only the **query** clause in Step 8 changes (`model_id` for bi-encoder vs `analyzer` for doc-only). We keep v1 bi-encoder so the query stays explicit and easy to trace.
 
-> **ML Commons prerequisites (already set in Chapter 2).** The persistent cluster settings from [Chapter 2 · Step 2](../Chapter%202/README.md#step-2--enable-ml-commons-cluster-settings) — URL model registration and `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster) — survive until explicitly changed, so they are still on. Unsure, or on a fresh cluster? Verify with `GET _cluster/settings?filter_path=persistent.plugins*`; if the keys are missing, run Chapter 2 Step 2 before continuing.
+> **ML Commons prerequisites (already set in Chapter 2).** The persistent cluster settings from [Chapter 2 · Step 1](../Chapter%202/README.md#step-1--enable-ml-commons-cluster-settings) — URL model registration and `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster) — survive until explicitly changed, so they are still on. Unsure, or on a fresh cluster? Verify with `GET _cluster/settings?filter_path=persistent.plugins*`; if the keys are missing, run Chapter 2 Step 1 before continuing.
 
 ### **Step 1: Reuse the model group from Chapter 2**
 
-**Why**
-Every registered model belongs to a group for access control and versioning. You created the `huggingface-models` group in Chapter 2 Step 3 — **reuse that `model_group_id`** rather than creating a second group. If you still have the id saved, skip straight to Step 2. If you lost it, look it up:
+Good news to start the chapter: you already own the first piece. Every registered model belongs to a group for access control and versioning, and you created the `huggingface-models` group back in Chapter 2 Step 2. The sparse model you're about to register slots right into it, so there is nothing to create here. If you still have the `model_group_id` saved, skip straight to Step 2. If it got away from you, one search brings it back:
 
 **Request** — paste into Dev Tools:
 
@@ -80,8 +79,7 @@ POST _plugins/_ml/model_groups/_search
 
 ### **Step 2: Register the neural sparse encoding model**
 
-**Why**
-This model turns text into sparse token→weight maps (not 768-dim dense vectors). Registration downloads the artifact asynchronously and returns a `task_id`.
+Time to meet the other kind of embedding model. Chapter 2's dense model squeezed meaning into 768 floats; this one produces something quite different, a map of tokens to weights where only the terms that matter get a value. That shape is what lets sparse search live in an ordinary inverted index and stay nearly as cheap as BM25. The registration flow is exactly the one you already know: submit, get a `task_id`, poll until the artifact finishes downloading.
 
 Replace `YOUR_MODEL_GROUP_ID`:
 
@@ -114,8 +112,7 @@ Repeat every few seconds until `"state": "COMPLETED"`. On `FAILED`, check cluste
 
 ### **Step 3: Deploy the sparse model**
 
-**Why**
-Deploy loads the model weights into ML-node memory so ingest pipelines and `neural_sparse` queries can call it.
+Registered is not the same as running, as you learned in Chapter 2: registration parks the artifact on disk, and deploy is what loads the weights into node memory. Once this completes, both your ingest pipeline (next step) and `neural_sparse` queries (Step 8) can call the model on demand.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
@@ -138,8 +135,7 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 
 ### **Step 4: Create the sparse ingest pipeline**
 
-**Why**
-This pipeline runs on every document at index time. It **chunks** long `passage_text` into small token windows, then **sparse-encodes** each chunk into a nested `passage_embedding` object. Create it **before** the index so the index can reference it.
+Same pattern as Chapter 2's pipeline, with one upgrade: this one has **two** processors working in sequence. First `text_chunking` slices each book's `passage_text` into small token windows, then `sparse_encoding` runs every chunk through your model. That means one incoming document fans out into several independently searchable chunks, which is exactly the chunking concept from Chapter 1, now happening automatically at ingest. As always, create the pipeline **before** the index so the index can reference it.
 
 - **`text_chunking` / `fixed_token_length`** splits by token count. **`token_limit: 5`** is intentionally tiny so you can *see* multiple chunks per book in lab responses; production uses 128–512.
 - **`overlap_rate: 0.5`** keeps phrases that straddle a chunk boundary intact in at least one chunk.
@@ -189,6 +185,8 @@ PUT _ingest/pipeline/nlp-ingest-pipeline
 
 ### **Step 5: Create the sparse index**
 
+Now build the home for those sparse-encoded chunks. This mapping looks different from every index you've made so far, and each difference is doing a specific job, so it's worth reading the three choices below before you run the request. The one that trips people up most: sparse embeddings do **not** go in a `knn_vector` field.
+
 **Why each mapping choice:**
 
 - **`default_pipeline`** — every document indexed here runs `nlp-ingest-pipeline` automatically, so clients send plain text only.
@@ -237,8 +235,7 @@ PUT my-sparse-neural-index
 
 ### **Step 6: Bulk index the sample books**
 
-**Why**
-Each document triggers chunking + sparse encoding **inside** the cluster (one model inference per chunk), so this is slower than a plain bulk. Allow several minutes for the full file.
+Load the same 256-book catalog you used in Chapter 2, this time through the sparse pipeline. Every document gets chunked and then every chunk gets its own model inference, so this bulk works even harder than Chapter 2's did. Allow several minutes for the full file, or use the two-book smoke test below if you just want to get searching quickly.
 
 The full body is in [`rest/bulk/chapter-3-lesson-1-sparse-index.ndjson`](../../rest/bulk/chapter-3-lesson-1-sparse-index.ndjson) (indexes into `my-sparse-neural-index`). In Dev Tools, run `POST _bulk`, then paste the **entire file contents** as the body (alternating action/source lines), ending with a blank line.
 
@@ -275,8 +272,7 @@ POST my-sparse-neural-index/_refresh
 
 ### **Step 7: Lexical-only baseline (BM25)**
 
-**Why**
-Establish the keyword-only ranking first. A plain `match` scores documents purely on term overlap — no model involved.
+The experiment begins here. Over the next three steps you'll run the *same* query three different ways and keep score, and this first run is the control group: a plain `match` query, pure term overlap, no model anywhere in the path. Keep a notepad handy, because the top-5 list you record here is the baseline everything else in this chapter gets measured against.
 
 **Request** — paste into Dev Tools:
 
@@ -302,8 +298,7 @@ GET my-sparse-neural-index/_search
 
 ### **Step 8: Sparse-only (`neural_sparse`)**
 
-**Why**
-Now retrieve by *meaning* using the sparse model. `neural_sparse` encodes the query text with your `sparse_model_id` and matches it against the `rank_features` field. The `nested` wrapper with `score_mode: max` gives each book the score of its single best-matching chunk.
+Now run the identical text through the sparse model and watch the ranking change. `neural_sparse` encodes your query with the `sparse_model_id` and matches it against the `rank_features` field, so books *about* perilous journeys can surface even when they never use your exact words. Note the `nested` wrapper with `score_mode: max`: since each book was split into chunks at ingest, this scores every chunk and lets the single best one speak for the whole book.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
@@ -342,8 +337,7 @@ GET my-sparse-neural-index/_search
 
 ### **Step 9: Dense-only comparison (optional — reuses Chapter 2)**
 
-**Why**
-Round out the picture with dense k-NN. This runs against **Chapter 2's** `vector-search-index` and dense model, so you can see all three retrieval styles on the same query. **Skip if you tore Chapter 2 down.**
+One more data point completes the picture. Your Chapter 2 index and dense model are still standing, so point the same query at them and you'll have all three retrieval styles (lexical, sparse, dense) ranked side by side on identical text. That three-way comparison is something few engineers ever actually run on the same data, and it's the clearest way to see what each method is good at. **Skip this step if you already tore Chapter 2 down.**
 
 Replace `YOUR_DENSE_MODEL_ID` with your **Chapter 2** model id (not the sparse one):
 
@@ -388,8 +382,7 @@ BM25 scores (~0–20) and sparse scores (~0–10) live on different scales. Add 
 
 ### **Step 1: Create the normalization search pipeline**
 
-**Why**
-This turns the theory above into a reusable cluster object. The pipeline lives on the cluster (not in any one query), so every hybrid search that references it by name gets the same min–max rescaling and 30/70 weighting — change the weights once here and every caller picks it up. Creating it **before** running a `hybrid` query matters: without it, the two branches' raw scores are simply summed and the larger scale wins.
+Time to turn the theory above into a reusable cluster object. The pipeline lives on the cluster rather than inside any one query, which is a bigger deal than it sounds: every hybrid search that references it by name gets the same min-max rescaling and 30/70 weighting, so when relevance tuning changes the weights later, you change them once here and every caller picks the change up instantly, with no application deploy. And creating it **before** running a `hybrid` query genuinely matters: without it, the two branches' raw scores just get summed and whichever scale is larger silently wins.
 
 **Request** — paste into Dev Tools:
 
@@ -422,8 +415,7 @@ PUT _search/pipeline/nlp-search-normalization-pipeline
 
 ### **Step 2: Run the hybrid query (normalized)**
 
-**Why**
-The `hybrid` query runs each sub-query independently, then the pipeline named in `?search_pipeline=` normalizes and combines their scores. A `hybrid` query supports **up to 5** sub-queries; here we use two (lexical + sparse). The `weights` order matches the `queries` order: index 0 → the `match`, index 1 → the `neural_sparse`.
+Here's the payoff of the whole lesson: both retrieval methods in one request. Look at the query body and you'll recognize each piece, since the `match` clause is your Step 7 baseline and the `neural_sparse` clause is your Step 8 query, now stacked inside a `hybrid` wrapper. OpenSearch runs each sub-query independently, then the pipeline named in `?search_pipeline=` normalizes and combines their scores. A `hybrid` query supports **up to 5** sub-queries; here we use two. One detail worth burning in: the `weights` order matches the `queries` order, so index 0 is the `match` and index 1 is the `neural_sparse`. Swap the clauses without swapping the weights and you'll silently invert your tuning.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
@@ -503,8 +495,7 @@ where `rank_j` is the document's position in result list *j* and `k` is the **ra
 
 ### **Step 1: Create the RRF search pipeline**
 
-**Why**
-Same pipeline slot (`phase_results_processors`) as normalization, but a **rank-based** processor. `technique: "rrf"` selects Reciprocal Rank Fusion.
+Now build the alternative fusion strategy so you can compare the two head-to-head. Structurally this pipeline is a sibling of the one from Lesson 3-2: same `phase_results_processors` slot, same position in the request flow. The difference is the processor inside it. Where the normalization processor rescued *scores*, the `score-ranker-processor` with `technique: "rrf"` ignores scores entirely and fuses by *rank position*, which is why it needs no normalization settings at all.
 
 **Request** — paste into Dev Tools:
 
@@ -535,8 +526,7 @@ PUT _search/pipeline/rrf-search-pipeline
 
 ### **Step 2: Run the hybrid query through RRF**
 
-**Why**
-The query body is **identical** to Lesson 3-2 Step 2 — only the `search_pipeline` changes. That is the point: the *same* two branches, fused a different way. Compare rankings to see how rank-based fusion differs from score-based.
+Run your final experiment, and notice what you're *not* changing: the query body is character-for-character identical to Lesson 3-2 Step 2. Only the `search_pipeline` parameter differs. That separation is the architectural lesson of this whole chapter: fusion strategy lives entirely in the pipeline, so you can A/B test score-based against rank-based fusion in production without touching a single query or reindexing a single document.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
