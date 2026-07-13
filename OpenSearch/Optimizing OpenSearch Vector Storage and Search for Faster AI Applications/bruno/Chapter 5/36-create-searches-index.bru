@@ -1,0 +1,23 @@
+meta {
+  name: Create searches-000001 with write alias
+  type: http
+  seq: 36
+}
+
+put {
+  url: {{baseUrl}}/searches-000001
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "settings": { "index.plugins.index_state_management.rollover_alias": "searches-current" },
+  "aliases": { "searches-current": { "is_write_index": true } }
+}
+}

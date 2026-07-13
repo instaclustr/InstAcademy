@@ -31,7 +31,7 @@ By the end you will have registered and deployed a sentence-transformer model wi
 
 ## Prerequisites
 
-- [Cluster setup](../../CREATE_CLUSTER.md) — a **3-node** Instaclustr cluster with the **AI Search / ML Commons** plugin and your IP on the firewall.
+- [Cluster setup](../../CREATE_CLUSTER.md) — an Instaclustr cluster with the **AI Search / ML Commons** plugin and your IP on the firewall.
 - **Dev Tools** open (or Bruno fast mode: [`bruno/Chapter 2/`](../../bruno/Chapter%202/)).
 - A notepad (or the Bruno **Local** environment) for ids returned by ML Commons:
 

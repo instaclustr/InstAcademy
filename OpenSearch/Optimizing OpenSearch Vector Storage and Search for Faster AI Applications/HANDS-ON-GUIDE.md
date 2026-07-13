@@ -33,7 +33,7 @@ Work through **Step 1**, then **Step 2**, and so on. Do not skip ahead unless yo
 
 Open **OpenSearch Dashboards → Dev Tools** and follow each lesson README step by step. You build the cluster state yourself.
 
-You need your Instaclustr cluster host, username, and password. The course uses a **3-node** cluster with the **AI Search Plugin** — see [cluster setup](CREATE_CLUSTER.md).
+You need your Instaclustr cluster host, username, and password. The course uses an Instaclustr cluster with the **AI Search Plugin** — see [cluster setup](CREATE_CLUSTER.md).
 
 ### Fast mode (Bruno)
 
@@ -67,16 +67,11 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 
 In Bruno, use the **Poll ML task** request in the same chapter folder.
 
-## Mostly-theory lessons
+## Reference-only topics
 
-Every lesson now has hands-on steps in its chapter workshop, but a few remain lighter on runnable work because the concepts are architectural:
+Every lesson has hands-on steps in its chapter workshop. Architectural topics that would require mutating a shared cluster (shard-count math, allocation awareness, the shrink recipe, search backpressure) appear inline as read-along reference blocks rather than separate lessons.
 
-| Lesson | Topic | What you still run |
-|--------|--------|--------------------|
-| 1-3 | GPUs vs CPUs | Inspection calls: `_cat/plugins`, `_nodes/os`, `_plugins/_knn/stats` |
-| 5-4 | Secure, resilient AI apps | Health monitoring + role/user creation via the Security API; TLS/audit config is reference-only on managed clusters |
-
-Lesson 4-4 (MCP server, steps for OpenSearch 3.3+) includes an optional section that needs an external LLM API key.
+Lesson 4-4 (MCP server, steps for OpenSearch 3.3+) includes an optional appendix that needs an external LLM API key.
 
 ## Course order
 

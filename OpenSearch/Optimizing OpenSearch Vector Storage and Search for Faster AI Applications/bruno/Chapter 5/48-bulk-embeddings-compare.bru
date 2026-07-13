@@ -1,0 +1,21 @@
+meta {
+  name: Bulk 50 vectors into both indexes
+  type: http
+  seq: 48
+}
+
+post {
+  url: {{baseUrl}}/_bulk?refresh=true
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+file: ../../rest/bulk/chapter-5-embeddings-compare.ndjson
+  contentType: application/x-ndjson
+}

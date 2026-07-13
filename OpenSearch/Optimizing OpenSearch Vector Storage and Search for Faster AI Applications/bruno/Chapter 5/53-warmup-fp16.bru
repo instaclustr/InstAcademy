@@ -1,11 +1,11 @@
 meta {
-  name: Per-node disk usage
+  name: Warm up fp16 graph
   type: http
-  seq: 12
+  seq: 53
 }
 
 get {
-  url: {{baseUrl}}/_cat/allocation?v&h=node,disk.percent,disk.avail
+  url: {{baseUrl}}/_plugins/_knn/warmup/book-embeddings-fp16
   body: none
   auth: basic
 }

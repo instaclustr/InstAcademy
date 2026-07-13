@@ -15,7 +15,7 @@ This chapter builds a single chunked index — **`bookstore-rag`** (nested `cont
 ## Prerequisites
 
 - Complete [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
-- A cluster with **ML Commons**, **k-NN**, and the **AI Search** plugin (the course 3-node Instaclustr cluster). See [cluster setup](../../CREATE_CLUSTER.md).
+- A cluster with **ML Commons**, **k-NN**, and the **AI Search** plugin (the course Instaclustr cluster). See [cluster setup](../../CREATE_CLUSTER.md).
 - Open **OpenSearch Dashboards → Dev Tools** (learn mode) or the [Bruno `Chapter 4`](../../bruno/Chapter%204/) collection (fast mode — flat, numbered up to `50`; the numbering has gaps where steps were consolidated).
 - **Save as you go:** `model_group_id`, `model_id`, `task_id`. In Bruno, set them as `modelGroupId`, `modelId`, `taskId`, `agentId` environment variables.
 - For k-NN / hybrid / profiling / rank-eval steps, open [`bookstore-rag-query-vector.json`](bookstore-rag-query-vector.json) in this folder — a pre-baked 768-dimensional query vector. Paste its array wherever a step shows `[ /* paste 768 floats … */ ]`.
@@ -30,7 +30,7 @@ This chapter builds a single chunked index — **`bookstore-rag`** (nested `cont
 
 **Why two levers?** RAG optimization is a trade-off between **performance** (retrieval latency) and **accuracy** (retrieval quality). Faster is not always better; the goal is to tune the balance for your use case.
 
-> **ML Commons prerequisites (already set in Chapter 2).** The persistent settings from [Chapter 2 · Step 1](../Chapter%202/README.md#step-1--enable-ml-commons-cluster-settings) — URL model registration, `only_run_on_ml_node: false` (required to deploy models on this 3-node cluster), and the relaxed native-memory threshold — are still in effect. Starting fresh at this chapter? Run Chapter 2 Step 1 first, then come back.
+> **ML Commons prerequisites (already set in Chapter 2).** The persistent settings from [Chapter 2 · Step 1](../Chapter%202/README.md#step-1--enable-ml-commons-cluster-settings) — URL model registration, `only_run_on_ml_node: false` (required to deploy models on this cluster), and the relaxed native-memory threshold — are still in effect. Starting fresh at this chapter? Run Chapter 2 Step 1 first, then come back.
 
 ### Step 1: Reuse the model group from Chapter 2
 

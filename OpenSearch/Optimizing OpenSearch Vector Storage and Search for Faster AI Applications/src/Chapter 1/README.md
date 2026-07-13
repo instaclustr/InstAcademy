@@ -34,7 +34,7 @@ Every step uses the same layout (see the [lab guide](../../HANDS-ON-GUIDE.md)):
 
 ## Prerequisites
 
-- A running **Instaclustr OpenSearch cluster** (3-node trial, **AI Search
+- A running **Instaclustr OpenSearch cluster** (a trial cluster works, **AI Search
   Plugin** enabled) reachable from your browser — see [cluster setup](../../CREATE_CLUSTER.md).
   Your IP must be on the firewall allow-list.
 - **OpenSearch 3.5+.**

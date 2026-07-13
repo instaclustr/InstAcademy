@@ -1,0 +1,16 @@
+meta {
+  name: Read back slow-log thresholds
+  type: http
+  seq: 64
+}
+
+get {
+  url: {{baseUrl}}/my-index/_settings?filter_path=*.settings.index.search.slowlog
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

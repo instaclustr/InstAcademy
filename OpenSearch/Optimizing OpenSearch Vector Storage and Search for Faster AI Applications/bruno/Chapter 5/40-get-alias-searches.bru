@@ -1,11 +1,11 @@
 meta {
-  name: Inspect index stats
+  name: Verify alias moved to searches-000002
   type: http
-  seq: 46
+  seq: 40
 }
 
 get {
-  url: {{baseUrl}}/book-embeddings-fp16/_stats
+  url: {{baseUrl}}/_alias/searches-current
   body: none
   auth: basic
 }

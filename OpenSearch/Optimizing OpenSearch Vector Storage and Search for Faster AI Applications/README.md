@@ -7,7 +7,7 @@ Short label: **Vector Storage & Search for AI** — hands-on labs for this InstA
 ## Start here
 
 1. **[How to run the labs](HANDS-ON-GUIDE.md)** — Dev Tools walkthrough, Bruno fast mode, credentials, sample data (read this first).
-2. **[Cluster setup](CREATE_CLUSTER.md)** — provision a 3-node Instaclustr trial with the AI Search Plugin.
+2. **[Cluster setup](CREATE_CLUSTER.md)** — provision an Instaclustr trial cluster with the AI Search Plugin.
 3. **[Chapter 1](src/Chapter%201/README.md)** — verify connectivity and build your first vector index.
 
 | | |

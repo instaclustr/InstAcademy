@@ -1,0 +1,16 @@
+meta {
+  name: Read request-cache counters
+  type: http
+  seq: 61
+}
+
+get {
+  url: {{baseUrl}}/my-index/_stats/request_cache?filter_path=_all.total.request_cache
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

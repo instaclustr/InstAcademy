@@ -1,0 +1,16 @@
+meta {
+  name: Compare disk cost: float vs fp16
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/book-embeddings-float,book-embeddings-fp16/_stats?filter_path=indices.*.primaries.docs.count,indices.*.primaries.store.size_in_bytes
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Profile a query
+  type: http
+  seq: 62
+}
+
+get {
+  url: {{baseUrl}}/my-index/_search?filter_path=took,profile.shards.searches.query.type,profile.shards.searches.query.description,profile.shards.searches.query.time_in_nanos,profile.shards.searches.rewrite_time,profile.shards.searches.collector
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{
+  "profile": true,
+  "query": {
+    "match_all": {}
+  }
+}
+}

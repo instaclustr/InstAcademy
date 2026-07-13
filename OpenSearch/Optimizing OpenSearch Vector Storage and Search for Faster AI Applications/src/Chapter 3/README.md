@@ -14,7 +14,7 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 
 ## Prerequisites
 
-- A 3-node Instaclustr cluster with **ML Commons / AI Search** enabled.
+- An Instaclustr cluster with **ML Commons / AI Search** enabled.
 - *(Optional)* Chapter 2's **dense** model (`msmarco-distilbert-base-tas-b`) and **`vector-search-index`**, used only by the dense comparison in Lesson 3-1 (Step 9). If you ran Chapter 2's full cleanup, that's fine; simply skip Step 9, or rebuild them (Chapter 2 Steps 2–9) if you want the three-way lexical/sparse/dense comparison.
 
 - Open **OpenSearch Dashboards → Dev Tools** (Learn mode) or the **[Bruno `Chapter 3`](../../bruno/Chapter%203/)** collection (Fast mode).
@@ -29,7 +29,6 @@ No single retrieval method wins on its own. **Lexical BM25** nails exact terms b
 | `task_id` | register / deploy | Polling |
 
 > **Two models, two ids.** Chapter 3 uses a **sparse** encoding model; Chapter 2 used a **dense** one. Keep both ids straight (in Bruno: `sparseModelId` vs `modelId`).
-
 
 ---
 

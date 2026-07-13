@@ -1,0 +1,16 @@
+meta {
+  name: k-NN graph memory per node
+  type: http
+  seq: 51
+}
+
+get {
+  url: {{baseUrl}}/_plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

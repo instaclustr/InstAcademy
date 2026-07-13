@@ -1,7 +1,7 @@
 meta {
-  name: Roll the write alias over
+  name: Roll over the write alias
   type: http
-  seq: 36
+  seq: 39
 }
 
 post {
@@ -16,11 +16,5 @@ auth:basic {
 }
 
 body:json {
-{
-  "conditions": {
-    "max_age": "30d",
-    "max_size": "50gb",
-    "max_docs": 100000
-  }
-}
+{ "conditions": { "max_docs": 5 } }
 }

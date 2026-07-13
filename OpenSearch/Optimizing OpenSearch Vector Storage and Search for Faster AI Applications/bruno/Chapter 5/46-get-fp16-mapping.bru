@@ -1,11 +1,11 @@
 meta {
-  name: Per-node disk usage
+  name: Read back fp16 mapping (encoder check)
   type: http
-  seq: 12
+  seq: 46
 }
 
 get {
-  url: {{baseUrl}}/_cat/allocation?v&h=node,disk.percent,disk.avail
+  url: {{baseUrl}}/book-embeddings-fp16/_mapping
   body: none
   auth: basic
 }

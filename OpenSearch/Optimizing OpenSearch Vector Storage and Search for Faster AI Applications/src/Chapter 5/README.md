@@ -1,73 +1,24 @@
+← [Chapter 4](../Chapter%204/README.md)
+
 # Chapter 5 — Production optimizations for OpenSearch clusters
 
-**Chapter 5** · [Vector Storage & Search for AI](../../README.md)
+You spent four chapters making vector search fast. This final chapter is about keeping it that way in production, where data outgrows its shard plan, clusters go yellow, memory gets tight, and the query that was instant in the demo becomes the slow one at peak traffic.
 
-← [Chapter 4](../Chapter%204/README.md) · [How to run labs](../../HANDS-ON-GUIDE.md)
+Consider this workshop your operations playbook. You will break a cluster on purpose and triage it back to health, design an index mapping that never needs rescuing, hand routine index chores to ISM so nobody babysits rollovers, cut vector memory in half with fp16 quantization, and close with the measurement tools (request caching, query profiling, slow logs) that show where query time actually goes.
 
-One comprehensive workshop covering shard management, index lifecycle, vector storage modes, security and resilience, and query optimization — all on a **3-node Instaclustr trial cluster** with the AI Search plugin.
-
-## How to use this workshop
-
-- Work top to bottom in **OpenSearch Dashboards → Dev Tools** (Learn mode), or use **[Bruno `Chapter 5`](../../bruno/Chapter%205/)** (Fast mode). Every step has matching `.bru` requests in run order (the file numbering has gaps where steps were consolidated).
-- Each step has **Why** (the concept), **Request** (copy into Dev Tools), **Expected**, and **Save** where a value is reused.
-- This is a **shared, managed lab cluster.** Cluster-wide mutations (watermarks, routing awareness, search backpressure, priority routing) are shown as **Reference** — syntax to know, nothing to run. The hands-on steps only touch lab indexes you create and delete yourself.
-- Some items in the script are **node configuration** (`opensearch.yml`) that you cannot change on a managed cluster. Those are marked **Reference** — read them, but there is nothing to run.
-
-### Reconciling the script with OpenSearch 3.x
-
-| Script shows | Correct on OpenSearch 3.5+ | Where |
-|---|---|---|
-| `knn_vector` with `data_type: "float16"` for fp16 savings | fp16 is a **Faiss scalar-quantization encoder**: `method.parameters.encoder = { "name": "sq" }` (no `bits` parameter — verified live, `bits` 400s; the only valid `sq` sub-parameter is the optional boolean `clip`). Valid `data_type` values are `float` (default), `byte`, `binary` — there is no `float16`. | Lesson 5-3 |
-| `PUT /_security/role/...` (course summary) | OpenSearch Security plugin API is `PUT _plugins/_security/api/roles/<role>` and `_plugins/_security/api/internalusers/<user>`. | Lesson 5-4 |
-| `dense_vector` / `dims` (course summary) | Those are Elasticsearch names. OpenSearch uses `knn_vector` / `dimension`. | throughout |
-| `nmslib` engine | Removed in OpenSearch 3.x. Use `faiss` (default) or `lucene`. | Lesson 5-2/5-3 |
-| Backpressure applied as `persistent` | Shown as **Reference**; when tuning in production, apply as `transient` first and monitor before enforcing. | Lesson 5-5 (Reference) |
-| Awareness attribute `"zone"` (script/course summary) | This Instaclustr cluster does not set `node.attr.zone`. Every node advertises `node.attr.rack_id` (values `us-west-2a`/`us-west-2b`/`us-west-2c`). Use `cluster.routing.allocation.awareness.attributes: "rack_id"` and `force.rack_id.values` for a realistic, effective example. Verified live: `zone` is silently accepted but never constrains allocation; `rack_id` does. | Lesson 5-1 (Reference) |
-| Priority routing attribute `node_type` (power/standard) | Instaclustr nodes only expose `node.attr.rack_id` — there is no `node_type` attribute on this cluster, so the priority-routing examples are confirmed **no-ops** here (shown as Reference). | Lesson 5-5 |
-
-## Prerequisites
-
-- [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity and sample data.
-- [Chapter 4 · Lesson 4-2](../Chapter%204/README.md#lesson-4-2--optimizing-indexes-for-rag) — the **`bookstore-rag`** index is referenced by the read-along shrink recipe in Lesson 5-2; nothing in this chapter modifies it.
-- 3-node Instaclustr trial with the AI Search plugin. **Lab cluster only — never run these on production.**
-
-## Values to save as you go
-
-One value carries through the chapter: the index **`my-index`** (created in 5-1 Step 1, given an optimized mapping in 5-2, and used by every Lesson 5-5 step).
+Along the way, a handful of production patterns (shard-count math, allocation awareness, the shrink recipe, search backpressure) appear as read-along references: worth knowing, but not worth in the scope of demonstrating in this lab. Everything else runs live on your **Instaclustr trial cluster**.
 
 ---
 
 ## Lesson 5-1 — Shards: optimizing, merging, and shard balancing
 
-A **shard** is a self-contained Lucene index. **Primaries** hold your data; **replicas** are redundant copies that add resilience and search throughput. OpenSearch queries all shards in parallel, so shard **size and count** is a balancing act: too many small shards drown you in coordinator overhead; too few large shards hurt recovery and flexibility. Aim for **10–50 GB per shard** (many teams target 20–30 GB).
-
-**Shard-count math (Reference — no API call):**
-
-- **Traditional / text search:** `primary_shards = (current_data × growth_factor) / target_shard_size`. Bookstore: `(800 GB × 1.25) / 40 GB ≈ 25 primary shards`.
-- **Vector / k-NN (HNSW):** `vectors_per_shard = (RAM × 50%) / (dimensions × 4 bytes × 1.5 overhead)`. Bookstore: `(64 GB × 0.5) / (768 × 4 × 1.5) ≈ 7M vectors/shard` — so 500k books fit in **one** primary (plan ≥ 1 replica for HA).
-- **Hybrid:** compute both, take the larger shard count.
-
-> **Reference — shard-allocation awareness.** Awareness spreads a primary and its replica across **different zones** so one AZ failure never takes out both copies: set `cluster.routing.allocation.awareness.attributes` to a node attribute, and `force.<attribute>.values` to block allocation until every listed zone has a node. **It only works when each node advertises a matching `node.attr`** — verified live on this cluster: nodes carry `node.attr.rack_id` (`us-west-2a/b/c`, one AWS AZ per rack), so `"attributes": "rack_id"` constrains allocation while the video's fictitious `"zone"` is silently accepted and does nothing. Check your own cluster with `GET _nodes?filter_path=nodes.*.attributes`. It's a persistent, cluster-wide setting on a shared lab cluster, so treat it as syntax to know rather than a step to run; after any allocation change, `GET _cat/shards?v&s=node` confirms shards actually moved.
-
-> **Force merge (already done in Chapter 4).** Chapter 4's fast-bulk recipe (Step 6) already force-merged `bookstore-rag` to `max_num_segments=5`, so there is nothing to re-run here. What's new is the **operations framing**:
-
-> - Each write batch creates immutable Lucene **segments**; search visits every segment, so segment sprawl raises latency, and force merge compacts them.
-> - Use it **only** on read-only / off-peak indexes — any later update or delete leaves tombstones inside a merged segment that waste space and slow search, undoing the gain.
-> - Merging to `1` can create huge (>5 GB) segments the background merge policy then ignores; `5` is a practical balance for an index that still receives occasional writes.
+You have been creating shards since Chapter 1, so this lesson skips the definitions and goes straight to the operations questions: how many shards, how big, and what to do when allocation breaks. The sizing tension is the part that only shows up at scale: too many small shards drown the coordinator in overhead, too few large ones slow recovery and limit flexibility. Aim for **10–50 GB per shard** (many teams target 20–30 GB).
 
 ### Step 1: Create a deliberately over-sharded index and watch the cluster go yellow
 
-The best way to learn cluster triage is to break a cluster you're allowed to break. In this step you deliberately create the most common allocation failure in the wild: asking for more shard *copies* than there are data nodes to hold them. A node will never host both a primary and its own replica (that would defeat the point of a replica), so the extra copies simply have nowhere to go, they sit unassigned, and the cluster turns **yellow**. You'll see the symptom now and fix it in Step 2. Delete first so the step is repeatable.
-
-> **Fixed for a 3-data-node cluster.** With `number_of_replicas: 1` (2 copies per shard) a 3-data-node cluster can place every copy without collision — verified live: the cluster stayed **green**, 100% active shards, nothing unassigned. The failure mode only appears once a shard needs **more copies than there are data nodes**. This cluster has 3 data nodes, so `number_of_replicas: 3` (4 copies per shard: 1 primary + 3 replicas) reliably forces at least one unassigned replica per shard. Verified live: `"status": "yellow"`, `"unassigned_shards": 6` (one per primary shard), `allocation/explain` shows the `same_shard` decider.
+The best way to learn cluster triage is to break a cluster you're allowed to break. In this step you deliberately create the most common allocation failure in the wild: asking for more shard *copies* than there are data nodes to hold them. A node will never host both a primary and its own replica (that would defeat the point of a replica), so the extra copies simply have nowhere to go, they sit unassigned, and the cluster turns **yellow**. You'll see the symptom now and fix it in Step 2.
 
 **Request**
-
-```http
-DELETE my-index
-```
-
-A `404` is fine if it did not exist.
 
 ```http
 PUT my-index
@@ -79,7 +30,17 @@ PUT my-index
 }
 ```
 
-**Expected** `"acknowledged": true`. **Save** the index name **`my-index`**. Then check cluster health — `_cluster/health` is your first call in any incident. **Yellow** = replicas unassigned (data intact, redundancy lost). **Red** = a primary is missing (data unsearchable):
+**Expected** output:
+
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "my-index"
+}
+```
+
+Then check cluster health. **Yellow** means there are unassigned replicas (data intact, redundancy lost). **Red** means a primary is missing (data unsearchable):
 
 ```http
 GET _cluster/health
@@ -87,11 +48,35 @@ GET _cluster/health
 
 **Expected** `"status": "yellow"` with `"unassigned_shards" > 0`.
 
+```json
+{
+  "cluster_name": "********",
+  "status": "yellow",
+  "timed_out": false,
+  "number_of_nodes": 7,
+  "number_of_data_nodes": 3,
+  "discovered_master": true,
+  "discovered_cluster_manager": true,
+  "active_primary_shards": 20,
+  "active_shards": 49,
+  "relocating_shards": 0,
+  "initializing_shards": 0,
+  "unassigned_shards": 6,
+  "delayed_unassigned_shards": 0,
+  "number_of_pending_tasks": 0,
+  "number_of_in_flight_fetch": 0,
+  "task_max_waiting_in_queue_millis": 0,
+  "active_shards_percent_as_number": 89.0909090909091
+}
+```
+
+Why exactly 6 unassigned_shards? in the previous step we set the number of shards to 6 and replicas to 3, but a node will never hold two copies of the same shard, and there are only 3 data nodes. And with `relocating_shards` and `initializing_shards` both at 0, the cluster isn't still working on it. It has settled: those replicas *cannot* allocate until something changes. Step 2 changes it.
+
 **Fast mode** — `06-delete-my-index-overshard.bru` → `07-create-oversharded-index.bru` → `08-cluster-health-before.bru`
 
 ### Step 2: Reduce replicas to fix allocation, then verify
 
-Now play the on-call engineer and bring the cluster back to green. Since the problem is more replica copies than nodes to hold them, the lab fix is to lower `number_of_replicas`. Note that replica count is a **live** setting: one API call, no reindex, and the cluster heals in seconds. (In production you'd keep at least 1 replica for high availability; the real fix there is adding nodes, not shedding redundancy.)
+Now play the role of an on-call engineer and bring the cluster back to green. Since the problem is more replica copies than nodes to hold them, the fix is to lower `number_of_replicas`. Note that replica count is a **live** setting: one API call, no reindex, and the cluster heals in seconds. 
 
 **Request**
 
@@ -101,18 +86,47 @@ PUT my-index/_settings
   "number_of_replicas": 0
 }
 ```
+**Expected** output:
 
-Verify with health and the shard list — the `unassigned.reason` column (`NODE_LEFT`, `REPLICA_ADDED`, `CLUSTER_RECOVERED`, `INDEX_CREATED`, …) is the fastest triage signal when shards won't allocate:
+```json
+{
+  "acknowledged": true
+}
+```
+
+Now we need to verify the cluster health and the shard list.
+
+***Request***
 
 ```http
 GET _cluster/health
 ```
 
-```http
-GET _cat/shards?v&h=index,shard,prirep,state,node,unassigned.reason
+**Expected** `"status": "green"`, `"unassigned_shards": 0`
+
+```json
+{
+  "cluster_name": "********",
+  "status": "green",
+  "timed_out": false,
+  "number_of_nodes": 7,
+  "number_of_data_nodes": 3,
+  "discovered_master": true,
+  "discovered_cluster_manager": true,
+  "active_primary_shards": 20,
+  "active_shards": 37,
+  "relocating_shards": 0,
+  "initializing_shards": 0,
+  "unassigned_shards": 0,
+  "delayed_unassigned_shards": 0,
+  "number_of_pending_tasks": 0,
+  "number_of_in_flight_fetch": 0,
+  "task_max_waiting_in_queue_millis": 0,
+  "active_shards_percent_as_number": 100
+}
 ```
 
-**Expected** `"status": "green"`, `"unassigned_shards": 0`, and `my-index` rows now `STARTED` with a node name (empty reason).
+As you can see, by fixing the replica overallocation our cluster immediately went back to a green health state.
 
 **Fast mode** — `09-set-replicas-zero.bru` → `10-cluster-health-after.bru` → `11-cat-shards-unassigned.bru`
 
@@ -123,8 +137,19 @@ You fixed this incident because you caused it and knew the answer. Real incident
 **Request**
 
 ```http
-GET _cat/allocation?v&h=node,disk.used_percent,disk.avail
+GET _cat/allocation?v&h=node,disk.percent,disk.avail
 ```
+
+**Expected** output: ~1% disk space utilized.
+
+```
+node           disk.percent disk.avail
+ip-10-2-123-11            1     28.7gb
+ip-10-2-37-236            1     28.7gb
+ip-10-2-181-70            1     28.7gb
+```
+
+**Request**
 
 ```http
 GET _cluster/allocation/explain
@@ -135,29 +160,83 @@ GET _cluster/allocation/explain
 }
 ```
 
-**Expected** disk used percent per node, then `can_allocate`, `allocate_explanation`, and per-node `deciders` (e.g. `disk_threshold`).
+**Expected** output: you're asking about a healthy, started shard, so the API answers a different question than it would in an incident. Instead of "why is this shard stuck," it reports "is this shard where it should be".
+
+Reading it top to bottom: `current_state: started` and `current_node` tell you shard 1's primary lives on one specific data node. `can_remain_on_current_node: yes` means no decider wants to evict it. And `can_rebalance_to_other_node: no` is not a problem to fix; it's the cluster saying a move would help nothing. The `node_allocation_decisions` list makes that concrete: each remaining data node answers `worse_balance`, meaning it *could* hold this shard, but taking it would make the cluster less balanced, not more. A healthy answer on every line.
+
+```json
+{
+  "index": "my-index",
+  "shard": 1,
+  "primary": true,
+  "current_state": "started",
+  "current_node": {
+    "id": "F9CA3Sq3ReSvZdflXArfzA",
+    "name": "ip-10-2-181-70",
+    "transport_address": "10.2.181.70:9300",
+    "attributes": {
+      "rack_id": "us-west-2c",
+      "shard_indexing_pressure_enabled": "true"
+    },
+    "weight_ranking": 1
+  },
+  "can_remain_on_current_node": "yes",
+  "can_rebalance_cluster": "yes",
+  "can_rebalance_to_other_node": "no",
+  "rebalance_explanation": "cannot rebalance as no target node exists that can both allocate this shard and improve the cluster balance",
+  "node_allocation_decisions": [
+    {
+      "node_id": "w5pYbppFT6-lxuh62xqkmw",
+      "node_name": "ip-10-2-37-236",
+      "transport_address": "10.2.37.236:9300",
+      "node_attributes": {
+        "rack_id": "us-west-2a",
+        "shard_indexing_pressure_enabled": "true"
+      },
+      "node_decision": "worse_balance",
+      "weight_ranking": 1
+    },
+    {
+      "node_id": "SEDgR4UkS96_RaYdAdJMMw",
+      "node_name": "ip-10-2-123-11",
+      "transport_address": "10.2.123.11:9300",
+      "node_attributes": {
+        "rack_id": "us-west-2b",
+        "shard_indexing_pressure_enabled": "true"
+      },
+      "node_decision": "worse_balance",
+      "weight_ranking": 2
+    }
+  ]
+}
+```
 
 **Fast mode** — `12-cat-allocation-disk.bru` → `13-allocation-explain.bru`
-
-> **Disk watermarks (Reference).** Watermarks protect nodes from filling up: **low (85%)** stop allocating new shards here; **high (90%)** actively relocate shards away; **flood_stage (95%)** make indexes on the node **read-only**. The keys are `cluster.routing.allocation.disk.watermark.{low,high,flood_stage}`, settable transiently. The defaults are good — know the knobs, don't change them on a shared lab cluster.
 
 ---
 
 ## Lesson 5-2 — Index optimization for performance and storage efficiency
 
-Indexes contain shards; segments live inside shards. Good index design plans for the data's **entire lifecycle**: shard sizing, mapping choices, and lifecycle automation. Three levers: **only index what you search**, **separate data by access pattern**, and **automate aging** with Index State Management (ISM).
+Nearly every index setting you have touched this course was decided at creation time, and that is the real lesson here: mapping and shard choices are effectively permanent once documents land. This lesson is about making those one-shot decisions deliberately, then automating everything that happens after. You will create a mapping that only indexes the fields you actually search, then set up an ISM policy so rollover and cleanup happen automatically instead of by hand. This lesson also includes a read-along shrink recipe, which shows how to reduce the shard count on an existing index if you sized it wrong.
 
 ### Step 4: Create `my-index` with an optimized mapping, then read it back
 
-Here's an index-design principle that saves real money at scale: **only index what you search**. By default OpenSearch builds search structures for every field, but plenty of fields are only ever *retrieved*, never queried. This mapping shows the two opt-outs. **`index: false`** stores a field's value but builds no search structures for it, perfect for `internal_notes` that staff read but nobody queries. **`enabled: false`** goes further and stores an object completely as-is without indexing any sub-field, perfect for opaque blobs like `inventory_metadata`. Decide these up front, because mappings are largely immutable once documents land. This also recreates a clean single-shard `my-index` for the lifecycle demos ahead.
+You know from the videos that unindexed fields are cheaper; this mapping is what that looks like in practice. Most fields get the exact types you'd expect by now (`keyword` for identifiers and filters, `text` for search). Two fields opt out of indexing. `internal_notes` sets **`index: false`** because staff read it but nobody searches it. `inventory_metadata` sets **`enabled: false`**, which skips indexing the object and all of its sub-fields, because the application only ever retrieves it and never queries it. Decide this when you design the index, because making a field searchable later means a reindex. This step also recreates `my-index` as a clean single-shard index for the lifecycle demos ahead.
 
-**Request**
+**Request** - Delete the current index
 
 ```http
 DELETE my-index
 ```
 
-A `404` is fine.
+**Expected** Output:
+```json
+{
+  "acknowledged": true
+}
+```
+
+**Request** - Build a new index with optimized mapping
 
 ```http
 PUT my-index
@@ -188,186 +267,110 @@ PUT my-index
   }
 }
 ```
+**Expected** output:
 
-Then read it back — `GET /<index>/_mapping` is your first call when debugging analysis or field types, and the inner `mappings` block is exactly what you'd pass to create the index elsewhere:
-
-```http
-GET my-index/_mapping
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "my-index"
+}
 ```
-
-**Expected** `"acknowledged": true` for the create, then JSON keyed by index name with all `properties` — confirm `internal_notes` shows `"index": false` and `inventory_metadata` shows `"enabled": false`.
 
 **Fast mode** — `16-delete-my-index-mapping.bru` → `17-create-my-index-bookstore.bru` → `18-get-mapping.bru`
 
-> **Refresh interval (already covered).** `refresh_interval` is the live, no-reindex setting you tuned in Chapter 2 Step 15 and toggled off/on around Chapter 4's fast bulk load (Step 6). The index-design takeaway: decide it per index, alongside the mapping, based on how fresh search results must be — the default `1s` suits interactive writes; `30s` (or `-1`) suits batch loads. For the two sample documents below, the default is fine.
-
 ### Step 5: Bulk sample documents into `my-index`
 
-Two quick documents and one refresh. It's a small step, but the caching, profiling, and slow-log work in Lesson 5-5 all runs against this index, and observability demos are far more convincing when there's real data behind them.
+Ten documents and one refresh. The caching, profiling, and slow-log work in Lesson 5-4 all runs against this index, and those demos are more convincing with real data behind them. Notice that every document fills in the two opt-out fields from Step 4. Want to see the opt-outs work after the load? We'll search `internal_notes` for any word from a note and you'll get zero hits, then fetch any document by id (`GET my-index/_doc/978-0143127740`) and both fields are sitting right there in `_source`. Stored for reading, invisible to search, exactly as designed.
 
-**Request**
+**Request** - Load data into our index
 
 ```http
 POST _bulk
 { "index": { "_index": "my-index", "_id": "978-0143127740" } }
-{ "book_id": "978-0143127740", "isbn": "978-0143127740", "title": "The Martian", "author": "Andy Weir", "genre": "Science Fiction", "description": "An astronaut stranded on Mars fights to survive.", "price": 16.99, "in_stock": true, "published_year": 2014 }
+{ "book_id": "978-0143127740", "isbn": "978-0143127740", "title": "The Martian", "author": "Andy Weir", "genre": "Science Fiction", "description": "An astronaut stranded on Mars fights to survive.", "price": 16.99, "in_stock": true, "published_year": 2014, "internal_notes": "Perennial staff pick; keep face-out on the sci-fi endcap.", "inventory_metadata": { "warehouse": "PDX-1", "aisle": "12A", "last_counted": "2026-06-28" } }
 { "index": { "_index": "my-index", "_id": "978-0307277677" } }
-{ "book_id": "978-0307277677", "isbn": "978-0307277677", "title": "The Road", "author": "Cormac McCarthy", "genre": "Fiction", "description": "A father and son journey through a post-apocalyptic landscape.", "price": 15.95, "in_stock": true, "published_year": 2006 }
+{ "book_id": "978-0307277677", "isbn": "978-0307277677", "title": "The Road", "author": "Cormac McCarthy", "genre": "Fiction", "description": "A father and son journey through a post-apocalyptic landscape.", "price": 15.95, "in_stock": true, "published_year": 2006, "internal_notes": "Assign to the book-club table in October.", "inventory_metadata": { "warehouse": "PDX-1", "aisle": "03C", "last_counted": "2026-06-28" } }
+{ "index": { "_index": "my-index", "_id": "978-0593135204" } }
+{ "book_id": "978-0593135204", "isbn": "978-0593135204", "title": "Project Hail Mary", "author": "Andy Weir", "genre": "Science Fiction", "description": "A lone astronaut wakes with no memory and must save Earth from an extinction-level threat.", "price": 18.99, "in_stock": true, "published_year": 2021, "internal_notes": "Customers who liked The Martian ask for this; shelve nearby.", "inventory_metadata": { "warehouse": "PDX-2", "aisle": "12B", "last_counted": "2026-07-01" } }
+{ "index": { "_index": "my-index", "_id": "978-0441172719" } }
+{ "book_id": "978-0441172719", "isbn": "978-0441172719", "title": "Dune", "author": "Frank Herbert", "genre": "Science Fiction", "description": "A young nobleman is drawn into a war for a desert planet and its spice.", "price": 19.99, "in_stock": true, "published_year": 1965, "internal_notes": "Movie tie-in cover sells faster than the classic cover.", "inventory_metadata": { "warehouse": "PDX-2", "aisle": "11A", "last_counted": "2026-05-19" } }
+{ "index": { "_index": "my-index", "_id": "978-0307588371" } }
+{ "book_id": "978-0307588371", "isbn": "978-0307588371", "title": "Gone Girl", "author": "Gillian Flynn", "genre": "Mystery", "description": "A wife disappears and a marriage's secrets unravel under investigation.", "price": 14.99, "in_stock": false, "published_year": 2012, "internal_notes": "Restock delayed; distributor backorder until August.", "inventory_metadata": { "warehouse": "PDX-1", "aisle": "07D", "last_counted": "2026-06-30" } }
+{ "index": { "_index": "my-index", "_id": "978-0307454546" } }
+{ "book_id": "978-0307454546", "isbn": "978-0307454546", "title": "The Girl with the Dragon Tattoo", "author": "Stieg Larsson", "genre": "Mystery", "description": "A journalist and a hacker investigate a decades-old disappearance.", "price": 16.95, "in_stock": true, "published_year": 2008, "internal_notes": "Series sells as a set; bundle with volumes 2 and 3.", "inventory_metadata": { "warehouse": "PDX-3", "aisle": "08A", "last_counted": "2026-06-15" } }
+{ "index": { "_index": "my-index", "_id": "978-0399590504" } }
+{ "book_id": "978-0399590504", "isbn": "978-0399590504", "title": "Educated", "author": "Tara Westover", "genre": "Memoir", "description": "A memoir of leaving a survivalist family for a university education.", "price": 17.99, "in_stock": true, "published_year": 2018, "internal_notes": "Frequent gift purchase; keep near the register in December.", "inventory_metadata": { "warehouse": "PDX-1", "aisle": "21B", "last_counted": "2026-07-02" } }
+{ "index": { "_index": "my-index", "_id": "978-1250301697" } }
+{ "book_id": "978-1250301697", "isbn": "978-1250301697", "title": "The Silent Patient", "author": "Alex Michaelides", "genre": "Thriller", "description": "A psychotherapist becomes obsessed with a patient who refuses to speak.", "price": 13.99, "in_stock": true, "published_year": 2019, "internal_notes": "Demand spike from social media; reorder threshold raised to 12.", "inventory_metadata": { "warehouse": "PDX-2", "aisle": "07A", "last_counted": "2026-06-25" } }
+{ "index": { "_index": "my-index", "_id": "978-0735219090" } }
+{ "book_id": "978-0735219090", "isbn": "978-0735219090", "title": "Where the Crawdads Sing", "author": "Delia Owens", "genre": "Fiction", "description": "An abandoned girl raises herself in the marshes of North Carolina.", "price": 15.99, "in_stock": false, "published_year": 2018, "internal_notes": "Damaged shipment returned; awaiting replacement stock.", "inventory_metadata": { "warehouse": "PDX-3", "aisle": "04C", "last_counted": "2026-06-20" } }
+{ "index": { "_index": "my-index", "_id": "978-0547928227" } }
+{ "book_id": "978-0547928227", "isbn": "978-0547928227", "title": "The Hobbit", "author": "J.R.R. Tolkien", "genre": "Fantasy", "description": "A homebody hobbit is swept into a quest to reclaim a dwarven kingdom.", "price": 14.95, "in_stock": true, "published_year": 1937, "internal_notes": "Evergreen seller; never let stock drop below 6.", "inventory_metadata": { "warehouse": "PDX-1", "aisle": "10A", "last_counted": "2026-06-28" } }
+
 ```
 
-**Expected** `"errors": false`. Then refresh:
+**Expected** `"errors": false`, documents can be seen in the `items` array
+
+```json
+{
+  "took": 44,
+  "errors": false,
+  "items": [
+    {
+      "index": {
+        "_index": "my-index",
+        "_id": "978-0143127740",
+        "_version": 1,
+        "result": "created",
+        "_shards": {
+          "total": 1,
+          "successful": 1,
+          "failed": 0
+        },
+        "_seq_no": 0,
+        "_primary_term": 1,
+        "status": 201
+      }
+    },[...]
+```
+
+**Request** - Refresh the index
 
 ```http
 POST my-index/_refresh
 ```
 
+**Expected** `_shards.successful: 1`. All ten documents are now searchable.
+
+```json
+{
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0
+  }
+}
+```
+
 **Fast mode** — `20-bulk-my-index.bru` → `21-refresh-my-index.bru`
-
-> **Reindex with a Painless transform (already done in Chapter 1).** Some changes cannot be made in place — changing a field **type**, changing shard **count**, or upgrading embedding **dimensions**. The fix is always the same server-side pattern you ran in Chapter 1 Step 16: create the destination **first** with the settings you want (never let it auto-create with defaults), then `POST _reindex` with a Painless `script` transforming each document in flight. Add `slices=5` to parallelize; run off-peak. Nothing new to run here.
-
-### Reference: Shrink an over-sharded read-only index (the canonical recipe)
-
-**Read-along — nothing to run.** This recipe would reshape and ultimately delete Chapter 4's `bookstore-rag`; on the lab cluster the payoff doesn't justify rebuilding that index, but in production this is *the* zero-downtime resharding pattern. **Shrink** rebuilds an index with **fewer primary shards** (the target count must evenly divide the source count), and you reach for it after time-series roll-off or when a bulk load left you over-sharded. The full sequence: (1) pin every shard to one node and block writes, (2) `_shrink`, (3) remove the pin so it rebalances, (4) force-merge, (5) atomic alias swap, (6) delete the source. Study each move below:
-
-> **Workshop bug found on the real cluster — `bookstore-rag` has only 1 primary shard.** Chapter 4 · Lesson 4-2 creates `bookstore-rag` without an explicit `number_of_shards`, which defaults to **1**. `_shrink` requires the source to have **more than one** primary shard — verified live: `POST bookstore-rag/_shrink/bookstore-rag-shrunk` returns `400 illegal_argument_exception: can't shrink an index with only one shard`. The fix below first uses the **`_split`** API (the inverse of shrink) to reshape `bookstore-rag` into a 2-shard `bookstore-rag-split`, then runs the canonical shrink recipe against that. This keeps the demo fully runnable against the exact prerequisite index the course builds, and additionally demonstrates `_split`.
-
-**1 — Block writes on `bookstore-rag`** (required before `_split`).
-
-```http
-PUT bookstore-rag/_settings
-{ "index.blocks.write": true }
-```
-
-**2 — Split into `bookstore-rag-split`** (2 primary shards).
-
-```http
-POST bookstore-rag/_split/bookstore-rag-split
-{
-  "settings": { "index.number_of_shards": 2, "index.number_of_replicas": 1 }
-}
-```
-
-**Expected** `"acknowledged": true`, `"shards_acknowledged": true`. Wait for `GET _cluster/health/bookstore-rag-split?wait_for_status=green&timeout=30s`.
-
-**3 — Delete the original `bookstore-rag`** (its 256 docs are now fully copied into `bookstore-rag-split`).
-
-```http
-DELETE bookstore-rag
-```
-
-**4 — Pin shards to one node and block writes.** Replace `YOUR_NODE_NAME` with a node name from `GET _cat/nodes?v` (in Bruno, set **`nodeName`** in the **Local** environment).
-
-```http
-PUT bookstore-rag-split/_settings
-{
-  "settings": {
-    "index.routing.allocation.require._name": "YOUR_NODE_NAME",
-    "index.blocks.write": true
-  }
-}
-```
-
-Wait until `GET _cat/shards/bookstore-rag-split?v` shows every primary on that node.
-
-**5 — Shrink to the target index.**
-
-```http
-POST bookstore-rag-split/_shrink/bookstore-rag-shrunk
-{
-  "settings": {
-    "index.number_of_shards": 1,
-    "index.number_of_replicas": 1,
-    "index.codec": "best_compression"
-  }
-}
-```
-
-**6 — Remove the routing pin so the shrunk index rebalances.**
-
-```http
-PUT bookstore-rag-shrunk/_settings
-{
-  "index.routing.allocation.require._name": null
-}
-```
-
-**7 — Force-merge the (now read-only-style) shrunk index to one segment.**
-
-```http
-POST bookstore-rag-shrunk/_forcemerge?max_num_segments=1
-```
-
-**8 — Atomic alias swap** (clients keep querying `bookstore-rag-alias`; create it on the split index first, then swap).
-
-```http
-POST _aliases
-{
-  "actions": [
-    { "add": { "index": "bookstore-rag-split", "alias": "bookstore-rag-alias" } }
-  ]
-}
-```
-
-Then swap:
-
-```http
-POST _aliases
-{
-  "actions": [
-    { "remove": { "index": "bookstore-rag-split", "alias": "bookstore-rag-alias" } },
-    { "add": { "index": "bookstore-rag-shrunk", "alias": "bookstore-rag-alias" } }
-  ]
-}
-```
-
-**9 — Delete the source index** after verifying the shrunk index serves the alias.
-
-```http
-DELETE bookstore-rag-split
-```
-
-**Expected across the recipe** each call returns `"acknowledged": true`; `GET _cat/shards/bookstore-rag-shrunk?v` shows fewer shards than `bookstore-rag-split`; `GET bookstore-rag-alias/_count` returns the original 256 docs.
 
 ### Step 6: Automate the index lifecycle: write alias, rollover, and ISM
 
-Some data never stops arriving: logs, metrics, search history. Let it pile into one index and that index grows without bound until it becomes a problem someone inherits. This step builds the standard escape hatch in three moves that hand off to each other. First, a **time-based index** (`searches-000001`) behind a **write alias** (`is_write_index: true`), so your app writes to the alias and never knows which physical index is current, and aging out old data becomes a cheap whole-index delete instead of an expensive delete-by-query. Second, `_rollover`, which creates the next backing index and moves the write alias whenever the current one hits a size, age, or doc-count threshold. Third, an **ISM policy** that runs the whole cycle automatically, because any maintenance that depends on a human remembering it will eventually be forgotten.
+Data like logs, metrics, and search history never stops arriving. If it all lands in one index, that index grows forever. The standard fix has three parts. You create a **time-based index** (`searches-000001`) with a **write alias** (`is_write_index: true`); your application writes to the alias and never needs to know which physical index is active. You call `_rollover`, which creates the next index and moves the write alias whenever the active index gets too old, too big, or too full. And you attach an **ISM policy** so the cycle repeats automatically instead of relying on someone to remember it. Aging out old data then becomes simple: delete a whole retired index, which is much cheaper than a delete-by-query. One ordering detail matters before you start: `ism_template` only attaches to indexes created *after* the policy exists, so in this step the policy comes first.
 
-**Request**
-
-```http
-PUT searches-000001
-{
-  "aliases": { "searches-current": { "is_write_index": true } }
-}
-```
-
-```http
-POST searches-current/_rollover
-{
-  "conditions": {
-    "max_age": "30d",
-    "max_size": "50gb",
-    "max_docs": 100000
-  }
-}
-```
-
-**Expected** `"acknowledged": true` for the create, then a rollover response with `old_index`, `new_index`, `rolled_over` (likely `false` on a brand-new empty index — the conditions are not met yet), and per-condition results.
-
-Finally, hand the cycle to **Index State Management**: roll over the hot index, then delete after N days, attached to an index pattern via `ism_template` so new `searches-*` indexes inherit it — replacing manual, forgettable maintenance.
-
-**Request**
+**Request** — create the lifecycle policy. The `min_doc_count: 5` rollover threshold is deliberately tiny so you can watch it fire in the next few requests; production values look more like `min_index_age: 30d` or `min_size: 50gb`.
 
 ```http
 PUT _plugins/_ism/policies/bookstore-searches-policy
 {
   "policy": {
-    "description": "Roll over daily/50gb, delete after 90 days",
+    "description": "Demo: roll over at 5 docs, delete after 90 days",
     "default_state": "hot",
     "states": [
       {
         "name": "hot",
-        "actions": [ { "rollover": { "min_size": "50gb", "min_index_age": "30d" } } ],
+        "actions": [ { "rollover": { "min_doc_count": 5 } } ],
         "transitions": [ { "state_name": "delete", "conditions": { "min_index_age": "90d" } } ]
       },
       {
@@ -381,31 +384,176 @@ PUT _plugins/_ism/policies/bookstore-searches-policy
 }
 ```
 
-**Expected** a `_id` of `bookstore-searches-policy` and the policy body echoed back.
+**Expected** an `_id` of `bookstore-searches-policy` and the policy echoed back, with retry defaults filled in on the rollover action.
 
-**Fast mode** — `35-time-based-index.bru` → `36-rollover-alias.bru` → `37-create-ism-policy.bru`
+```json
+{
+  "_id": "bookstore-searches-policy",
+  "_version": 1,
+  "_primary_term": 1,
+  "_seq_no": 6605,
+  "policy": {
+    "policy": {
+      "policy_id": "bookstore-searches-policy",
+      "description": "Demo: roll over at 5 docs, delete after 90 days",
+      [...]
+     
+```
 
-> **Versioned k-NN indexes (read-along).** Embedding models change dimensions and similarity behavior, and a `knn_vector` mapping can't be edited in place. The production pattern: **versioned index names** (`book-embeddings-v2`, `-v3`, …) behind an alias — backfill the new version, swap the alias, zero downtime. Store `model_version` / `model_name` per document to audit recall regressions. A v2→v3 upgrade is typically the same mapping with a higher `dimension` (e.g. 768 → 1024) and a denser HNSW graph (`ef_construction: 256`, `m: 32`) — slower indexing, more memory, better recall — kept in a separate index so you migrate gradually without touching the live catalog. The naming pattern is the lesson; there's no need to create empty indexes to see it. (`faiss` is the production engine; `nmslib` was removed in 3.x.)
+**Request** — Next we'll create the first backing index with the write alias. The extra setting tells ISM which alias its rollover action should move; in production an index template would stamp it onto every `searches-*` index automatically.
+
+```http
+PUT searches-000001
+{
+  "settings": { "index.plugins.index_state_management.rollover_alias": "searches-current" },
+  "aliases": { "searches-current": { "is_write_index": true } }
+}
+```
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "searches-000001"
+}
+```
+
+Now let's check that the policy attached on its own:
+
+```http
+GET _plugins/_ism/explain/searches-000001
+```
+
+**Expected** output (attachment happens within a few seconds of index creation; if `policy_id` is still `null`, run it again):
+
+```json
+{
+  "searches-000001": {
+    "index.plugins.index_state_management.policy_id": "bookstore-searches-policy",
+    "index.opendistro.index_state_management.policy_id": "bookstore-searches-policy",
+    "index": "searches-000001",
+    "index_uuid": "qvwrmT74Qtm5Xqw8LGwd3Q",
+    "policy_id": "bookstore-searches-policy",
+    "enabled": true
+  },
+  "total_managed_indices": 1
+}
+```
+
+Nobody registered this index with ISM by hand. It matched the `searches-*` pattern at creation time, and the policy picked it up.
+
+**Request** — Next we'll write six search-history events through the alias. The `refresh=true` makes them count toward the rollover condition immediately.
+
+```http
+POST _bulk?refresh=true
+{ "index": { "_index": "searches-current" } }
+{ "query": "mystery novels under 20 dollars", "results": 14, "timestamp": "2026-07-13T09:14:02Z" }
+{ "index": { "_index": "searches-current" } }
+{ "query": "andy weir new releases", "results": 3, "timestamp": "2026-07-13T09:15:47Z" }
+{ "index": { "_index": "searches-current" } }
+{ "query": "books like project hail mary", "results": 9, "timestamp": "2026-07-13T09:16:29Z" }
+{ "index": { "_index": "searches-current" } }
+{ "query": "cormac mccarthy the road", "results": 1, "timestamp": "2026-07-13T09:18:03Z" }
+{ "index": { "_index": "searches-current" } }
+{ "query": "fantasy classics for beginners", "results": 22, "timestamp": "2026-07-13T09:21:11Z" }
+{ "index": { "_index": "searches-current" } }
+{ "query": "memoirs about education", "results": 6, "timestamp": "2026-07-13T09:24:55Z" }
+```
+
+**Expected** `"errors": false`. Look at any item in the response: `"_index": "searches-000001"`. You wrote to the alias, and OpenSearch resolved the physical index for you.
+
+```json
+{
+  "took": 536,
+  "errors": false,
+  "items": [
+    {
+      "index": {
+        "_index": "searches-000001",
+        "_id": "hBuHXZ8BCKwDOnnOt0DM",
+        "_version": 1,
+        "result": "created",
+        "forced_refresh": true,
+        "_shards": {
+          "total": 2,
+          "successful": 2,
+          "failed": 0
+        },
+        "_seq_no": 0,
+        "_primary_term": 1,
+        "status": 201
+      }
+    },[...]
+}
+```
+
+**Request** — now trigger the rollover. This call asks OpenSearch to check the index behind `searches-current` against the conditions in the body, and if any condition is met, to create the next index and move the write alias onto it. You loaded six documents and the condition says five, so the check will pass. OpenSearch reads the `-000001` suffix and names the new index `searches-000002` on its own. This is the same operation ISM runs on its schedule; you are running it by hand so you don't have to wait for the next check.
+
+```http
+POST searches-current/_rollover
+{ "conditions": { "max_docs": 5 } }
+```
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "old_index": "searches-000001",
+  "new_index": "searches-000002",
+  "rolled_over": true,
+  "dry_run": false,
+  "conditions": {
+    "[max_docs: 5]": true
+  }
+}
+```
+
+`"rolled_over": true` is the confirmation that it happened. `conditions` shows the check that justified it (six documents met the `max_docs: 5` threshold), and `old_index` / `new_index` name the index that stopped receiving writes and the one that now does. Confirm that by looking at the alias:
+
+```http
+GET _alias/searches-current
+```
+
+**Expected** output:
+
+```json
+{
+  "searches-000001": {
+    "aliases": {
+      "searches-current": {
+        "is_write_index": false
+      }
+    }
+  },
+  "searches-000002": {
+    "aliases": {
+      "searches-current": {
+        "is_write_index": true
+      }
+    }
+  }
+}
+```
+
+This is the whole pattern on one screen. The application never stopped writing to `searches-current`, but new documents now land in `searches-000002`, while the old data in `searches-000001` stays searchable through the same alias. And because `searches-000002` matches the `ism_template` pattern too, it is already managed; run the explain request against it if you want proof. In production you don't run the rollover call yourself: ISM checks its managed indexes about every five minutes and runs this same rollover when a condition is met. You triggered it manually only so you didn't have to sit and wait. The delete phase works the same way, just on a 90-day clock.
+
+**Fast mode** — `35-create-ism-policy.bru` → `36-create-searches-index.bru` → `37-ism-explain.bru` → `38-bulk-search-events.bru` → `39-rollover-searches.bru` → `40-get-alias-searches.bru`
 
 ---
 
 ## Lesson 5-3 — Optimizing for vector storage and search
 
-Vectors are memory hogs by design. A 768-dim `float` vector is `768 × 4 = 3072` bytes; the HNSW graph that makes search fast must live in RAM. Bookstore math: `500k × 768 × 4 ≈ 1.5 GB` raw, `≈ 2.25 GB` with ~50% HNSW overhead — fine in one shard. At 10M books that's ~45 GB and must be spread across shards/nodes. Two escape hatches when memory is the constraint: **`on_disk` mode** and **scalar quantization (fp16)**.
-
-> **Storage modes recap (already covered in Chapter 1 — nothing to run).** You built an `on_disk` index in Chapter 1 Step 6 (`vector-disk-demo`); the mechanics are identical at production scale, only `dimension: 768` changes. The production framing worth pinning before the fp16 step:
->
-> - **`on_disk`** keeps compressed vectors on disk and rescoring metadata in memory — a little latency for a large memory saving, ideal for cold archives searched rarely. Defaults: `faiss` engine, `hnsw` method, **`compression_level: 32x`**, rescoring on; `float` vectors only.
-> - **`compression_level`** tunes that trade: `16x` keeps more precision in memory than the default `32x` (higher recall, larger footprint). Valid levels `1x`–`32x`; one detail Chapter 1 didn't cover — **`4x` uses the `lucene` engine**, the rest use `faiss`. Compression > `1x` is `float`-only.
-> - **`in_memory`** keeps full-precision vectors in native memory — lowest latency, highest cost. It is the **default**: every `knn_vector` index you've created without a `mode` (Chapter 2's `vector-search-index`, Chapter 4's `bookstore-rag`) is already `in_memory` with `data_type: float` (32-bit).
+Vectors are memory hogs by design. A 768-dim `float` vector is `768 × 4 = 3072` bytes; the HNSW graph that makes search fast must live in RAM. Bookstore math: `500k books × 768-dims × 4 bytes ≈ 1.5 GB` raw, and `≈ 2.25 GB` with ~50% HNSW overhead, which is fine in one shard. At 10M books that's ~45 GB and must be spread across shards/nodes. Two escape hatches when memory is the constraint: **`on_disk` mode** and **scalar quantization (fp16)**.
 
 ### Step 7: Cut memory in half with fp16 scalar quantization
 
-If someone offered to cut your vector memory bill in half for under 1% recall loss, you'd take that trade every time, and that's exactly what fp16 quantization is: each dimension stored as a 16-bit float instead of 32, dropping our bookstore shard math from ~2.25 GB to ~1.1 GB. One correction to the video script before you run it: `data_type: "float16"` does not exist in OpenSearch. The real mechanism is a **Faiss scalar-quantization encoder**, set via `method.parameters.encoder = { "name": "sq" }`. Values must fit within `[-65504, 65504]`, which normalized embeddings always do.
+If someone offered to cut your vector memory bill in half for under 1% recall loss, you'd probably almost always take that tradeoff, and that's exactly what fp16 quantization is. Each dimension is stored as a 16-bit float instead of 32, dropping our bookstore shard math from ~2.25 GB to ~1.1 GB. One correction to the video script before you run it: `data_type: "float16"` does not exist in OpenSearch. The real mechanism is a **Faiss scalar-quantization encoder**, set via `method.parameters.encoder = { "name": "sq" }`. Values must fit within `[-65504, 65504]`, which normalized embeddings always do.
 
-> **Second script correction, found on the real cluster.** The `sq` encoder does **not** accept a `bits` parameter — `"encoder": { "name": "sq", "parameters": { "bits": 16 } }` fails live with `mapper_parsing_exception: parameter validation failed for MethodComponentContext parameter [encoder]`. OpenSearch 3.5's Faiss `sq` encoder only implements one quantization type (fp16) and its only valid sub-parameter is the optional boolean `clip` (whether to clip out-of-range values instead of erroring). Verified live: `{ "name": "sq" }` alone, and `{ "name": "sq", "parameters": { "clip": false } }`, both succeed; adding `bits` always 400s.
-
-**Request**
+**Request** — this is the same FAISS HNSW recipe you used for `bookstore-rag` in Chapter 4: 768 dimensions, `l2` distance, `m: 16`, `ef_construction: 128`. Read it looking for what changed and you'll find exactly one new line, the `encoder`. That line tells FAISS to store every vector dimension as a 16-bit float instead of a 32-bit one. Everything else about working with the index (queries, bulk loads, warmup) stays exactly the same.
 
 ```http
 PUT book-embeddings-fp16
@@ -432,69 +580,212 @@ PUT book-embeddings-fp16
 }
 ```
 
-**Expected** `"acknowledged": true`.
+**Expected** output:
 
-**Fast mode** — `45-create-fp16-quantized.bru`
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "index": "book-embeddings-fp16"
+}
+```
 
-### Step 8: Inspect index stats (memory footprint)
+An acknowledgment alone doesn't prove the quantization is on, so read the mapping back and look inside `method.parameters`:
 
-A claim like "half the memory" deserves verification, and this is the API you'd verify it with. `_stats` reports doc counts, store size, and (for k-NN indexes) segment info, making it the go-to for answering "what is this index actually costing me right now?" Run it against `book-embeddings-fp16`, and when you want a real before/after, compare against a full-precision index like Chapter 4's populated `bookstore-rag` once data is loaded.
+```http
+GET book-embeddings-fp16/_mapping
+```
+
+**Expected** output: the `encoder` block is there. From this point on, every vector written to this index gets stored as fp16 on arrival, at half the memory of the 32-bit default. If you had misspelled the encoder name, the create would have failed loudly, so what you're really confirming here is that you created the index you think you did before data starts landing in it.
+
+```json
+{
+  "book-embeddings-fp16": {
+    "mappings": {
+      "properties": {
+        "embedding": {
+          "type": "knn_vector",
+          "dimension": 768,
+          "method": {
+            "engine": "faiss",
+            "space_type": "l2",
+            "name": "hnsw",
+            "parameters": {
+              "ef_construction": 128,
+              "encoder": {
+                "name": "sq",
+                "parameters": {}
+              },
+              "m": 16
+            }
+          },
+          "space_type": "l2"
+        }
+      }
+    }
+  }
+}
+```
+
+**Request** — now build the experiment that proves the memory claim. This second index is the control group: the identical mapping with the encoder line removed, so every byte of difference you measure in Step 8 comes from quantization and nothing else.
+
+```http
+PUT book-embeddings-float
+{
+  "settings": { "index.knn": true },
+  "mappings": {
+    "properties": {
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "space_type": "l2",
+        "method": {
+          "name": "hnsw",
+          "engine": "faiss",
+          "parameters": {
+            "ef_construction": 128,
+            "m": 16
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Expected** `"acknowledged": true`, `"index": "book-embeddings-float"`.
+
+**Request** — load the same vectors into both indexes. The bulk file ([`rest/bulk/chapter-5-embeddings-compare.ndjson`](../../rest/bulk/chapter-5-embeddings-compare.ndjson)) holds 50 pre-generated 768-dimensional vectors and writes each one twice, once per index, so the two indexes end up holding identical data. Paste its contents after the `POST` line, then force-merge so each index settles into one segment and the comparison is clean.
+
+```http
+POST _bulk?refresh=true
+{ /* paste the contents of chapter-5-embeddings-compare.ndjson */ }
+```
+
+```http
+POST book-embeddings-float,book-embeddings-fp16/_forcemerge?max_num_segments=1
+```
+
+**Expected** bulk `"errors": false` with 100 items (50 documents into each index), every item showing `"result": "created"` and status `201`. The force-merge returns `{"_shards": {"total": 4, "successful": 4, "failed": 0}}`: four shard copies touched, one primary and one replica per index. Both indexes now hold the same 50 vectors; the only difference between them is how the HNSW graph stores each dimension. Step 8 measures what that difference costs.
+
+**Fast mode** — `45-create-fp16-quantized.bru` → `46-get-fp16-mapping.bru` → `47-create-float-control.bru` → `48-bulk-embeddings-compare.bru` → `49-forcemerge-embeddings.bru`
+
+### Step 8: Measure what fp16 actually saves
+
+A claim like "half the memory" deserves verification, and you just built the perfect experiment for it: two indexes, identical data, one encoder line apart. Two measurements settle it. Disk first, using `_stats`. Its raw response is enormous (hundreds of counters covering indexing, search, merges, and caches), so keep the `filter_path` habit from Chapter 3 and ask only for the numbers that answer the cost question.
 
 **Request**
 
 ```http
-GET book-embeddings-fp16/_stats
+GET book-embeddings-float,book-embeddings-fp16/_stats?filter_path=indices.*.primaries.docs.count,indices.*.primaries.store.size_in_bytes
 ```
 
-**Expected** `_all.primaries` / `total` blocks with `docs`, `store.size_in_bytes`, etc. Also try the k-NN plugin stats for graph memory:
+**Expected** output:
+
+```json
+{
+  "indices": {
+    "book-embeddings-fp16": {
+      "primaries": {
+        "docs": {
+          "count": 50
+        },
+        "store": {
+          "size_in_bytes": 244886
+        }
+      }
+    },
+    "book-embeddings-float": {
+      "primaries": {
+        "docs": {
+          "count": 50
+        },
+        "store": {
+          "size_in_bytes": 321626
+        }
+      }
+    }
+  }
+}
+```
+
+Same 50 documents, but fp16 is only about 24% smaller on disk, not half. That is not a failure; it's the design. Lucene keeps a full-precision copy of every vector on disk (used for exact scoring and rebuilding), and quantization never touches it. The part that shrank by half is the FAISS graph file, and the graph file is the only part that loads into memory for search. (Want to see the full-precision copy? Re-run with `&include_segment_file_sizes=true`: the `vec` file is 153,708 bytes in both indexes, byte-identical.) So disk tells half the story. The real question is what sits in RAM, and the k-NN plugin can answer it because the graphs aren't loaded until an index is warmed or searched.
+
+**Request** — check graph memory before warming anything:
 
 ```http
-GET _plugins/_knn/stats?pretty
+GET _plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
 ```
 
-**Expected** per-node k-NN counters (`graph_memory_usage`, `cache_capacity_reached`, hit/miss counts).
+**Expected** every node reports `0`. Nothing has searched these indexes yet, so no graph is in memory. (If other k-NN indexes on your cluster have been warmed or searched, your baseline is higher; watch the increments instead of the absolute numbers.)
 
-**Fast mode** — `46-index-stats.bru` → `47-knn-stats.bru`
+**Request** — load the float graph into memory, then measure again:
+
+```http
+GET _plugins/_knn/warmup/book-embeddings-float
+```
+
+```http
+GET _plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
+```
+
+**Expected** two nodes now report `157` each (the value is in KB). That's the full-precision graph, loaded once for the primary and once for the replica, on whichever two data nodes hold them.
+
+**Request** — now the fp16 graph:
+
+```http
+GET _plugins/_knn/warmup/book-embeddings-fp16
+```
+
+```http
+GET _plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
+```
+
+**Expected** output: the totals grow by `82` per fp16 shard copy. Your node names and shard placement will differ, but the arithmetic is the same: four graph copies in memory, `157 + 157` for float and `82 + 82` for fp16. On this cluster one node happened to hold a copy of each, so it reports `239`:
+
+```json
+{
+  "nodes": {
+    "SEDgR4UkS96_RaYdAdJMMw": {
+      "graph_memory_usage": 157
+    },
+    "BnNel5ARRiCjRTNHxNIFGQ": {
+      "graph_memory_usage": 0
+    },
+    "cK0uLQjwTuyTO00iydQ3vg": {
+      "graph_memory_usage": 0
+    },
+    "w5pYbppFT6-lxuh62xqkmw": {
+      "graph_memory_usage": 239
+    },
+    "qn_icf3PSH-5-yV_StCi6g": {
+      "graph_memory_usage": 0
+    },
+    "8juFfT-sRfW__kvz6NbgOA": {
+      "graph_memory_usage": 0
+    },
+    "F9CA3Sq3ReSvZdflXArfzA": {
+      "graph_memory_usage": 82
+    }
+  }
+}
+```
+
+There is the proof: 157 KB per copy for the float graph, 82 KB for fp16, measured on your own cluster with identical data. Scale that ratio up to the lesson intro's bookstore math (about 2.25 GB of graph per shard at 500k books) and it's the difference between fitting in your data nodes' RAM and not. The takeaway worth keeping: quantization buys you memory, not disk. Know which resource a knob buys before you reach for it.
+
+**Fast mode** — `50-compare-store-stats.bru` → `51-knn-graph-memory.bru` → `52-warmup-float.bru` → re-run `51` → `53-warmup-fp16.bru` → re-run `51`
 
 ---
 
-## Lesson 5-4 — Creating secure, resilient OpenSearch AI applications
-
-Resilience keeps search online when infrastructure fails; security protects customer data. Much of this lesson is **cluster/node configuration** you cannot change on a managed cluster (marked **Reference**), but the **Security plugin API** and **health monitoring** are fully hands-on.
-
-**Reference — resilience (node config, not runnable here):**
-- Spread nodes across **multiple AZs**; use shard-allocation awareness (Lesson 5-1 reference) so a zone loss never removes both a primary and its replica.
-- On-prem: **rack awareness**, redundant power/network, a DR site, and **cross-cluster replication** to it.
-- Avoid **split brain** with `cluster.initial_cluster_manager_nodes` and **3 dedicated manager-eligible nodes** (see `opensearch.yml.example` in this chapter folder). Keep JVM heap ≤ 50% of RAM and ≤ 32 GB.
-
-> **Monitoring quick reference.** You already used `_cluster/health` for triage in Lesson 5-1; the production monitoring loop adds two refinements: `GET _cluster/health?level=indices` breaks health down per index so you can spot exactly which catalog category is degraded, and `GET _cat/nodes?v&h=name,node.role,heap.percent,ram.percent,cpu,load_1m,disk.used_percent` watches the top warning signs — node disconnects and `heap.percent` sustained above ~75% (aggressive garbage collection is coming). For deeper detail: `GET _nodes/stats/jvm` (heap used, GC counts, circuit breakers).
-
-> **Reference — least-privilege security (roles and users).** RBAC with least privilege is the core of the Security plugin, but it's cluster administration rather than vector-search optimization, so treat this as syntax to know rather than steps to run. The OpenSearch Security API (not Elasticsearch's `_security/role` path) creates a read-only role scoped to specific index patterns:
->
-> ```
-> PUT _plugins/_security/api/roles/bookstore_read_only
-> { "cluster_permissions": [ "cluster_composite_ops_ro" ],
->   "index_permissions": [ { "index_patterns": [ "books*", "bookstore-rag*" ],
->       "allowed_actions": [ "read", "indices:data/read/search", "indices:data/read/get" ] } ] }
-> ```
->
-> then an internal user bound to it via `PUT _plugins/_security/api/internalusers/<user>` with `"opendistro_security_roles": [ "bookstore_read_only" ]`, and `GET` on both endpoints to audit before handing credentials out. Field-level (`"fls": [ "~payment_card" ]`) and document-level (`"dls"`) security restrict what a role can see inside an index. Note the Security API requires admin privileges on a managed cluster.
-
-**Reference — audit logging & anomaly detection:** enable audit logging in the Security plugin, then point the **Anomaly Detection** plugin at the audit-log index (fields: `user`, `action`, source IP, timestamp; 10-minute interval) as an early-warning layer — not a SIEM replacement. Common mistakes to avoid: default `admin/admin` credentials, port 9200 exposed to the internet, security plugin disabled "for convenience," overly broad roles, no audit logs, unencrypted transport (enable TLS), un-rotated certs.
-
----
-
-## Lesson 5-5 — Mastering OpenSearch query optimization
+## Lesson 5-4 — Mastering OpenSearch query optimization
 
 Under peak load, all queries competing equally means a checkout can stall behind hundreds of "show me mystery novels." OpenSearch has no per-query priority queue, but you can approximate one with **index/hardware separation**, **request caching**, **recovery priority**, and **search backpressure**. You can also **profile** slow queries and log them.
-
-> **Reference — priority tiers and recovery order.** OpenSearch has no per-query priority queue; the approximation is **physical index separation**: pin latency-sensitive indexes (e.g. `orders`) to fast nodes with `index.routing.allocation.require.<attr>: power` and bursty browse traffic to cheaper nodes with `: standard` (`include` = any match, `exclude` = none). This only works when nodes advertise a matching `node.attr` — **this Instaclustr cluster has no `node_type` attribute, so the calls would be silent no-ops here** (verified). Related: `index.priority` (higher integer = first) controls **recovery order** after a node restart, so critical indexes come back online before browse/recommendations.
 
 ### Step 9: Enable shard request caching
 
 Think about how much of your search traffic is the *same* few requests fired over and over: current prices, order status, the dashboard someone keeps refreshing. Recomputing those from scratch every time is pure waste. The shard request cache stores the results of aggregation and `size: 0` queries at the shard level, so hot, repeated requests get answered from memory while the cluster's compute goes to queries that are genuinely new. Enable it per index, and note the practical effect: your highest-value, most-hammered shards end up staying cached the longest. We use the populated `my-index` from Lesson 5-2.
 
-**Request**
+**Request** — turn the cache on for the index.
 
 ```http
 PUT my-index/_settings
@@ -503,7 +794,9 @@ PUT my-index/_settings
 }
 ```
 
-Then run a cacheable search (`?request_cache=true`, `size:0`):
+**Expected** `{"acknowledged": true}`.
+
+**Request** — now run a cacheable search, twice. Not every request can be cached: the shard request cache only stores `size: 0` responses, which is counts and aggregations, exactly the dashboard-style traffic that repeats all day. The `?request_cache=true` parameter asks for caching explicitly on this request. Run it two times in a row and watch the `took` value.
 
 ```http
 GET my-index/_search?request_cache=true
@@ -513,33 +806,114 @@ GET my-index/_search?request_cache=true
 }
 ```
 
-**Expected** `"acknowledged": true`, then a search response with `hits.total` and no `hits` array entries (size 0). Re-running is served from cache.
+**Expected** output: the first run computes the answer (`"took": 2` on this cluster); the second run is served from the cache (`"took": 0`). The rest of the response is identical both times:
 
-**Fast mode** — `59-enable-request-cache.bru` → `60-cacheable-search.bru`
+```json
+{
+  "took": 0,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 10,
+      "relation": "eq"
+    },
+    "max_score": null,
+    "hits": []
+  }
+}
+```
+
+The query matched all ten documents, so the response reports `"hits.total.value": 10`. But because the request asked for `size: 0`, no actual documents come back; the `hits` array stays empty. Count-only responses like this one are exactly what the shard request cache stores.
+
+**Request** — prove the cache did the work by reading its counters:
+
+```http
+GET my-index/_stats/request_cache?filter_path=_all.total.request_cache
+```
+
+**Expected** output:
+
+```json
+{
+  "_all": {
+    "total": {
+      "request_cache": {
+        "memory_size_in_bytes": 689,
+        "evictions": 0,
+        "hit_count": 1,
+        "miss_count": 1
+      }
+    }
+  }
+}
+```
+
+One miss and one hit: the first search had to compute the result and store it (those are the 689 bytes), and the second search was answered from memory without touching the shard. The counters are cumulative, so every extra re-run adds a hit. And you never trade correctness for this speed: the cache invalidates automatically whenever the shard refreshes with new data, so it cannot serve stale results.
+
+**Fast mode** — `59-enable-request-cache.bru` → `60-cacheable-search.bru` (run it twice) → `61-request-cache-stats.bru`
 
 ### Step 10: Profile a query
 
-Never optimize a slow query on a hunch. Adding `"profile": true` to any search returns a per-shard, per-component timing breakdown, showing exactly which clause, rewrite, or collector is eating the time, so you fix the actual bottleneck instead of the suspected one. Make it the first move whenever someone reports "search is slow." (One caveat from Chapter 4: `profile` combined with a `hybrid` query 500s on OpenSearch 3.5.0; plain queries like this one work fine.)
+Never optimize a slow query on a hunch. Adding `"profile": true` to any search returns a per-shard, per-component timing breakdown, showing exactly which clause, rewrite, or collector is eating the time, so you fix the actual bottleneck instead of the suspected one. Make it the first move whenever someone reports "search is slow."
 
-**Request**
+**Request** — add `"profile": true` to the search body. One warning: profiling is verbose. Even this trivial query returns about 10 KB of per-component timings, so the `filter_path` below keeps only the three numbers you triage with. (When you profile for real, drop the `filter_path` and dig into the full breakdown once you know which component to blame.)
 
 ```http
-GET my-index/_search
+GET my-index/_search?filter_path=took,profile.shards.searches.query.type,profile.shards.searches.query.description,profile.shards.searches.query.time_in_nanos,profile.shards.searches.rewrite_time,profile.shards.searches.collector
 {
   "profile": true,
   "query": { "match_all": {} }
 }
 ```
 
-**Expected** a normal search response plus a `profile.shards[]` block with `query`, `rewrite_time`, and `collector` timings in nanoseconds.
+**Expected** output:
 
-**Fast mode** — `61-profile-query.bru`
+```json
+{
+  "took": 42,
+  "profile": {
+    "shards": [
+      {
+        "searches": [
+          {
+            "query": [
+              {
+                "type": "ApproximateScoreQuery",
+                "description": "ApproximateScoreQuery(originalQuery=*:*, approximationQuery=Approximate(*:*))",
+                "time_in_nanos": 37924
+              }
+            ],
+            "rewrite_time": 12398,
+            "collector": [
+              {
+                "name": "TopScoreDocCollector",
+                "reason": "search_top_hits",
+                "time_in_nanos": 17657
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Read the three numbers, remembering they are nanoseconds: the query itself spent 38 microseconds matching and scoring, rewriting the query into its executable form took 12, and collecting the results took 18. All well under a tenth of a millisecond on ten documents, which is the point of learning the shape now: when a real query misbehaves, the slow component stands out in exactly these three fields. Two details worth noticing: the `description` shows what your query became internally (OpenSearch 3.x wraps `match_all` in its approximation framework, and the original `*:*` is visible inside), and `took` is milliseconds for the whole request while the profile numbers are nanoseconds per component, so they will not add up to `took`.
+
+**Fast mode** — `62-profile-query.bru`
 
 ### Step 11: Configure slow logs (per index)
 
-Profiling works when you already know which query is slow, but in production the pathological query usually strikes while nobody is watching. Slow logs are the tripwire: any query or fetch that exceeds your thresholds gets recorded to the node logs with its full body, so the evidence is waiting for you instead of vanished. These are **index-level** settings (safe to set on your demo index) with separate query and fetch thresholds per severity, letting you decide per index what counts as "worryingly slow."
+Profiling works when you already know which query is slow, but in production the pathological query usually strikes while nobody is watching. Slow logs are the tripwire: any query or fetch that exceeds your thresholds gets recorded to the node logs with its full body, so the evidence is waiting for you instead of vanished. These are **index-level** settings with separate query and fetch thresholds per severity, letting you decide per index what counts as "worryingly slow."
 
-**Request**
+**Request** — set three thresholds on the index. The two `query` thresholds cover the search phase (finding and scoring matches) at different severities, and the `fetch` threshold covers the fetch phase (retrieving the actual documents). Fetch gets a tighter limit because retrieving already-identified documents should be fast; if fetch is slow, something is wrong with document size or disk, not query complexity.
 
 ```http
 PUT my-index/_settings
@@ -550,39 +924,62 @@ PUT my-index/_settings
 }
 ```
 
-**Expected** `"acknowledged": true`.
+**Expected** output:
 
-**Fast mode** — `62-set-slow-logs.bru`
+```json
+{
+  "acknowledged": true
+}
+```
 
-> **Reference — search backpressure.** **Search backpressure** cancels expensive in-flight searches when a node is under **duress** (high CPU/heap), trading individual query completion for cluster stability. The knobs, all under `search_backpressure.*` cluster settings: `mode` (`monitor_only` **logs what would be cancelled** without cancelling — always tune here before ever switching to `enforced`); per-shard-task thresholds that define "expensive" (`cpu_time_millis_threshold: 30000` = >30s CPU, `elapsed_time_millis_threshold: 45000` = >45s wall-clock, `total_heap_percent_threshold: 0.05` = coordinator buffering >5% of heap); `node_duress.cpu_threshold: 0.90` / `heap_threshold: 0.70` so backpressure only activates when the node itself is stressed; and `cancellation_rate` / `cancellation_burst` caps so a wave of cancellations never becomes its own outage. Observe with `GET _nodes/stats/search_backpressure` (per-node mode, resource trackers, would-be cancellation counts). On an idle lab cluster the counters read zero, so there's nothing to run here — when you tune it in production, apply as `transient` first, watch `monitor_only` stats, and only then consider `enforced`.
+Then read the settings back to confirm all three thresholds landed where you expect:
 
-**Reference — thread pools (node config):** in `opensearch.yml` you can size the built-in `search` and `write` thread pools (`size`, `queue_size`) but you **cannot** create custom-named pools or route query types to pools by name. Priority separation is achieved by index/hardware separation (see the priority-tiers reference above). See `opensearch.yml.example` in this chapter folder.
+```http
+GET my-index/_settings?filter_path=*.settings.index.search.slowlog
+```
+
+**Expected** output:
+
+```json
+{
+  "my-index": {
+    "settings": {
+      "index": {
+        "search": {
+          "slowlog": {
+            "threshold": {
+              "fetch": {
+                "warn": "1s"
+              },
+              "query": {
+                "warn": "10s",
+                "info": "5s"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+The thresholds are armed, and nothing else visible happens, because no query against ten documents will take five seconds. That's the point of a tripwire: you set it and move on. In production the entries land in each node's log files with the full query body (on a managed cluster you reach them through your provider's log delivery). The real decision is where to set the thresholds: `info` low enough to catch slow drift early, and `warn` reserved for latencies you would want to be paged about.
+
+**Fast mode** — `63-set-slow-logs.bru` → `64-get-slowlog-settings.bru`
 
 ---
 
-## Cleanup
+## Chapter 5 wrap-up
 
-Remove the lab indexes and policy.
-
-```http
-DELETE my-index,searches-000001,book-embeddings-fp16
-```
-
-> Earlier revisions of this workshop also created `my-index-new`, `orders`, `book-browse`, `book-embeddings-v2`, `book-embeddings-v3`, `book-embeddings-archive`, `book-embeddings-archive-16x`, `book-embeddings-efficient`, `bookstore-rag-shrunk`/`-split`, the `bookstore-rag-alias` alias, and the `bookstore_analyst` / `bookstore_read_only` security objects. If you ran one of those revisions, delete them individually — a `404` means they're already gone. They may also have left `persistent`/`transient` cluster-setting overrides (awareness, watermarks, backpressure); check with `GET _cluster/settings?flat_settings=true` and `null` out anything left.
-
-```http
-DELETE _plugins/_ism/policies/bookstore-searches-policy
-```
-
-**Fast mode** — `68-cleanup-delete-indexes.bru` → `69-cleanup-delete-ism.bru`
+Every step in this workshop followed the same pattern: make a claim, then make the cluster prove it. You watched a yellow cluster explain exactly why six replicas had nowhere to go. You read an allocation decision straight from the decider that made it. You saw a write alias move to a new index mid-rollover, confirmed ISM attached itself to an index nobody registered by hand, measured fp16 cutting graph memory from 157 KB to 82, and caught a cache hit in the counters. That habit is the real lesson of the chapter: production operations is measurement, not guesswork. When your future cluster misbehaves, ask it to explain itself. It usually will.
 
 ## What you learned
 
 - **5-1:** shard sizing math, the yellow-cluster failure mode and its fix, `_cat/allocation` + `allocation/explain` triage, with awareness and disk watermarks as reference.
 - **5-2:** `index:false` / `enabled:false` mappings, the write-alias → rollover → ISM lifecycle, with the shrink + alias-swap recipe as reference.
 - **5-3:** `on_disk` vs `in_memory`, `compression_level`, and correct **fp16 scalar quantization** via the Faiss `sq` encoder.
-- **5-4:** the monitoring loop (health, nodes, heap), with least-privilege security as reference.
-- **5-5:** request caching, `_profile`, and slow logs hands-on, with priority routing and search backpressure as reference.
+- **5-4:** request caching, `_profile`, and slow logs hands-on, with priority routing and search backpressure as reference.
 
 ## Course wrap-up
 
@@ -592,11 +989,28 @@ That's the end of the course — congratulations. Looking back across the five c
 2. **Chapter 2** — the neural search pipeline: registering and deploying an embedding model in ML Commons, ingest pipelines that embed at index time, and semantic queries with the `neural` clause.
 3. **Chapter 3** — beyond dense-only: neural sparse encoding, then hybrid search with score normalization, and RRF as the tuning-free alternative — with a side-by-side comparison of all four rankings.
 4. **Chapter 4** — RAG in practice: a chunked, filtered, hybrid-searched bookstore index, cache warming and preload, and exposing the cluster to AI agents through the built-in MCP server.
-5. **Chapter 5** — running it in production: shard sizing, allocation awareness, storage-mode trade-offs, least-privilege security, and the monitoring and backpressure levers that keep it healthy.
+5. **Chapter 5** — running it in production: shard sizing and yellow-cluster triage, the rollover + ISM lifecycle, measured fp16 memory savings, and the caching, profiling, and slow-log toolkit that keeps queries fast.
 
 **Where to go next:**
 
 - Re-run the labs against **your own dataset** — build a bulk body from your documents (like the ones in `rest/bulk/`) and re-use the Chapter 2 ingest pipeline as-is.
-- Explore the [OpenSearch documentation](https://docs.opensearch.org/latest/) for the features this course touched as reference-only (TLS, audit logging, cross-cluster replication).
-- Keep your trial cluster tidy: run each chapter's **Cleanup** section, or delete the cluster from the Instaclustr console when you're done.
+- Explore the [OpenSearch documentation](https://docs.opensearch.org/latest/) for the features this course touched as reference-only (the shrink recipe, allocation awareness, search backpressure).
+- Keep your trial cluster tidy: run the **Cleanup** section below to remove this chapter's assets, or delete the cluster from the Instaclustr console when you're done.
+
+You started this course pasting eight-dimensional toy vectors into an index to learn what a k-NN search even was. Five chapters later, you have deployed embedding models, built pipelines that chunk and embed documents on arrival, compared lexical, sparse, dense, and hybrid rankings on real books, tuned a RAG index end to end, opened your cluster to AI agents over MCP, and proved every optimization with a measurement instead of a promise. That is a production skill set. Point it at your own data next, and thanks for building along.
+
+## Cleanup
+
+Remove the lab indexes and policy.
+
+```http
+DELETE my-index,searches-000001,searches-000002,book-embeddings-float,book-embeddings-fp16
+```
+
+
+```http
+DELETE _plugins/_ism/policies/bookstore-searches-policy
+```
+
+**Fast mode** — `68-cleanup-delete-indexes.bru` → `69-cleanup-delete-ism.bru`
 
