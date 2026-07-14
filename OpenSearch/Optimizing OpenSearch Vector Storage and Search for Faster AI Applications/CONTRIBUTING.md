@@ -50,10 +50,7 @@ scripts/validate.sh
 
 This checks that every Bruno file is referenced by its README, that no README names a file that doesn't exist, that `seq` values match filenames, that request ordering matches step ordering, and that every bulk payload resolves and matches its README block. It runs in a couple of seconds and needs only Python 3.
 
-If your change touches the steps themselves, also update:
-
-- [`src/steps-per-chapter.md`](src/steps-per-chapter.md) if a step count changed.
-- [`CHANGELOG.md`](CHANGELOG.md) under a new **Unreleased** heading, describing the change from a learner's point of view.
+If your change touches the steps themselves, also add an entry to [`CHANGELOG.md`](CHANGELOG.md) under a new **Unreleased** heading, describing the change from a learner's point of view.
 
 ## Testing against a real cluster
 

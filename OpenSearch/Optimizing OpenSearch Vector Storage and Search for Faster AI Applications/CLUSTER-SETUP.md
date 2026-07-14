@@ -22,49 +22,49 @@ Budget about **10-15 minutes**, most of which is the cluster provisioning itself
 
 >Start at the [NetApp Instaclustr free trial](https://console2.instaclustr.com/signup?source=InstAcademy_OpenSearch_AISearch) and fill out the sign-up form.
 
-![Instaclustr sign-up form](./img/signup.png)
+![Instaclustr sign-up form](./screenshots/cluster-setup/signup.png)
 
 >You'll land on the console dashboard, which asks you to verify your email address before you can create anything.
 
-![Verify your email address](./img/verify_email.png)
+![Verify your email address](./screenshots/cluster-setup/verify_email.png)
 
 >Click the link in the verification email. When you come back, the yellow banner is gone and the console is ready.
 
-![Email verified](./img/email_verified.png)
+![Email verified](./screenshots/cluster-setup/email_verified.png)
 
 ## 2. Create the OpenSearch cluster
 
 >On the dashboard, click the blue **Create Cluster** button in the left sidebar.
 
-![Create Cluster button](./img/create_cluster.png)
+![Create Cluster button](./screenshots/cluster-setup/create_cluster.png)
 
 >Give the cluster a name: **IA-{your_initials}-OpenSearch**, choose **OpenSearch** from the list of technologies. Make sure you have **AWS** selected, and click **Next**.
 
-![Name the cluster and select OpenSearch](./img/name_and_opensearch.png)
+![Name the cluster and select OpenSearch](./screenshots/cluster-setup/name_and_opensearch.png)
 
 >On the plugins list, select the **AI Search Plugin**. This is the one choice you cannot skip: it installs ML Commons and the k-NN plugin, which is what lets the cluster host embedding models and run vector search. **Without it, this coursewill not work!**
 
-![Select the AI Search Plugin](./img/ai_search_plugin.png)
+![Select the AI Search Plugin](./screenshots/cluster-setup/ai_search_plugin.png)
 
 >Click **Next**, then scroll to **Data Node Selection** and click **Change Node Size**.
 
-![Data node selection](./img/node_selection.png)
+![Data node selection](./screenshots/cluster-setup/node_selection.png)
 
 >Choose the **t4g.medium** node size at the bottom of the list. Smaller nodes cannot hold the embedding models this course deploys. (Remember, this will run for free in your account)
 
-![Choose the m.80 node size](./img/node_size.png)
+![Choose the m.80 node size](./screenshots/cluster-setup/node_size.png)
 
 ## 3. Add your IP to the firewall
 
 >Instaclustr clusters are closed to the internet by default, so your machine has to be allowed in explicitly. On the network screen, check the two boxes to **add your current IP address** to the firewall rules.
 
-![Add your IP to the firewall rules](./img/add_IP.png)
+![Add your IP to the firewall rules](./screenshots/cluster-setup/add_IP.png)
 
 > **If your IP changes, you'll lose access until you update it in the firewall rules after deployment.** Home internet connections and VPNs hand out new addresses regularly, and a connection that worked yesterday can hang or time out today for this reason alone. If requests suddenly stop responding, come back to **Firewall Rules** in the console and add your current IP again.
 
 >Click **Next**, review everything on the final screen, accept the ToS, then click **Create Cluster**.
 
-![Review and create](./img/review.png)
+![Review and create](./screenshots/cluster-setup/review.png)
 
 >Provisioning takes about ten minutes. The console shows the cluster as **Provisioning** and then **Running**.
 
