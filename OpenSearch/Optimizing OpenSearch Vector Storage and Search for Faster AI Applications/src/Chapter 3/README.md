@@ -1,4 +1,4 @@
-← [Chapter 2](../Chapter%202/README.md)
+← [Chapter 2](../Chapter%202/README.md) · [Course index](../../README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 4](../Chapter%204/README.md)
 
 # Chapter 3 — Mastering hybrid search in OpenSearch
 

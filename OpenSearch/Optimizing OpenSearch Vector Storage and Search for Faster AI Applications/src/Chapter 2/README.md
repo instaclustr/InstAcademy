@@ -1,4 +1,4 @@
-← [Chapter 1](../Chapter%201/README.md)
+← [Chapter 1](../Chapter%201/README.md) · [Course index](../../README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 3](../Chapter%203/README.md)
 # Chapter 2 — Building neural search pipelines
 
 In Chapter 1 you built vector indexes by hand, typing 8-dimensional vectors
@@ -31,7 +31,7 @@ By the end you will have registered and deployed a sentence-transformer model wi
 
 ## Prerequisites
 
-- [Cluster setup](../../CREATE_CLUSTER.md) — an Instaclustr cluster with the **AI Search / ML Commons** plugin and your IP on the firewall.
+- [Cluster setup](../../CLUSTER-SETUP.md) — an Instaclustr cluster with the **AI Search / ML Commons** plugin and your IP on the firewall.
 - **Dev Tools** open (or Bruno fast mode: [`bruno/Chapter 2/`](../../bruno/Chapter%202/)).
 - A notepad (or the Bruno **Local** environment) for ids returned by ML Commons:
 

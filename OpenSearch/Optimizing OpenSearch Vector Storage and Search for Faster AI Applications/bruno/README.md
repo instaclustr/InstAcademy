@@ -1,6 +1,6 @@
-# Fast mode — Bruno REST collection
+← [Course index](../README.md) · [How to run labs](../HANDS-ON-GUIDE.md)
 
-**Vector Storage & Search for AI** · [← How to run labs](../HANDS-ON-GUIDE.md)
+# Fast mode — Bruno REST collection
 
 Run the same REST calls as the chapter workshop READMEs without typing them into Dev Tools. Use this to **catch up**, **recover after a mistake**, or **smoke-test** a cluster.
 
@@ -20,12 +20,10 @@ Run the same REST calls as the chapter workshop READMEs without typing them into
    | `taskId` | | Update when polling ML tasks |
    | `ivfModelId` | | Chapter 1 — fill with the `model_id` from **Train IVF model** |
    | `sparseModelId` | | Chapters 2–3 — the **sparse** model's id (keep separate from `modelId`) |
-   | `agentId` | | Chapter 4 optional MCP section — fill after **Register conversational agent** |
-   | `nodeName` | | Chapter 5 — a node name from `_cat/nodes`, used by the shrink pin |
 
    The pipeline-name variables (`hybridPipelineId`, `bookstoreHybridPipelineId`) are pre-filled and never need editing.
 
-4. **Disable SSL certificate verification** in Bruno: **Settings → SSL/TLS Certificate Verification → OFF**. Trial clusters use certificates that fail strict verification.
+4. SSL certificate verification can stay **on**: Instaclustr trial clusters present valid, publicly trusted certificates. If you run the collection against a self-managed cluster with a self-signed certificate instead, turn verification off in **Settings → SSL/TLS Certificate Verification**.
 
 5. Select the **Local** environment in the top-right before sending requests.
 

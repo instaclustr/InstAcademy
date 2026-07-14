@@ -4,10 +4,12 @@
 
 Short label: **Vector Storage & Search for AI** — hands-on labs for this InstAcademy course.
 
+**Course version 1.0.0** · validated end to end on **OpenSearch 3.5.0** · see the [changelog](CHANGELOG.md)
+
 ## Start here
 
 1. **[How to run the labs](HANDS-ON-GUIDE.md)** — Dev Tools walkthrough, Bruno fast mode, credentials, sample data (read this first).
-2. **[Cluster setup](CREATE_CLUSTER.md)** — provision an Instaclustr trial cluster with the AI Search Plugin.
+2. **[Cluster setup](CLUSTER-SETUP.md)** — sign up, create a trial cluster with the AI Search Plugin, open the firewall, and collect your connection details.
 3. **[Chapter 1](src/Chapter%201/README.md)** — verify connectivity and build your first vector index.
 
 | | |
@@ -33,6 +35,16 @@ Short label: **Vector Storage & Search for AI** — hands-on labs for this InstA
 | [`src/Chapter …/`](src/Chapter%201/) | One step-by-step Dev Tools workshop README per chapter |
 | [`bruno/`](bruno/) | Fast-mode REST collection |
 | [`rest/bulk/`](rest/bulk/) | NDJSON bulk payloads (the shared Gutendex book dataset) |
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed between course versions, and which OpenSearch version each was validated on |
+| [`CLUSTER-SETUP.md`](CLUSTER-SETUP.md) | Sign up, create the cluster, open the firewall, collect connection details |
+
+## For contributors
+
+| Path | What it's for |
+|------|----------------|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to report a broken step and the house rules for changes |
+| [`SECURITY.md`](SECURITY.md) | Credential handling, and which lab shortcuts are not production practice |
+| [`scripts/validate.sh`](scripts/validate.sh) | Checks the collection, bulk payloads, links, and credentials before you commit |
 
 ## Support
 

@@ -1,8 +1,6 @@
-# Chapter 1 — Configuring and optimizing vector search
-
-**Chapter 1 workshop** · [Vector Storage & Search for AI](../../README.md)
-
 ← [Course index](../../README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 2](../Chapter%202/README.md)
+
+# Chapter 1 — Configuring and optimizing vector search
 
 This is the hands-on companion to Chapter 1 of the video course. Everything the
 videos demonstrate — index settings, HNSW/IVF method parameters, exact k-NN,
@@ -35,7 +33,7 @@ Every step uses the same layout (see the [lab guide](../../HANDS-ON-GUIDE.md)):
 ## Prerequisites
 
 - A running **Instaclustr OpenSearch cluster** (a trial cluster works, **AI Search
-  Plugin** enabled) reachable from your browser — see [cluster setup](../../CREATE_CLUSTER.md).
+  Plugin** enabled) reachable from your browser — see [cluster setup](../../CLUSTER-SETUP.md).
   Your IP must be on the firewall allow-list.
 - **OpenSearch 3.5+.**
 - **Dev Tools** to run the commands or [Bruno](../../bruno/README.md) configured with

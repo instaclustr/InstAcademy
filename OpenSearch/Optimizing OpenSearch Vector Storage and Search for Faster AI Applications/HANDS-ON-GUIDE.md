@@ -1,11 +1,8 @@
+← [Course index](README.md) · [Cluster setup](CLUSTER-SETUP.md) · [Bruno collection](bruno/README.md) · **Next:** [Chapter 1](src/Chapter%201/README.md)
+
 # Hands-on lab guide
 
 **Vector Storage & Search for AI** — InstAcademy OpenSearch course
-
-| | |
-|---|---|
-| **Course index** | [README.md](README.md) |
-| **Cluster setup** | [CREATE_CLUSTER.md](CREATE_CLUSTER.md) |
 
 This is the **single entry point** for running the labs. Each chapter has **one workshop README** at `src/Chapter N/README.md` that walks through every lesson of that chapter, in order.
 
@@ -33,7 +30,7 @@ Work through **Step 1**, then **Step 2**, and so on. Do not skip ahead unless yo
 
 Open **OpenSearch Dashboards → Dev Tools** and follow each lesson README step by step. You build the cluster state yourself.
 
-You need your Instaclustr cluster host, username, and password. The course uses an Instaclustr cluster with the **AI Search Plugin** — see [cluster setup](CREATE_CLUSTER.md).
+You need your Instaclustr cluster host, username, and password. The course uses an Instaclustr cluster with the **AI Search Plugin** — see [cluster setup](CLUSTER-SETUP.md).
 
 ### Fast mode (Bruno)
 

@@ -1,4 +1,4 @@
-← [Chapter 3](../Chapter%203/README.md)
+← [Chapter 3](../Chapter%203/README.md) · [Course index](../../README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 5](../Chapter%205/README.md)
 
 # Chapter 4 — Performance meets precision: RAG optimization in OpenSearch
 

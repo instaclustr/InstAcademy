@@ -1,4 +1,4 @@
-← [Chapter 4](../Chapter%204/README.md)
+← [Chapter 4](../Chapter%204/README.md) · [Course index](../../README.md) · [How to run labs](../../HANDS-ON-GUIDE.md)
 
 # Chapter 5 — Production optimizations for OpenSearch clusters
 
