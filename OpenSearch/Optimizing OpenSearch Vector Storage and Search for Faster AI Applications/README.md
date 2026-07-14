@@ -42,8 +42,8 @@ Everything is hands-on: **72 steps across five chapters**, each one a real reque
 ## What you need
 
 - A **NetApp Instaclustr** OpenSearch cluster with the **AI Search Plugin** (free 30-day trial, no credit card). [Cluster setup](CLUSTER-SETUP.md) walks you through it.
-- **OpenSearch 3.5 or later.** Chapter 4's MCP steps need 3.3 or later; Chapter 4's Claude Desktop step also needs Node 18+ on your own machine.
-- A browser. Everything else is optional.
+- **OpenSearch 3.5 or later.** (From the Instaclustr platform)
+- Chapter 4's final step is **optional** but requires Claude Desktop and Node 18+. The step is not required
 
 ## Contributing
 
