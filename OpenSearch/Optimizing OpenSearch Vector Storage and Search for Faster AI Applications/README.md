@@ -1,50 +1,54 @@
-# InstAcademy · OpenSearch
+[InstAcademy](../../) · [OpenSearch courses](../)
 
-**Optimizing OpenSearch Vector Storage and Search for Faster AI Applications**
+# Optimizing OpenSearch Vector Storage and Search for Faster AI Applications
 
-Short label: **Vector Storage & Search for AI** — hands-on labs for this InstAcademy course.
+**Course version 1.0** · validated end to end on **OpenSearch 3.5.0** · [changelog](CHANGELOG.md)
 
-**Course version 1.0.0** · validated end to end on **OpenSearch 3.5.0** · see the [changelog](CHANGELOG.md)
+Build a production vector-search system on OpenSearch, one working piece at a time. You'll create k-NN indexes by hand, deploy an embedding model inside your cluster, run semantic and hybrid searches over real book data, tune a RAG retrieval layer until you can measure the improvement, and finish by connecting an AI agent to the index you built.
+
+Everything is hands-on: **72 steps across five chapters**, each one a real request against your own cluster. Every **Expected** response printed in this course is the actual output from a live OpenSearch 3.5.0 run, not an idealized example.
+
+---
 
 ## Start here
 
-1. **[How to run the labs](HANDS-ON-GUIDE.md)** — Dev Tools walkthrough, Bruno fast mode, credentials, sample data (read this first).
-2. **[Cluster setup](CLUSTER-SETUP.md)** — sign up, create a trial cluster with the AI Search Plugin, open the firewall, and collect your connection details.
-3. **[Chapter 1](src/Chapter%201/README.md)** — verify connectivity and build your first vector index.
-
 | | |
 |---|---|
-| **Up to OpenSearch courses** | [OpenSearch/](../) |
-| **Up to InstAcademy home** | [InstAcademy/](../../) |
+| **1. [Set up your cluster](CLUSTER-SETUP.md)** | Sign up for a free trial, create an OpenSearch cluster with the AI Search Plugin, open the firewall, and collect your connection details. About 15 minutes. |
+| **2. [Learn how to run the labs](HANDS-ON-GUIDE.md)** | How a chapter is laid out, how to reach Dev Tools, and the two ways to run each step. Read this once. |
+| **3. [Start Chapter 1](src/Chapter%201/README.md)** | Build your first vector index and search it. |
 
-## Chapters
+## The five chapters
 
-| Chapter | Topic | Entry |
-|---------|--------|--------|
-| 1 | Vector fundamentals | [Chapter 1](src/Chapter%201/README.md) |
-| 2 | Neural search pipelines | [Chapter 2](src/Chapter%202/README.md) |
-| 3 | Hybrid / sparse search | [Chapter 3](src/Chapter%203/README.md) |
-| 4 | RAG optimization | [Chapter 4](src/Chapter%204/README.md) |
-| 5 | Production cluster ops | [Chapter 5](src/Chapter%205/README.md) |
+| | Chapter | What you build |
+|---|---|---|
+| **1** | [Configuring and optimizing vector search](src/Chapter%201/README.md) | k-NN indexes from scratch: HNSW and IVF, quantization, storage modes, and the memory and shard levers everything else builds on |
+| **2** | [Building neural search pipelines](src/Chapter%202/README.md) | Deploy a real embedding model inside the cluster, embed documents at ingest time, and search by meaning instead of keywords |
+| **3** | [Mastering hybrid search](src/Chapter%203/README.md) | Sparse encoding, then hybrid search: compare lexical, sparse, dense, and two ways of fusing them side by side on the same query |
+| **4** | [RAG optimization](src/Chapter%204/README.md) | A production retrieval layer: chunking, filtered k-NN, reranking with business rules, measured quality, and an AI agent querying your index over MCP |
+| **5** | [Production optimizations](src/Chapter%205/README.md) | Break a cluster and triage it back to green, automate the index lifecycle, prove what fp16 quantization saves, and tune queries with real measurements |
 
-## What's in this folder
+## What's in this repository
 
-| Path | For learners |
-|------|----------------|
-| [`HANDS-ON-GUIDE.md`](HANDS-ON-GUIDE.md) | How to read a chapter workshop and run the course |
-| [`src/Chapter …/`](src/Chapter%201/) | One step-by-step Dev Tools workshop README per chapter |
-| [`bruno/`](bruno/) | Fast-mode REST collection |
-| [`rest/bulk/`](rest/bulk/) | NDJSON bulk payloads (the shared Gutendex book dataset) |
-| [`CHANGELOG.md`](CHANGELOG.md) | What changed between course versions, and which OpenSearch version each was validated on |
-| [`CLUSTER-SETUP.md`](CLUSTER-SETUP.md) | Sign up, create the cluster, open the firewall, collect connection details |
+| Path | What it is |
+|---|---|
+| [`src/Chapter N/`](src/Chapter%201/) | The five chapter workshops. This is the course |
+| [`bruno/`](bruno/) | Fast mode: every request in the course as a Bruno collection |
+| [`rest/bulk/`](rest/bulk/) | The bulk payloads Bruno sends (the same data printed in each chapter) |
+| [`screenshots/`](screenshots/) | Diagrams and console captures used by the chapters |
+| [`CLUSTER-SETUP.md`](CLUSTER-SETUP.md) | Sign-up, cluster creation, firewall, connection details |
+| [`HANDS-ON-GUIDE.md`](HANDS-ON-GUIDE.md) | How to run the labs |
+| [`CHANGELOG.md`](CHANGELOG.md) | Course versions and which OpenSearch version each was validated on |
 
-## For contributors
+## What you need
 
-| Path | What it's for |
-|------|----------------|
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to report a broken step and the house rules for changes |
-| [`SECURITY.md`](SECURITY.md) | Credential handling, and which lab shortcuts are not production practice |
-| [`scripts/validate.sh`](scripts/validate.sh) | Checks the collection, bulk payloads, links, and credentials before you commit |
+- A **NetApp Instaclustr** OpenSearch cluster with the **AI Search Plugin** (free 30-day trial, no credit card). [Cluster setup](CLUSTER-SETUP.md) walks you through it.
+- **OpenSearch 3.5 or later.** Chapter 4's MCP steps need 3.3 or later; Chapter 4's Claude Desktop step also needs Node 18+ on your own machine.
+- A browser. Everything else is optional.
+
+## Contributing
+
+Found a step that doesn't work? That's worth an issue. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for what to include and the house rules for changes, and [`SECURITY.md`](SECURITY.md) for credential handling and the lab shortcuts that are not production practice.
 
 ## Support
 

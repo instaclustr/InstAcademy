@@ -55,7 +55,7 @@ A few persistent settings make model registration/deployment reliable on a small
 - **`model_access_control_enabled: false`** — keeps model-group access simple for the lab (no backend-role wiring).
 - **`native_memory_threshold: 99`** — raises the guard that blocks deployment when native memory is scarce, so a trial cluster doesn't refuse a small model.
 
-**Request**
+**Request:**
 
 ```http
 PUT _cluster/settings
@@ -69,7 +69,7 @@ PUT _cluster/settings
 }
 ```
 
-**Expected** `acknowledged: true` with the four keys echoed under `ml_commons`.
+**Expected** - `acknowledged: true` with the four keys echoed under `ml_commons`.
 
 ```http
 {
@@ -94,7 +94,7 @@ PUT _cluster/settings
 
 Every ML Commons model belongs to a **model group** — the unit of organization and access control. Create it once, then pass its id into the model registration.
 
-**Request**
+**Request:**
 
 ```http
 POST _plugins/_ml/model_groups/_register
@@ -104,7 +104,7 @@ POST _plugins/_ml/model_groups/_register
 }
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -125,7 +125,7 @@ Registering the model downloads and validates the pretrained **`msmarco-distilbe
 
 Replace `YOUR_MODEL_GROUP_ID` with the id from Step 2.
 
-**Request**
+**Request:**
 
 ```http
 POST _plugins/_ml/models/_register
@@ -137,7 +137,7 @@ POST _plugins/_ml/models/_register
 }
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -181,7 +181,7 @@ Registration stores the artifact on disk; **deploy** loads it into node memory s
 
 Replace `YOUR_MODEL_ID` with the id from Step 3.
 
-**Request**
+**Request:**
 
 ```http
 POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
@@ -232,7 +232,7 @@ The smoke-test proves the deployed model returns vectors **before** you attach i
 
 Let's give it a try:
 
-**Request**
+**Request:**
 
 ```http
 POST _plugins/_ml/_predict/text_embedding/YOUR_MODEL_ID
@@ -243,7 +243,7 @@ POST _plugins/_ml/_predict/text_embedding/YOUR_MODEL_ID
 }
 ```
 
-**Expected** `inference_results` should have one `sentence_embedding` per input, each is a **768-float** dense vector (every position populated).
+**Expected** - `inference_results` should have one `sentence_embedding` per input, each is a **768-float** dense vector (every position populated).
 
 ```json
 {
@@ -305,7 +305,7 @@ Replace `YOUR_MODEL_ID` with the `ML_MODEL_ID` you saved in Step 3.
 >
 > You should get exactly **one hit** — its `_id` is your `model_id`, and `model_state` should say `DEPLOYED`. 
 
-**Request**
+**Request:**
 
 ```http
 PUT _ingest/pipeline/vector-search-embeddings-pipeline
@@ -324,7 +324,7 @@ PUT _ingest/pipeline/vector-search-embeddings-pipeline
 }
 ```
 
-**Expected** - 'acknowledged = true' 
+**Expected** - 'acknowledged = true'
 
 ```json
 {
@@ -354,7 +354,7 @@ it; the pipeline fills it in.
 - **`dimension: 768`** — must match the model's output; a mismatch fails ingestion.
 - **`engine: lucene`, `name: hnsw`, `space_type: l2`** — a solid, easy-to-operate HNSW baseline.
 
-**Request**
+**Request:**
 
 ```http
 PUT vector-search-index
@@ -922,7 +922,7 @@ POST _bulk?timeout=600s
 
 ```
 
-**Expected** `errors: false`. First lines of the payload look like:
+**Expected** - `errors: false`. First lines of the payload look like:
 
 ```json
 {
@@ -956,13 +956,13 @@ If any item errors, the usual causes are an **undeployed model**, wrong **`model
 
 One quick housekeeping call before the fun part. OpenSearch is near-real-time: newly indexed documents become searchable on the next refresh cycle (every second by default), not the instant they are written. Forcing a refresh now guarantees all 256 books are visible before you start querying, so you never chase a "missing documents" mystery that is really just timing.
 
-**Request**
+**Request:**
 
 ```http
 POST vector-search-index/_refresh
 ```
 
-**Expected** Output below:
+**Expected** - Output below:
 
 ```json
 {
@@ -982,7 +982,7 @@ Here's a small quality-of-life upgrade that pays off for the rest of the chapter
 
 This takes two calls because you're creating two different things. Replace `YOUR_MODEL_ID` with `ML_MODEL_ID` in the first one.
 
-**Request** — first, create the search pipeline itself. This is a standalone cluster object that says "inject this model id into any neural query that passes through me." On its own it does nothing, since no query flows through it yet:
+**Request** - first, create the search pipeline itself. This is a standalone cluster object that says "inject this model id into any neural query that passes through me." On its own it does nothing, since no query flows through it yet:
 
 ```http
 PUT _search/pipeline/default-model-pipeline
@@ -997,7 +997,7 @@ PUT _search/pipeline/default-model-pipeline
 }
 ```
 
-**Request** — second, connect it. This index setting tells `vector-search-index` to route every incoming search through that pipeline automatically, which is the moment the default actually takes effect:
+**Request** - second, connect it. This index setting tells `vector-search-index` to route every incoming search through that pipeline automatically, which is the moment the default actually takes effect:
 
 ```http
 PUT vector-search-index/_settings
@@ -1006,7 +1006,7 @@ PUT vector-search-index/_settings
 }
 ```
 
-**Expected** for both. (The split matters: because the pipeline is its own object, several indexes could share it, and you can detach it from the index later without deleting it.)
+**Expected** - for both. (The split matters: because the pipeline is its own object, several indexes could share it, and you can detach it from the index later without deleting it.)
 
 ```json
 {
@@ -1022,7 +1022,7 @@ This is the moment the chapter promised. Read the query below before you run it:
 
 ![Neural query flow with the enricher and the shared model](../../screenshots/chapter2/diagram-04-neural-query-flow.png)
 
-**Request**
+**Request:**
 
 ```http
 GET vector-search-index/_search
@@ -1039,7 +1039,7 @@ GET vector-search-index/_search
 }
 ```
 
-**Expected** Ten hits ranked by semantic similarity, with *Frankenstein; or, the Modern Prometheus* landing in the **top handful** of 256 books (typically top 5, not necessarily #1). Don't be surprised to see philosophy titles like Nietzsche or Locke ranked alongside or above it: the model reads your query as being about creation, ambition, morality, and regret, and philosophy summaries are dense with exactly those themes. Two things in the response are worth understanding rather than worrying about:
+**Expected** - Ten hits ranked by semantic similarity, with *Frankenstein; or, the Modern Prometheus* landing in the **top handful** of 256 books (typically top 5, not necessarily #1). Don't be surprised to see philosophy titles like Nietzsche or Locke ranked alongside or above it: the model reads your query as being about creation, ambition, morality, and regret, and philosophy summaries are dense with exactly those themes. Two things in the response are worth understanding rather than worrying about:
 
 - **The scores are small and tightly packed** (roughly 0.017 to 0.018). This model family produces unnormalized vectors optimized for dot-product comparison, and the index scores them with L2 distance (score = 1/(1+distance²)), which compresses everything into a narrow low band. On top of that, every summary in this dataset shares the same boilerplate framing ("*Title* by *Author* is a ... (This is an automatically generated summary.)"), which pulls all the embeddings closer together. The *ranking* is meaningful; the absolute numbers are not the result.
 - **The ranking is the win.** Pulling Frankenstein into the top few of 256 books from a paraphrase, with no title words in the query, is the semantic advantage, and it confirms the full pipeline (model → ingest → index → query) works end to end.
@@ -1050,7 +1050,7 @@ GET vector-search-index/_search
 
 Semantic search is powerful, but it has a blind spot: exact terms. Ask for a specific title, an author's name, or a product code and a pure vector search can rank a "similar-feeling" document above the exact match a user obviously wanted. The cure is to run both retrieval styles at once: `neural` for paraphrase and intent, lexical `match` (BM25) for precise wording, then blend the scores. What you're building here is the **hand-rolled version** of that blend, a `bool.should` with `script_score` weights, so you can feel what the knobs do. Chapter 3 will replace this with the dedicated `hybrid` query and proper score normalization. The `filter` clause restricting candidates first is a preview of the optimization you'll meet in Lesson 2-5.
 
-**Request**
+**Request:**
 
 ```http
 GET vector-search-index/_search
@@ -1087,7 +1087,7 @@ GET vector-search-index/_search
 }
 ```
 
-**Expected** Hits with `_score`, `title`, `passage_text` (embedding excluded). Titles about historical or underdog narratives rank highly. Try flipping the `1.5`/`1.7` weights to see neural vs. lexical influence.
+**Expected** - Hits with `_score`, `title`, `passage_text` (embedding excluded). Titles about historical or underdog narratives rank highly. Try flipping the `1.5`/`1.7` weights to see neural vs. lexical influence.
 
 > **Note.** Like Step 11, this query omits `model_id` because Step 10's `neural_query_enricher` fills it in, even for a `neural` clause nested this deeply.
 
@@ -1140,13 +1140,13 @@ Deploying a model is a one-time task; keeping it running is an ongoing one. The 
 
 Your model is now a piece of production infrastructure, and infrastructure needs a dashboard. When search slows down or a pipeline starts erroring six months from now, these three read-only calls are where you'll look first, so take a minute to learn what each one tells you. **Get** returns the registered metadata and current `model_state` (e.g. `DEPLOYED`), dimension, and group, the source of truth for what is loaded. The **Profile API** returns runtime data (which worker nodes host the model, plus per-request latency: min/max/avg, p50/p90/p99) so you can confirm inference routing and see where time goes ([docs](https://docs.opensearch.org/latest/ml-commons-plugin/api/profile/)). **Stats** aggregates ML request counts and failures across nodes, a quick health check for the whole ML layer.
 
-**Request** — model metadata:
+**Request** - model metadata:
 
 ```http
 GET _plugins/_ml/models/YOUR_MODEL_ID
 ```
 
-**Expected** results:
+**Expected** - results:
 
 ```json
 {
@@ -1188,13 +1188,13 @@ GET _plugins/_ml/models/YOUR_MODEL_ID
 
 ![Chunked model storage and deployment onto worker nodes](../../screenshots/chapter2/diagram-06-chunked-model-deployment.png)
 
-**Request** — runtime profile:
+**Request** - runtime profile:
 
 ```http
 GET _plugins/_ml/profile/models/YOUR_MODEL_ID
 ```
 
-**Expected** results:
+**Expected** - results:
 
 ```json
 {
@@ -1250,13 +1250,13 @@ GET _plugins/_ml/profile/models/YOUR_MODEL_ID
     },[...]
 ```
 
-**Request** — cluster-wide ML stats:
+**Request** - cluster-wide ML stats:
 
 ```http
 GET _plugins/_ml/stats
 ```
 
-**Expected** results:
+**Expected** - results:
 
 ```json
 {
@@ -1301,7 +1301,7 @@ Here's a fact that surprises most people the first time a vector node falls over
 
 ![Node memory layout and the k-NN circuit breaker](../../screenshots/chapter2/diagram-07-node-memory-circuit-breaker.png)
 
-**Request**
+**Request:**
 
 ```http
 PUT _cluster/settings
@@ -1313,7 +1313,7 @@ PUT _cluster/settings
 }
 ```
 
-**Expected** result:
+**Expected** - result:
 
 ```json
 {
@@ -1340,7 +1340,7 @@ PUT _cluster/settings
 
 Remember the segment lesson from Chapter 1? It matters even more for vector search. Every refresh cuts a new Lucene segment, each segment carries its own slice of the HNSW graph, and a query must walk *every* slice, so segment sprawl during a big ingest quietly taxes every search that follows. The production recipe is two moves you'll use for the rest of your vector career: raise `refresh_interval` during heavy ingest (30s is common, or `-1` to disable entirely) so segments stop churning, then **force-merge** afterward so the k-NN graph lives in a few large segments instead of many small ones.
 
-**Request** — raise refresh interval:
+**Request** - raise refresh interval:
 
 ```http
 PUT vector-search-index/_settings
@@ -1349,15 +1349,15 @@ PUT vector-search-index/_settings
 }
 ```
 
-**Expected** `acknowledged: true` for the settings update;
+**Expected** - `acknowledged: true` for the settings update;
 
-**Request** — after ingestion, consolidate segments:
+**Request** - after ingestion, consolidate segments:
 
 ```http
 POST vector-search-index/_forcemerge?max_num_segments=1
 ```
 
-**Expected** `_shards.failed: 0`
+**Expected** - `_shards.failed: 0`
 
 ```json
 {
@@ -1388,7 +1388,7 @@ The _source excludes is response hygiene: every hit carries a 768-float embeddin
 
 ![Filter before vectors funnel](../../screenshots/chapter2/diagram-08-filter-before-vectors-funnel.png)
 
-**Request**
+**Request:**
 
 ```http
 GET vector-search-index/_search
@@ -1408,7 +1408,7 @@ GET vector-search-index/_search
 }
 ```
 
-**Expected** Ten hits, and both halves of the query visibly did their jobs:
+**Expected** - Ten hits, and both halves of the query visibly did their jobs:
 
 - **The filter held the line.** Scan the `bookshelves` array of every hit: each one contains `Category: Romance`. Not a single philosophy text or sea adventure slipped through, no matter how semantically "tragic" it might be.
 - **The ranking is the model's work.** *Romeo and Juliet* takes the top **two** spots — the archetypal tragic romance, and yes, twice, because the dataset contains two Gutenberg editions of it (a nice reminder that real-world data is messy). *Carmen* and *Manon Lescaut*, both stories of passion ending in ruin, rank well too, while lighter shelf-mates like *A Midsummer Night's Dream* (a comedy that merely lives on the Romance shelf) sit lower. Within the filtered set, "tragic" is doing real ranking work.

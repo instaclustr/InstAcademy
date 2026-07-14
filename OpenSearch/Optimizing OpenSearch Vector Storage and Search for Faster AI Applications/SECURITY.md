@@ -6,13 +6,11 @@ This course is teaching material, not a deployed service, so the risks here are 
 
 ## Never commit credentials
 
-The course ships placeholders only, and it must stay that way:
+The course ships placeholders only:
 
 - The Bruno environment (`bruno/environments/Local.bru`) contains `YOUR-CLUSTER-IP` and `YOUR_PASSWORD`. Fill those in locally and never commit the result.
 - Chapter text uses `YOUR_MODEL_ID`, `YOUR_CLUSTER_HOST`, `YOUR_BASE64_VALUE`, and similar. Keep it that way when you edit.
 - Redact cluster hostnames, usernames, passwords, and API keys from anything you paste into an issue or a pull request. A base64 authorization header is **encoding, not encryption**: anyone can decode it in one second, so treat it exactly like a password.
-
-If a credential does get committed, rotate it first (change the cluster password, revoke the API key) and then clean the history. Removing the line in a later commit is not enough, because the old commit still contains it.
 
 ## Lab shortcuts that are not production practice
 

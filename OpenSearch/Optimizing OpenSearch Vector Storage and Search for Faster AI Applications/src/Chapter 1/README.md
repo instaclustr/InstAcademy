@@ -75,13 +75,13 @@ name and version — a five-second smoke test that saves hours of debugging bulk
 or model errors later. It also confirms your engine version so you know which
 features (like `on_disk` mode) are available.
 
-**Request**
+**Request:**
 
 ```http
 GET /
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -118,7 +118,7 @@ with a standard approximate-nearest-neighbor index structure.
 **m: 16** means each node in the graph connects to **up to 16 neighbors**. This controls density/accuracy vs memory usage.
 **ef_construction: 100** is how thoroughly the graph is built at index time (higher is a better quality graph but slower to build).
 
-**Request**
+**Request:**
 
 ```http
 PUT vector-fundamentals
@@ -150,7 +150,7 @@ PUT vector-fundamentals
 }
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -172,13 +172,13 @@ configuration and shows the effective defaults it filled in. This is useful when
 want to know exactly what `m`, `ef_construction`, and `space_type` your index is
 actually using.
 
-**Request**
+**Request:**
 
 ```http
 GET vector-fundamentals/_mapping
 ```
 
-**Expected** — the `my_vector` field echoed back with `type: knn_vector`,
+**Expected** - the `my_vector` field echoed back with `type: knn_vector`,
 `dimension: 8`, and your `method` block.
 
 ```
@@ -218,7 +218,7 @@ meaningful. The bulk API indexes many documents in one request as alternating
 action/source lines (NDJSON). These three vectors are 8-dimensional to be more
 readable by eye. We'll index these 50 vectors across two _bulk commands and show what that looks
 
-**Request** — run the `POST` command to index the 50 vectors
+**Request** - run the `POST` command to index the 50 vectors
 
 ```http
 POST _bulk
@@ -342,7 +342,7 @@ We'll invoke another refresh since we added more vectors.
 POST vector-fundamentals/_refresh
 ```
 
-**Expected** — The command should return a similar output to the following:
+**Expected** - The command should return a similar output to the following:
 ```
 {
   "took": 25,
@@ -399,7 +399,7 @@ that are done ingesting; it is expensive.)
 
 You'll see we have 2 total shards and both were successful.
 
-**Request** — This command will show us where the shards are in our cluster
+**Request** - This command will show us where the shards are in our cluster
 ```http
 GET _cat/shards/vector-fundamentals?v
 ```
@@ -410,7 +410,7 @@ Notice in the image below that **shard 0** has a **Primary (p)** and
 
 Now we'll take a look at any segments inside of the shard:
 
-**Request**:
+**Request:**
 
 ```http
 GET _cat/segments/vector-fundamentals?v
@@ -433,13 +433,13 @@ of this workshop, but good to know.
 
 
 
-**Request** — merge to a single segment:
+**Request** - merge to a single segment:
 
 ```http
 POST vector-fundamentals/_forcemerge?max_num_segments=1
 ```
 
-**Expected** — Successful command
+**Expected** - Successful command
 ```
 {
   "_shards": {
@@ -456,7 +456,7 @@ POST vector-fundamentals/_refresh
 ```
 
 Now if we run our segment query again, we will see a single segment:
-**Request**
+**Request:**
 ```
 GET _cat/segments/vector-fundamentals?v
 ```
@@ -477,7 +477,7 @@ stored representation to about 1/16th the size of the full float32 precision.
 
 ![Disk-based storage: the two-phase quantize-then-rescore search](../../screenshots/chapter1/diagram-03-disk-based-two-phase-search.png)
 
-**Request**
+**Request:**
 
 ```http
 PUT vector-disk-demo
@@ -497,7 +497,7 @@ PUT vector-disk-demo
 }
 ```
 
-**Expected** — Note we set only `mode` and `compression_level`; OpenSearch chooses
+**Expected** - Note we set only `mode` and `compression_level`; OpenSearch chooses
  the `faiss` engine and a quantizing encoder for you.
 ```
 {
@@ -543,7 +543,7 @@ for IVF later. The `category` keyword field lets us demonstrate filtered exact
 search. We set `m` and `ef_construction` explicitly so you can see the knobs from
 Lesson 1-1 in a realistic index. Noticed the method name here and the engine being used...
 
-**Request**:
+**Request:**
 
 ```http
 PUT products-hnsw
@@ -568,7 +568,7 @@ PUT products-hnsw
 }
 ```
 
-**Expected**: 
+**Expected Output:**
 ```
 {
   "acknowledged": true,
@@ -586,7 +586,7 @@ search methods something to distinguish.
 
 ![The 10 product vectors: three clusters and the query point](../../screenshots/chapter1/diagram-05-product-vector-clusters.png)
 
-**Request** — run the following command to index 10 products
+**Request** - run the following command to index 10 products
 
 ```http
 POST _bulk
@@ -613,7 +613,7 @@ POST _bulk
 
 ```
 
-**Expected**: ten items created and "errors: false"
+**Expected** - ten items created and "errors: false"
 ```
 {
   "took": 36,
@@ -623,13 +623,13 @@ POST _bulk
  Your response should look similar to the image below.
 ![response](../../screenshots/chapter1/step08-bulk-products-response.png)
 
-**Request**
+**Request:**
 
 ```http
 POST products-hnsw/_refresh
 ```
 
-**Expected**: 2 successful shards refresh
+**Expected** - 2 successful shards refresh
 
 ```
 {
@@ -655,7 +655,7 @@ field's `dimension`.
 In this example, we are giving you a pre-computed query_value, but in chapter 2
 your environment will be configured to compute it's own. Here we'll assume our 
 query_value comes from '**portable wireless gadgets**'.
-**Request**
+**Request:**
 
 ```http
 GET products-hnsw/_search
@@ -678,7 +678,7 @@ GET products-hnsw/_search
 }
 ```
 
-**Expected**: based on the input query_value the three electronics products 
+**Expected** - based on the input query_value the three electronics products
 (`Wireless Headphones`, `Bluetooth Speaker`, and `Smart Watch`) rank highest, 
 because the query vector sits in the electronics cluster.
 
@@ -692,7 +692,7 @@ distances only over what survives. Here we score exact distance only across the
 `books` category. (Approximate `knn` queries filter differently and can return
 fewer than `k` results after filtering; the scoring script avoids that.)
 
-**Request**
+**Request:**
 
 ```http
 GET products-hnsw/_search
@@ -717,7 +717,7 @@ GET products-hnsw/_search
 }
 ```
 
-**Expected** — 3 books returned. (Hardcover Novel, Cookbook Deluxe, 
+**Expected** - 3 books returned. (Hardcover Novel, Cookbook Deluxe,
 Poetry Collection), and no electronics or outdoor items leaked through.
 
 **Fast mode** — `17-exact-knn-prefilter.bru`
@@ -730,7 +730,7 @@ return; `method_parameters.ef_search` widens the search list at query time
 (higher = more accurate, slower). On this tiny dataset the results match exact
 search, but on millions of vectors this is orders of magnitude faster.
 
-**Request**
+**Request:**
 
 ```http
 GET products-hnsw/_search
@@ -748,7 +748,7 @@ GET products-hnsw/_search
 }
 ```
 
-**Expected** — the 3 nearest neighbors to the query vector are returned, 
+**Expected** - the 3 nearest neighbors to the query vector are returned,
 all from the electronics category (Wireless Headphones, Bluetooth Speaker, 
 Smart Watch), ranked by similarity score. Since the query vector 
 [0.90, 0.90, 0.10, 0.10, 0.05, 0.05, 0.10, 0.10] closely matches 
@@ -770,7 +770,7 @@ vectors. Training is asynchronous — the call returns immediately with a
 
 ![The IVF pipeline: train a model, then build the index from it](../../screenshots/chapter1/diagram-06-ivf-training-pipeline.png)
 
-**Request**
+**Request:**
 
 ```http
 POST _plugins/_knn/models/_train
@@ -788,7 +788,7 @@ POST _plugins/_knn/models/_train
 }
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -803,13 +803,13 @@ If using Bruno, set **`ivfModelId`** in the **Local** environment instead.
 Training runs in the background. Poll the model until its `state` is `created`
 (from `training`); only then can an index use it.
 
-**Request**
+**Request:**
 
 ```http
 GET _plugins/_knn/models/YOUR_MODEL_ID?filter_path=state,error
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -855,7 +855,7 @@ model was trained on, bucket assignments get lopsided and recall degrades;
 the fix is retraining a new model and reindexing, which is IVF's ongoing 
 operational cost compared to HNSW.
 
-**Request**
+**Request:**
 
 ```http
 PUT products-ivf
@@ -896,7 +896,7 @@ POST _reindex?wait_for_completion=true
 }
 ```
 
-**Expected** — 10 items total, timed_out: false
+**Expected** - 10 items total, timed_out: false
 
 ```http
 {
@@ -929,7 +929,7 @@ how many centroid buckets are scanned (raise it for better recall, lower it for
 speed). Because most buckets are skipped, IVF stays fast on very large datasets
 while using less memory than HNSW.
 
-**Request**
+**Request:**
 
 ```http
 GET products-ivf/_search
@@ -947,7 +947,7 @@ GET products-ivf/_search
 }
 ```
 
-**Expected** — The same top 3 electronics products (Wireless Headphones, 
+**Expected** - The same top 3 electronics products (Wireless Headphones,
 Bluetooth Speaker, Smart Watch) rank highest, retrieved through IVF's 
 centroid-bucket search rather than HNSW's graph walk. With nprobes: 4, 
 4 of the index's centroid buckets get scanned. The query vector lands 
@@ -1021,7 +1021,7 @@ big enough that cutting it in half produces a saving worth measuring, small
 enough to load in seconds. Treat `my-vector-index` as if it were your production
 index whose memory bill you want to shrink.
 
-**Request**
+**Request:**
 
 ```http
 PUT my-vector-index
@@ -1041,7 +1041,7 @@ PUT my-vector-index
 }
 ```
 
-**Expected**:
+**Expected Output:**
 ```
 {
   "acknowledged": true,
@@ -1053,7 +1053,7 @@ PUT my-vector-index
 Vectors are large, so load it with the pre-generated bulk file rather than
 typing 256 floats per document.
 
-**Request** — Run the bulk import of 20 256-float documents below, then \
+**Request** - Run the bulk import of 20 256-float documents below, then \
 make sure you run the refresh command (found below this command).
 
 ```http
@@ -1108,7 +1108,7 @@ Then refresh:
 POST my-vector-index/_refresh
 ```
 
-**Expected** —  twenty created items.
+**Expected** - twenty created items.
 ```
 {
   "took": 139,
@@ -1136,7 +1136,7 @@ Before shrinking anything, capture the baseline. `_cat/indices` shows the
 index's on-disk footprint — `pri.store.size` is the primary copy of the data;
 `store.size` includes replicas (on this cluster, roughly double):
 
-**Request** — measure the 256-dim footprint:
+**Request** - measure the 256-dim footprint:
 
 ```http
 GET _cat/indices/my-vector-index?v&h=index,docs.count,pri.store.size,store.size
@@ -1156,7 +1156,7 @@ Halving the dimension roughly halves the per-vector memory and the HNSW graph
 footprint. This is the smaller "rebuild" target. First we will create the new
 optimized index before we copy all of our 256-dim vectors into our new 128-dim index.
 
-**Request**
+**Request:**
 
 ```http
 PUT my-optimized-vector-index
@@ -1176,7 +1176,7 @@ PUT my-optimized-vector-index
 }
 ```
 
-**Expected**:
+**Expected Output:**
 ```
 {
   "acknowledged": true,
@@ -1203,7 +1203,7 @@ simple truncation from 256 to 128 dimensions. The destination mapping's
 > Whichever reduction method you choose, it slots into this same `_reindex`
 > script where `subList` sits today.
 
-**Request** - As you can see in the code below we are stating the source and 
+**Request** - As you can see in the code below we are stating the source and
 destination indexes and keeping the first 128 elements of the vector.
 
 ```http
@@ -1218,7 +1218,7 @@ POST _reindex?wait_for_completion=true
 }
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -1250,20 +1250,20 @@ documents were created (near-real-time visibility, not a failure):
 POST my-optimized-vector-index/_refresh
 ```
 
-**Request** — confirm the documents landed:
+**Request** - confirm the documents landed:
 
 ```http
 GET my-optimized-vector-index/_search
 { "size": 20, "_source": ["title"] }
 ```
 
-**Request** — now compare the footprint against the Step 15 baseline:
+**Request** - now compare the footprint against the Step 15 baseline:
 
 ```http
 GET _cat/indices/my-vector-index,my-optimized-vector-index?v&h=index,docs.count,pri.store.size,store.size
 ```
 
-**Expected** — both indexes show `docs.count` 20, and `my-optimized-vector-index`
+**Expected** - both indexes show `docs.count` 20, and `my-optimized-vector-index`
 has a noticeably smaller `pri.store.size` — the vector payload dropped from 256
 to 128 floats per document. (It won't be exactly 2×: titles, index metadata, and
 segment overhead don't shrink with the vectors.)
@@ -1288,26 +1288,26 @@ over-dimensioned index early beats migrating one later.
 
 Remove everything this workshop created so you start Chapter 2 clean.
 
-**Request** — delete all lab indexes in one call:
+**Request** - delete all lab indexes in one call:
 
 ```http
 DELETE vector-fundamentals,vector-disk-demo,products-hnsw,products-ivf,my-vector-index,my-optimized-vector-index
 ```
-**Expected**
+**Expected Output:**
 ```
 {
   "acknowledged": true
 }
 ```
 
-**Request** — delete the trained IVF model (replace `YOUR_MODEL_ID`; we delete this
+**Request** - delete the trained IVF model (replace `YOUR_MODEL_ID`; we delete this
 after the indexes because a model must be unused by any index before it can be deleted):
 
 ```http
 DELETE _plugins/_knn/models/YOUR_MODEL_ID
 ```
 
-**Expected**
+**Expected Output:**
 ```
 {
   "model_id": "{{YOUR_MODEL_ID}}",

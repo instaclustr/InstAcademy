@@ -1,79 +1,90 @@
 ← [Course index](README.md) · [Cluster setup](CLUSTER-SETUP.md) · [Bruno collection](bruno/README.md) · **Next:** [Chapter 1](src/Chapter%201/README.md)
 
-# Hands-on lab guide
+# How to run the labs
 
-**Vector Storage & Search for AI** — InstAcademy OpenSearch course
+This page is the entry point for the hands-on part of the course. Read it once, then work through the chapters in order. Each chapter is a single workshop page at `src/Chapter N/README.md` that walks through every step of that chapter, and you run those steps against your own OpenSearch cluster.
 
-This is the **single entry point** for running the labs. Each chapter has **one workshop README** at `src/Chapter N/README.md` that walks through every lesson of that chapter, in order.
+**Before you start:** you need a running cluster and its connection details. If you don't have one yet, go to [cluster setup](CLUSTER-SETUP.md) first; it takes about 15 minutes.
 
-## How to read a chapter workshop
+---
 
-Every chapter workshop uses the same layout:
+## How a chapter is laid out
 
-| Label | What it means |
-|-------|----------------|
-| **Lesson N-M** | Section matching the video lesson the steps come from |
-| **Goals** | What you will have when the section is done |
-| **Prerequisites** | What to complete first |
-| **Step N** | One action in Dev Tools — do these in order |
-| **Why** | Reason this step exists and the concept behind it |
-| **Request** | Full REST call to copy into Dev Tools |
-| **Expected** | What a successful response looks like |
-| **Save** | Values to write down for later steps |
-| **Fast mode** | Matching Bruno request if you want a shortcut |
+Every chapter follows the same shape, so once you've done one, you know how to read them all.
 
-Work through **Step 1**, then **Step 2**, and so on. Do not skip ahead unless you are using fast mode to recover.
+| Element | What it is |
+|---|---|
+| **Lesson N-M** | A section matching the lesson in the video |
+| **Step N** | One thing you do, numbered across the whole chapter. Do them in order |
+| **Request** | The REST call to run, ready to copy |
+| **Expected** | The real response from the cluster this course was validated on, and what the interesting parts of it mean |
+| **Save** | A value (a model id, a task id) that a later step needs |
+| **Fast mode** | The matching Bruno request, if you'd rather click than type |
 
-## Two ways to work
+Steps build on each other, so work through them in order. If something breaks, the Bruno collection is the fastest way to catch back up.
 
-### Learn mode (recommended)
+Each chapter ends with a **wrap-up**, a **what you learned** summary, and a **cleanup** section that removes what the chapter created.
 
-Open **OpenSearch Dashboards → Dev Tools** and follow each lesson README step by step. You build the cluster state yourself.
+## Two ways to run the steps
 
-You need your Instaclustr cluster host, username, and password. The course uses an Instaclustr cluster with the **AI Search Plugin** — see [cluster setup](CLUSTER-SETUP.md).
+### Dev Tools (the main path)
 
-### Fast mode (Bruno)
+Dev Tools is the console built into OpenSearch Dashboards, and it's where you run almost every request in this course. To get there:
 
-Use the [bruno](bruno/) collection to run the same REST calls with less typing. Good for catching up or fixing a mistake.
+1. Open your **Dashboards URL** in a browser. It's on the **Connection Info** tab of your cluster in the Instaclustr console, and it looks like this (note the port, **5601**, not 9200):
 
-1. Install [Bruno](https://www.usebruno.com/downloads)
-2. Open the `bruno/` folder as a collection
-3. Set `baseUrl`, `username`, and `password` in the **Local** environment
-4. Turn off SSL certificate verification in Bruno settings
-5. Open the chapter folder (flat, numbered `01-…`) and run requests in `seq` order; poll ML tasks until `state` is `COMPLETED`
+   ```
+   https://opensearch-dashboards.<your-cluster-id>.cnodes.io:5601
+   ```
 
-Details: [bruno/README.md](bruno/README.md)
+2. Log in with the same username and password you use for the cluster (`icopensearch` by default).
+3. Open the menu at the top left, scroll to **Management**, and choose **Dev Tools**. Or jump straight there:
 
-## Configuration
+   ```
+   https://opensearch-dashboards.<your-cluster-id>.cnodes.io:5601/app/dev_tools#/console
+   ```
 
-**Dev Tools / Bruno** — cluster URL, username, password
+You'll see a split screen: type requests on the left, responses appear on the right. Paste a **Request** from the chapter page, click the green play button (or press **Ctrl+Enter**), and compare what comes back to the **Expected** block.
 
-**Save while you work:** `model_group_id`, `model_id`, `task_id` (when polling ML tasks). In Bruno, keep them in the **Local** environment variables ([bruno/README.md](bruno/README.md) lists them all).
+Everything a step needs is printed on the chapter page, including the bulk data. There is nothing to download or generate.
 
-## Sample data
+### Bruno (fast mode)
 
-Chapters 2–5 bulk-index a shared Gutendex (Project Gutenberg) book dataset; Chapter 1 uses small hand-crafted vector payloads. All bulk bodies ship ready-to-use in [rest/bulk](rest/bulk/) — there is nothing to download or generate.
+[Bruno](https://www.usebruno.com/downloads) is a free REST client. The [`bruno/`](bruno/) collection contains every request in the course, so you can run a chapter without typing. It's useful for catching up, recovering from a mistake, or re-running a chapter quickly.
 
-## ML task polling
+1. Install Bruno and open the `bruno/` folder as a collection.
+2. In the **Local** environment, set `baseUrl`, `username`, and `password` from your cluster's connection info.
+3. Open a chapter folder and run the requests in numbered order.
 
-Register and deploy often return a `task_id` immediately. Poll until `state` is `COMPLETED`:
+The [Bruno guide](bruno/README.md) covers the variables you fill in as you go.
+
+## Things worth knowing before you start
+
+**Values you carry forward.** A few steps produce ids that later steps need, mainly `model_group_id`, `model_id`, and `task_id`. Each one is flagged with **Save** where it appears. Keep them in a scratch file, or in Bruno's **Local** environment variables.
+
+**Model registration and deployment are asynchronous.** Those calls return a `task_id` immediately and finish in the background, so you poll until the task reports `"state": "COMPLETED"` before moving on:
 
 ```http
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
 
-In Bruno, use the **Poll ML task** request in the same chapter folder.
+Registration can take a minute or two, because the cluster is downloading a model. This is normal, and the chapters tell you when to expect it.
 
-## Reference-only topics
+**Every step runs.** There is no read-along filler in this course: each numbered step sends a real request and produces a result you can inspect. Where a production practice is worth knowing but not worth demonstrating on a trial cluster, it appears as a short note inside the step that raises it, not as a step of its own.
 
-Every lesson has hands-on steps in its chapter workshop. Architectural topics that would require mutating a shared cluster (shard-count math, allocation awareness, the shrink recipe, search backpressure) appear inline as read-along reference blocks rather than separate lessons.
-
-Lesson 4-4 (MCP server, steps for OpenSearch 3.3+) ends by connecting Claude Desktop to the cluster, which needs Node 18+ on your own machine.
+**Clean up when you finish a chapter.** Each chapter's cleanup section removes the indexes, pipelines, and models it created. Running it keeps your trial cluster tidy and avoids surprises in the next chapter.
 
 ## Course order
 
-1. [Chapter 1](src/Chapter%201/README.md) — vector fundamentals, kNN/HNSW/IVF, storage optimizations
-2. [Chapter 2](src/Chapter%202/README.md) — neural search pipeline and model management
-3. [Chapter 3](src/Chapter%203/README.md) — sparse, hybrid, and RRF search
-4. [Chapter 4](src/Chapter%204/README.md) — RAG optimization and the MCP server
-5. [Chapter 5](src/Chapter%205/README.md) — production cluster tuning
+| Chapter | What you build |
+|---|---|
+| [Chapter 1](src/Chapter%201/README.md) | Vector fundamentals: k-NN indexes, HNSW and IVF, quantization and storage modes |
+| [Chapter 2](src/Chapter%202/README.md) | A neural search pipeline: deploy an embedding model, embed at ingest, search by meaning |
+| [Chapter 3](src/Chapter%203/README.md) | Sparse encoding, hybrid search, and comparing score normalization against RRF |
+| [Chapter 4](src/Chapter%204/README.md) | Production RAG: chunking, filtering, reranking, quality measurement, and connecting an AI agent over MCP |
+| [Chapter 5](src/Chapter%205/README.md) | Running it in production: shard triage, index lifecycle, memory savings, and query tuning |
+
+---
+
+### Ready to start some hands-on fun??
+**Make sure your Cluster is ready** and start with [Chapter 1](src/Chapter%201/README.md)!

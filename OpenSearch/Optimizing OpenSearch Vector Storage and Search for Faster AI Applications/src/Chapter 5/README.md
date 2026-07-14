@@ -6,7 +6,7 @@ You spent four chapters making vector search fast. This final chapter is about k
 
 Consider this workshop your operations playbook. You will break a cluster on purpose and triage it back to health, design an index mapping that never needs rescuing, hand routine index chores to ISM so nobody babysits rollovers, cut vector memory in half with fp16 quantization, and close with the measurement tools (request caching, query profiling, slow logs) that show where query time actually goes.
 
-Along the way, a handful of production patterns (shard-count math, allocation awareness, the shrink recipe, search backpressure) appear as read-along references: worth knowing, but not worth in the scope of demonstrating in this lab. Everything else runs live on your **Instaclustr trial cluster**.
+Every step runs live on your **Instaclustr trial cluster**, and each one proves its own claim with a real number.
 
 ---
 
@@ -18,7 +18,7 @@ You have been creating shards since Chapter 1, so this lesson skips the definiti
 
 The best way to learn cluster triage is to break a cluster you're allowed to break. In this step you deliberately create the most common allocation failure in the wild: asking for more shard *copies* than there are data nodes to hold them. A node will never host both a primary and its own replica (that would defeat the point of a replica), so the extra copies simply have nowhere to go, they sit unassigned, and the cluster turns **yellow**. You'll see the symptom now and fix it in Step 2.
 
-**Request**
+**Request:**
 
 ```http
 PUT my-index
@@ -30,7 +30,7 @@ PUT my-index
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -46,7 +46,7 @@ Then check cluster health. **Yellow** means there are unassigned replicas (data 
 GET _cluster/health
 ```
 
-**Expected** `"status": "yellow"` with `"unassigned_shards" > 0`.
+**Expected** - `"status": "yellow"` with `"unassigned_shards" > 0`.
 
 ```json
 {
@@ -80,7 +80,7 @@ Why exactly 6 unassigned_shards? in the previous step we set the number of shard
 
 Now play the role of an on-call engineer and bring the cluster back to green. Since the problem is more replica copies than nodes to hold them, the fix is to lower `number_of_replicas`. Note that replica count is a **live** setting: one API call, no reindex, and the cluster heals in seconds. 
 
-**Request**
+**Request:**
 
 ```http
 PUT my-index/_settings
@@ -88,7 +88,7 @@ PUT my-index/_settings
   "number_of_replicas": 0
 }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -98,13 +98,13 @@ PUT my-index/_settings
 
 Now we need to verify the cluster health and the shard list.
 
-***Request***
+**Request:**
 
 ```http
 GET _cluster/health
 ```
 
-**Expected** `"status": "green"`, `"unassigned_shards": 0`
+**Expected** - `"status": "green"`, `"unassigned_shards": 0`
 
 ```json
 {
@@ -138,13 +138,13 @@ You fixed this incident because you caused it and knew the answer. Real incident
 
 ![Disk watermark thresholds at 85, 90, and 95 percent](../../screenshots/chapter5/diagram-02-disk-watermark-thresholds.png)
 
-**Request**
+**Request:**
 
 ```http
 GET _cat/allocation?v&h=node,disk.percent,disk.avail
 ```
 
-**Expected** output: ~1% disk space utilized.
+**Expected** - output: ~1% disk space utilized.
 
 ```
 node           disk.percent disk.avail
@@ -153,7 +153,7 @@ ip-10-2-37-236            1     28.7gb
 ip-10-2-181-70            1     28.7gb
 ```
 
-**Request**
+**Request:**
 
 ```http
 GET _cluster/allocation/explain
@@ -164,7 +164,7 @@ GET _cluster/allocation/explain
 }
 ```
 
-**Expected** output: you're asking about a healthy, started shard, so the API answers a different question than it would in an incident. Instead of "why is this shard stuck," it reports "is this shard where it should be".
+**Expected** - output: you're asking about a healthy, started shard, so the API answers a different question than it would in an incident. Instead of "why is this shard stuck," it reports "is this shard where it should be".
 
 Reading it top to bottom: `current_state: started` and `current_node` tell you shard 1's primary lives on one specific data node. `can_remain_on_current_node: yes` means no decider wants to evict it. And `can_rebalance_to_other_node: no` is not a problem to fix; it's the cluster saying a move would help nothing. The `node_allocation_decisions` list makes that concrete: each remaining data node answers `worse_balance`, meaning it *could* hold this shard, but taking it would make the cluster less balanced, not more. A healthy answer on every line.
 
@@ -221,7 +221,7 @@ Reading it top to bottom: `current_state: started` and `current_node` tell you s
 
 ## Lesson 5-2 — Index optimization for performance and storage efficiency
 
-Nearly every index setting you have touched this course was decided at creation time, and that is the real lesson here: mapping and shard choices are effectively permanent once documents land. This lesson is about making those one-shot decisions deliberately, then automating everything that happens after. You will create a mapping that only indexes the fields you actually search, then set up an ISM policy so rollover and cleanup happen automatically instead of by hand. This lesson also includes a read-along shrink recipe, which shows how to reduce the shard count on an existing index if you sized it wrong.
+Nearly every index setting you have touched this course was decided at creation time, and that is the real lesson here: mapping and shard choices are effectively permanent once documents land. This lesson is about making those one-shot decisions deliberately, then automating everything that happens after. You will create a mapping that only indexes the fields you actually search, then set up an ISM policy so rollover and cleanup happen automatically instead of by hand.
 
 ![The shrink recipe: eight steps to fewer shards](../../screenshots/chapter5/diagram-03-shrink-recipe.png)
 
@@ -235,7 +235,7 @@ You know from the videos that unindexed fields are cheaper; this mapping is what
 DELETE my-index
 ```
 
-**Expected** Output:
+**Expected Output:**
 ```json
 {
   "acknowledged": true
@@ -273,7 +273,7 @@ PUT my-index
   }
 }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -316,7 +316,7 @@ POST _bulk
 
 ```
 
-**Expected** `"errors": false`, documents can be seen in the `items` array
+**Expected** - `"errors": false`, documents can be seen in the `items` array
 
 ```json
 {
@@ -347,7 +347,7 @@ POST _bulk
 POST my-index/_refresh
 ```
 
-**Expected** `_shards.successful: 1`. All ten documents are now searchable.
+**Expected** - `_shards.successful: 1`. All ten documents are now searchable.
 
 ```json
 {
@@ -367,7 +367,7 @@ Data like logs, metrics, and search history never stops arriving. If it all land
 
 ![The write alias, rollover, and ISM lifecycle](../../screenshots/chapter5/diagram-04-alias-rollover-ism.png)
 
-**Request** — create the lifecycle policy. The `min_doc_count: 5` rollover threshold is deliberately tiny so you can watch it fire in the next few requests; production values look more like `min_index_age: 30d` or `min_size: 50gb`.
+**Request** - create the lifecycle policy. The `min_doc_count: 5` rollover threshold is deliberately tiny so you can watch it fire in the next few requests; production values look more like `min_index_age: 30d` or `min_size: 50gb`.
 
 ```http
 PUT _plugins/_ism/policies/bookstore-searches-policy
@@ -392,7 +392,7 @@ PUT _plugins/_ism/policies/bookstore-searches-policy
 }
 ```
 
-**Expected** an `_id` of `bookstore-searches-policy` and the policy echoed back, with retry defaults filled in on the rollover action.
+**Expected** - an `_id` of `bookstore-searches-policy` and the policy echoed back, with retry defaults filled in on the rollover action.
 
 ```json
 {
@@ -408,7 +408,7 @@ PUT _plugins/_ism/policies/bookstore-searches-policy
      
 ```
 
-**Request** — Next we'll create the first backing index with the write alias. The extra setting tells ISM which alias its rollover action should move; in production an index template would stamp it onto every `searches-*` index automatically.
+**Request** - Next we'll create the first backing index with the write alias. The extra setting tells ISM which alias its rollover action should move; in production an index template would stamp it onto every `searches-*` index automatically.
 
 ```http
 PUT searches-000001
@@ -418,7 +418,7 @@ PUT searches-000001
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -434,7 +434,7 @@ Now let's check that the policy attached on its own:
 GET _plugins/_ism/explain/searches-000001
 ```
 
-**Expected** output (attachment happens within a few seconds of index creation; if `policy_id` is still `null`, run it again):
+**Expected** - output (attachment happens within a few seconds of index creation; if `policy_id` is still `null`, run it again):
 
 ```json
 {
@@ -452,7 +452,7 @@ GET _plugins/_ism/explain/searches-000001
 
 Nobody registered this index with ISM by hand. It matched the `searches-*` pattern at creation time, and the policy picked it up.
 
-**Request** — Next we'll write six search-history events through the alias. The `refresh=true` makes them count toward the rollover condition immediately.
+**Request** - Next we'll write six search-history events through the alias. The `refresh=true` makes them count toward the rollover condition immediately.
 
 ```http
 POST _bulk?refresh=true
@@ -470,7 +470,7 @@ POST _bulk?refresh=true
 { "query": "memoirs about education", "results": 6, "timestamp": "2026-07-13T09:24:55Z" }
 ```
 
-**Expected** `"errors": false`. Look at any item in the response: `"_index": "searches-000001"`. You wrote to the alias, and OpenSearch resolved the physical index for you.
+**Expected** - `"errors": false`. Look at any item in the response: `"_index": "searches-000001"`. You wrote to the alias, and OpenSearch resolved the physical index for you.
 
 ```json
 {
@@ -497,14 +497,14 @@ POST _bulk?refresh=true
 }
 ```
 
-**Request** — now trigger the rollover. This call asks OpenSearch to check the index behind `searches-current` against the conditions in the body, and if any condition is met, to create the next index and move the write alias onto it. You loaded six documents and the condition says five, so the check will pass. OpenSearch reads the `-000001` suffix and names the new index `searches-000002` on its own. This is the same operation ISM runs on its schedule; you are running it by hand so you don't have to wait for the next check.
+**Request** - now trigger the rollover. This call asks OpenSearch to check the index behind `searches-current` against the conditions in the body, and if any condition is met, to create the next index and move the write alias onto it. You loaded six documents and the condition says five, so the check will pass. OpenSearch reads the `-000001` suffix and names the new index `searches-000002` on its own. This is the same operation ISM runs on its schedule; you are running it by hand so you don't have to wait for the next check.
 
 ```http
 POST searches-current/_rollover
 { "conditions": { "max_docs": 5 } }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -526,7 +526,7 @@ POST searches-current/_rollover
 GET _alias/searches-current
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -563,7 +563,7 @@ Vectors are memory hogs by design. A 768-dim `float` vector is `768 × 4 = 3072`
 
 If someone offered to cut your vector memory bill in half for under 1% recall loss, you'd probably almost always take that tradeoff, and that's exactly what fp16 quantization is. Each dimension is stored as a 16-bit float instead of 32, dropping our bookstore shard math from ~2.25 GB to ~1.1 GB. One correction to the video script before you run it: `data_type: "float16"` does not exist in OpenSearch. The real mechanism is a **Faiss scalar-quantization encoder**, set via `method.parameters.encoder = { "name": "sq" }`. Values must fit within `[-65504, 65504]`, which normalized embeddings always do.
 
-**Request** — this is the same FAISS HNSW recipe you used for `bookstore-rag` in Chapter 4: 768 dimensions, `l2` distance, `m: 16`, `ef_construction: 128`. Read it looking for what changed and you'll find exactly one new line, the `encoder`. That line tells FAISS to store every vector dimension as a 16-bit float instead of a 32-bit one. Everything else about working with the index (queries, bulk loads, warmup) stays exactly the same.
+**Request** - this is the same FAISS HNSW recipe you used for `bookstore-rag` in Chapter 4: 768 dimensions, `l2` distance, `m: 16`, `ef_construction: 128`. Read it looking for what changed and you'll find exactly one new line, the `encoder`. That line tells FAISS to store every vector dimension as a 16-bit float instead of a 32-bit one. Everything else about working with the index (queries, bulk loads, warmup) stays exactly the same.
 
 ```http
 PUT book-embeddings-fp16
@@ -590,7 +590,7 @@ PUT book-embeddings-fp16
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -606,7 +606,7 @@ An acknowledgment alone doesn't prove the quantization is on, so read the mappin
 GET book-embeddings-fp16/_mapping
 ```
 
-**Expected** output: the `encoder` block is there. From this point on, every vector written to this index gets stored as fp16 on arrival, at half the memory of the 32-bit default. If you had misspelled the encoder name, the create would have failed loudly, so what you're really confirming here is that you created the index you think you did before data starts landing in it.
+**Expected** - output: the `encoder` block is there. From this point on, every vector written to this index gets stored as fp16 on arrival, at half the memory of the 32-bit default. If you had misspelled the encoder name, the create would have failed loudly, so what you're really confirming here is that you created the index you think you did before data starts landing in it.
 
 ```json
 {
@@ -637,7 +637,7 @@ GET book-embeddings-fp16/_mapping
 }
 ```
 
-**Request** — now build the experiment that proves the memory claim. This second index is the control group: the identical mapping with the encoder line removed, so every byte of difference you measure in Step 8 comes from quantization and nothing else.
+**Request** - now build the experiment that proves the memory claim. This second index is the control group: the identical mapping with the encoder line removed, so every byte of difference you measure in Step 8 comes from quantization and nothing else.
 
 ```http
 PUT book-embeddings-float
@@ -663,9 +663,9 @@ PUT book-embeddings-float
 }
 ```
 
-**Expected** `"acknowledged": true`, `"index": "book-embeddings-float"`.
+**Expected** - `"acknowledged": true`, `"index": "book-embeddings-float"`.
 
-**Request** — load the same vectors into both indexes.
+**Request** - load the same vectors into both indexes.
 
 ```http
 POST _bulk?refresh=true
@@ -877,7 +877,7 @@ POST _bulk?refresh=true
 POST book-embeddings-float,book-embeddings-fp16/_forcemerge?max_num_segments=1
 ```
 
-**Expected** bulk `"errors": false` with 100 items (50 documents into each index), every item showing `"result": "created"` and status `201`. The force-merge returns `{"_shards": {"total": 4, "successful": 4, "failed": 0}}`: four shard copies touched, one primary and one replica per index. Both indexes now hold the same 50 vectors; the only difference between them is how the HNSW graph stores each dimension. Step 8 measures what that difference costs.
+**Expected** - bulk `"errors": false` with 100 items (50 documents into each index), every item showing `"result": "created"` and status `201`. The force-merge returns `{"_shards": {"total": 4, "successful": 4, "failed": 0}}`: four shard copies touched, one primary and one replica per index. Both indexes now hold the same 50 vectors; the only difference between them is how the HNSW graph stores each dimension. Step 8 measures what that difference costs.
 
 **Fast mode** — `45-create-fp16-quantized.bru` → `46-get-fp16-mapping.bru` → `47-create-float-control.bru` → `48-bulk-embeddings-compare.bru` → `49-forcemerge-embeddings.bru`
 
@@ -885,13 +885,13 @@ POST book-embeddings-float,book-embeddings-fp16/_forcemerge?max_num_segments=1
 
 A claim like "half the memory" deserves verification, and you just built the perfect experiment for it: two indexes, identical data, one encoder line apart. Two measurements settle it. Disk first, using `_stats`. Its raw response is enormous (hundreds of counters covering indexing, search, merges, and caches), so keep the `filter_path` habit from Chapter 3 and ask only for the numbers that answer the cost question.
 
-**Request**
+**Request:**
 
 ```http
 GET book-embeddings-float,book-embeddings-fp16/_stats?filter_path=indices.*.primaries.docs.count,indices.*.primaries.store.size_in_bytes
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -924,15 +924,15 @@ Same 50 documents, but fp16 is only about 24% smaller on disk, not half. That is
 
 ![What lives on disk versus what loads into RAM](../../screenshots/chapter5/diagram-06-disk-vs-ram.png)
 
-**Request** — check graph memory before warming anything:
+**Request** - check graph memory before warming anything:
 
 ```http
 GET _plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
 ```
 
-**Expected** every node reports `0`. Nothing has searched these indexes yet, so no graph is in memory. (If other k-NN indexes on your cluster have been warmed or searched, your baseline is higher; watch the increments instead of the absolute numbers.)
+**Expected** - every node reports `0`. Nothing has searched these indexes yet, so no graph is in memory. (If other k-NN indexes on your cluster have been warmed or searched, your baseline is higher; watch the increments instead of the absolute numbers.)
 
-**Request** — load the float graph into memory, then measure again:
+**Request** - load the float graph into memory, then measure again:
 
 ```http
 GET _plugins/_knn/warmup/book-embeddings-float
@@ -942,9 +942,9 @@ GET _plugins/_knn/warmup/book-embeddings-float
 GET _plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
 ```
 
-**Expected** two nodes now report `157` each (the value is in KB). That's the full-precision graph, loaded once for the primary and once for the replica, on whichever two data nodes hold them.
+**Expected** - two nodes now report `157` each (the value is in KB). That's the full-precision graph, loaded once for the primary and once for the replica, on whichever two data nodes hold them.
 
-**Request** — now the fp16 graph:
+**Request** - now the fp16 graph:
 
 ```http
 GET _plugins/_knn/warmup/book-embeddings-fp16
@@ -954,7 +954,7 @@ GET _plugins/_knn/warmup/book-embeddings-fp16
 GET _plugins/_knn/stats?stat=graph_memory_usage&filter_path=nodes.*.graph_memory_usage
 ```
 
-**Expected** output: the totals grow by `82` per fp16 shard copy. Your node names and shard placement will differ, but the arithmetic is the same: four graph copies in memory, `157 + 157` for float and `82 + 82` for fp16. On this cluster one node happened to hold a copy of each, so it reports `239`:
+**Expected** - output: the totals grow by `82` per fp16 shard copy. Your node names and shard placement will differ, but the arithmetic is the same: four graph copies in memory, `157 + 157` for float and `82 + 82` for fp16. On this cluster one node happened to hold a copy of each, so it reports `239`:
 
 ```json
 {
@@ -1000,7 +1000,7 @@ Under peak load, all queries competing equally means a checkout can stall behind
 
 Think about how much of your search traffic is the *same* few requests fired over and over: current prices, order status, the dashboard someone keeps refreshing. Recomputing those from scratch every time is pure waste. The shard request cache stores the results of aggregation and `size: 0` queries at the shard level, so hot, repeated requests get answered from memory while the cluster's compute goes to queries that are genuinely new. Enable it per index, and note the practical effect: your highest-value, most-hammered shards end up staying cached the longest. We use the populated `my-index` from Lesson 5-2.
 
-**Request** — turn the cache on for the index.
+**Request** - turn the cache on for the index.
 
 ```http
 PUT my-index/_settings
@@ -1009,9 +1009,9 @@ PUT my-index/_settings
 }
 ```
 
-**Expected** `{"acknowledged": true}`.
+**Expected** - `{"acknowledged": true}`.
 
-**Request** — now run a cacheable search, twice. Not every request can be cached: the shard request cache only stores `size: 0` responses, which is counts and aggregations, exactly the dashboard-style traffic that repeats all day. The `?request_cache=true` parameter asks for caching explicitly on this request. Run it two times in a row and watch the `took` value.
+**Request** - now run a cacheable search, twice. Not every request can be cached: the shard request cache only stores `size: 0` responses, which is counts and aggregations, exactly the dashboard-style traffic that repeats all day. The `?request_cache=true` parameter asks for caching explicitly on this request. Run it two times in a row and watch the `took` value.
 
 ```http
 GET my-index/_search?request_cache=true
@@ -1021,7 +1021,7 @@ GET my-index/_search?request_cache=true
 }
 ```
 
-**Expected** output: the first run computes the answer (`"took": 2` on this cluster); the second run is served from the cache (`"took": 0`). The rest of the response is identical both times:
+**Expected** - output: the first run computes the answer (`"took": 2` on this cluster); the second run is served from the cache (`"took": 0`). The rest of the response is identical both times:
 
 ```json
 {
@@ -1046,13 +1046,13 @@ GET my-index/_search?request_cache=true
 
 The query matched all ten documents, so the response reports `"hits.total.value": 10`. But because the request asked for `size: 0`, no actual documents come back; the `hits` array stays empty. Count-only responses like this one are exactly what the shard request cache stores.
 
-**Request** — prove the cache did the work by reading its counters:
+**Request** - prove the cache did the work by reading its counters:
 
 ```http
 GET my-index/_stats/request_cache?filter_path=_all.total.request_cache
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1079,7 +1079,7 @@ One miss and one hit: the first search had to compute the result and store it (t
 
 Never optimize a slow query on a hunch. Adding `"profile": true` to any search returns a per-shard, per-component timing breakdown, showing exactly which clause, rewrite, or collector is eating the time, so you fix the actual bottleneck instead of the suspected one. Make it the first move whenever someone reports "search is slow."
 
-**Request** — add `"profile": true` to the search body. One warning: profiling is verbose. Even this trivial query returns about 10 KB of per-component timings, so the `filter_path` below keeps only the three numbers you triage with. (When you profile for real, drop the `filter_path` and dig into the full breakdown once you know which component to blame.)
+**Request** - add `"profile": true` to the search body. One warning: profiling is verbose. Even this trivial query returns about 10 KB of per-component timings, so the `filter_path` below keeps only the three numbers you triage with. (When you profile for real, drop the `filter_path` and dig into the full breakdown once you know which component to blame.)
 
 ```http
 GET my-index/_search?filter_path=took,profile.shards.searches.query.type,profile.shards.searches.query.description,profile.shards.searches.query.time_in_nanos,profile.shards.searches.rewrite_time,profile.shards.searches.collector
@@ -1089,7 +1089,7 @@ GET my-index/_search?filter_path=took,profile.shards.searches.query.type,profile
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1130,7 +1130,7 @@ Read the three numbers, remembering they are nanoseconds: the query itself spent
 
 Profiling works when you already know which query is slow, but in production the pathological query usually strikes while nobody is watching. Slow logs are the tripwire: any query or fetch that exceeds your thresholds gets recorded to the node logs with its full body, so the evidence is waiting for you instead of vanished. These are **index-level** settings with separate query and fetch thresholds per severity, letting you decide per index what counts as "worryingly slow."
 
-**Request** — set three thresholds on the index. The two `query` thresholds cover the search phase (finding and scoring matches) at different severities, and the `fetch` threshold covers the fetch phase (retrieving the actual documents). Fetch gets a tighter limit because retrieving already-identified documents should be fast; if fetch is slow, something is wrong with document size or disk, not query complexity.
+**Request** - set three thresholds on the index. The two `query` thresholds cover the search phase (finding and scoring matches) at different severities, and the `fetch` threshold covers the fetch phase (retrieving the actual documents). Fetch gets a tighter limit because retrieving already-identified documents should be fast; if fetch is slow, something is wrong with document size or disk, not query complexity.
 
 ```http
 PUT my-index/_settings
@@ -1141,7 +1141,7 @@ PUT my-index/_settings
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1155,7 +1155,7 @@ Then read the settings back to confirm all three thresholds landed where you exp
 GET my-index/_settings?filter_path=*.settings.index.search.slowlog
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1193,10 +1193,10 @@ Every step in this chapter followed the same pattern: make a claim, then make th
 
 ## What you learned
 
-- **5-1:** shard sizing math, the yellow-cluster failure mode and its fix, `_cat/allocation` + `allocation/explain` triage, with awareness and disk watermarks as reference.
-- **5-2:** `index:false` / `enabled:false` mappings, the write-alias → rollover → ISM lifecycle, with the shrink + alias-swap recipe as reference.
-- **5-3:** `on_disk` vs `in_memory`, `compression_level`, and correct **fp16 scalar quantization** via the Faiss `sq` encoder.
-- **5-4:** request caching, `_profile`, and slow logs hands-on, with priority routing and search backpressure as reference.
+- **5-1:** shard sizing targets, the yellow-cluster failure mode and its fix, and reading a shard's fate straight from `_cat/allocation` and `allocation/explain`.
+- **5-2:** mappings that only index what you search (`index: false`, `enabled: false`), and the write-alias → rollover → ISM lifecycle running on its own.
+- **5-3:** **fp16 scalar quantization** via the Faiss `sq` encoder, measured: half the graph memory, and why disk barely moves.
+- **5-4:** request caching proved in the counters, `_profile` timings decoded, and slow logs armed as a tripwire.
 
 ## Course wrap-up
 

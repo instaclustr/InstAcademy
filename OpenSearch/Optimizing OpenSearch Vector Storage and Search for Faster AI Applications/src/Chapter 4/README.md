@@ -24,12 +24,12 @@ This chapter builds one chunked index, **`bookstore-rag`**. Every pipeline, inde
 
 You know the drill by now: models live in groups, and your `huggingface-models` group from Chapter 2 Step 2 is still sitting on the cluster, ready to hold one more. Reuse its `model_group_id` rather than creating a duplicate. If you still have the id, skip to Step 2; if not, one lookup gets it back.
 
-**Request**
+**Request:**
 ```http
 POST _plugins/_ml/model_groups/_search
 { "query": { "match": { "name": "huggingface-models" } } }
 ```
-**Expected** one hit; the group's `_id` is the value you need:
+**Expected** - one hit; the group's `_id` is the value you need:
 
 ```json
 {
@@ -69,7 +69,7 @@ POST _plugins/_ml/models/_register
 }
 ```
 
-**Expected** a `task_id` immediately, because the ~430 MB download happens in the background. 
+**Expected** - a `task_id` immediately, because the ~430 MB download happens in the background.
 
 ```json
 {
@@ -110,7 +110,7 @@ Registering the model put the artifact on disk, and deploying loads it into memo
 ```http
 POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 ```
-**Expected** a `task_id`;
+**Expected** - a `task_id`;
 
 ```json
 {
@@ -126,7 +126,7 @@ POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
 
-**Expected** the completed task will list the worker nodes that loaded the model, and with no dedicated ML nodes here, that means all three data nodes:
+**Expected** - the completed task will list the worker nodes that loaded the model, and with no dedicated ML nodes here, that means all three data nodes:
 
 ```json
 {
@@ -155,7 +155,7 @@ This is the most sophisticated pipeline in the course, and it exists to solve a 
 
 Replace `YOUR_MODEL_ID`.
 
-**Request**
+**Request:**
 ```http
 PUT _ingest/pipeline/bookstore-chunking-pipeline
 {
@@ -180,7 +180,7 @@ PUT _ingest/pipeline/bookstore-chunking-pipeline
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -198,7 +198,7 @@ Now build the index this whole chapter revolves around. Every mapping choice her
 
 ![Anatomy of the bookstore-rag index](../../screenshots/chapter4/diagram-02-bookstore-rag-index-anatomy.png)
 
-**Request** — Create the `bookstore-rag` index
+**Request** - Create the `bookstore-rag` index
 ```http
 PUT bookstore-rag
 {
@@ -224,7 +224,7 @@ PUT bookstore-rag
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -240,13 +240,13 @@ PUT bookstore-rag
 
 Chapter 2 taught you the theory of this recipe; now run it for real. Turning refresh off during the load stops Lucene from cutting a new segment every second, the force merge afterward collapses the segment debris into a few large files, and restoring refresh makes everything visible in one shot. This four-move sequence (refresh off, bulk, force-merge, refresh on) is the standard pattern for any large vector load, worth committing to memory. Expect it to take several minutes on your cluster, since each of the 256 documents is chunked and embedded server-side on arrival.
 
-**Request** — turn refresh off first:
+**Request** - turn refresh off first:
 
 ```http
 PUT bookstore-rag/_settings
 { "index": { "refresh_interval": "-1" } }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -254,7 +254,7 @@ PUT bookstore-rag/_settings
 }
 ```
 
-**Request** — now we bulk-load the 256 books. Every document passes through the chunking pipeline on arrival, so each one gets chunked and embedded server-side. We'll give it a generous timeout (10 minutes or 600 seconds); on a busy cluster this takes several minutes. The same payload lives in [`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson) if you prefer to copy from a file.
+**Request** - now we bulk-load the 256 books. Every document passes through the chunking pipeline on arrival, so each one gets chunked and embedded server-side. We'll give it a generous timeout (10 minutes or 600 seconds); on a busy cluster this takes several minutes. The same payload lives in [`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson) if you prefer to copy from a file.
 
 ```http
 POST _bulk?timeout=600s
@@ -773,7 +773,7 @@ POST _bulk?timeout=600s
 
 ```
 
-**Expected** `"errors": false` with 256 items, every one `"result": "created"` with status `201`. (If items fail with "Model not ready yet", the model from Step 3 is not fully deployed; re-check its state and retry.)
+**Expected** - `"errors": false` with 256 items, every one `"result": "created"` with status `201`. (If items fail with "Model not ready yet", the model from Step 3 is not fully deployed; re-check its state and retry.)
 
 ```json
 {
@@ -799,13 +799,13 @@ POST _bulk?timeout=600s
     },[...]
 ```
 
-**Request** — next, we'll compact the segment debris, and then restore refresh:
+**Request** - next, we'll compact the segment debris, and then restore refresh:
 
 ```http
 POST bookstore-rag/_forcemerge?max_num_segments=5
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -817,14 +817,14 @@ POST bookstore-rag/_forcemerge?max_num_segments=5
 }
 ```
 
-**Request** — and now, restore our refresh interval:
+**Request** - and now, restore our refresh interval:
 
 ```http
 PUT bookstore-rag/_settings
 { "index": { "refresh_interval": "30s" } }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -832,13 +832,13 @@ PUT bookstore-rag/_settings
 }
 ```
 
-**Request** — Once we've restored the refresh interval, we'll go ahead and do a manual refresh on this index:
+**Request** - Once we've restored the refresh interval, we'll go ahead and do a manual refresh on this index:
 
 ```http
 POST bookstore-rag/_refresh
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -853,7 +853,7 @@ Now check the shard picture. Shard count is a near-permanent decision, so it's w
 ```http
 GET _cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=json
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 [
@@ -896,7 +896,7 @@ Wait, 502 documents when you loaded 256? That's the nested field at work: Lucene
 
 Your first lever is the least glamorous and the easiest to use: ask for less. One misconception to clear up before it makes sense: `k` does not control how much similarity math happens. The HNSW graph visits a bounded set of candidates on every query no matter what you ask for (that bound is `ef_search`, and it's exact k-NN that scores every vector in the index, which is exactly why this chapter doesn't use it). What your request does control is everything after the math: each returned hit has its stored fields read from disk, filtered, serialized, and sent over the network, and this index's raw `_source` carries a 768-number embedding plus every chunk of the book. One wasteful query is invisible; thousands per hour become real latency and real bandwidth. So request only what the page will show: `size: 10` and the five fields you actually display.
 
-**Request**
+**Request:**
 ```http
 GET bookstore-rag/_search
 {
@@ -1006,7 +1006,7 @@ GET bookstore-rag/_search
   }
 }
 ```
-**Expected** 10 hits, each `_source` limited to the five listed fields. The top five from this run:
+**Expected** - 10 hits, each `_source` limited to the five listed fields. The top five from this run:
 
 | Rank | Score | Title | Genre | Price | Rating |
 |---|---|---|---|---|---|
@@ -1148,7 +1148,7 @@ GET bookstore-rag/_search
   }
 }
 ```
-**Expected** exactly six hits, because exactly six books in the sample data satisfy all three constraints:
+**Expected** - exactly six hits, because exactly six books in the sample data satisfy all three constraints:
 
 | Rank | Score | Title | Price | Rating |
 |---|---|---|---|---|
@@ -1169,7 +1169,7 @@ This should feel familiar from Chapter 3, and that's the point: hybrid search is
 
 ![Hybrid search score normalization and blending](../../screenshots/chapter4/diagram-04-hybrid-score-normalization.png)
 
-**Request** — create the hybrid pipeline:
+**Request** - create the hybrid pipeline:
 ```http
 PUT _search/pipeline/bookstore-hybrid-pipeline
 {
@@ -1188,7 +1188,7 @@ PUT _search/pipeline/bookstore-hybrid-pipeline
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1196,7 +1196,7 @@ PUT _search/pipeline/bookstore-hybrid-pipeline
 }
 ```
 
-**Request** — now we'll run the hybrid query through it:
+**Request** - now we'll run the hybrid query through it:
 
 ```http
 GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
@@ -1451,7 +1451,7 @@ GET bookstore-rag/_search
   }
 }
 ```
-**Expected** the same ten candidates from Step 7, in a very different order:
+**Expected** - the same ten candidates from Step 7, in a very different order:
 
 | Rank | Score | Title | Rating | Year | In stock |
 |---|---|---|---|---|---|
@@ -1505,7 +1505,7 @@ The first search after a restart is always slower than the ones that follow. The
 GET _plugins/_knn/warmup/bookstore-rag
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1564,7 +1564,7 @@ Now set the preload. It's a static setting, and static settings can only change 
 POST bookstore-rag/_close
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1587,7 +1587,7 @@ PUT bookstore-rag/_settings
 { "index": { "store": { "preload": ["vec", "vem"] } } }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1601,7 +1601,7 @@ PUT bookstore-rag/_settings
 POST bookstore-rag/_open
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1616,7 +1616,7 @@ POST bookstore-rag/_open
 GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s&filter_path=status,active_shards_percent_as_number
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1666,7 +1666,7 @@ GET bookstore-rag/_rank_eval
   "metric": { "mean_reciprocal_rank": { "k": 10, "relevant_rating_threshold": 1 } }
 }
 ```
-**Expected** a top-level `metric_score` plus per-query `details`. This run scored:
+**Expected** - a top-level `metric_score` plus per-query `details`. This run scored:
 
 ```json
 {
@@ -1721,7 +1721,7 @@ GET bookstore-rag/_rank_eval
 }
 ```
 
-**Expected** output (trimmed the same way):
+**Expected** - output (trimmed the same way):
 
 ```json
 {
@@ -1756,7 +1756,7 @@ PUT _search/pipeline/bookstore-stock-filter
   ]
 }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1771,7 +1771,7 @@ The pipeline exists on the cluster, but nothing uses it yet. Queries against `bo
 PUT bookstore-rag/_settings
 { "index.search.default_pipeline": "bookstore-stock-filter" }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1784,7 +1784,7 @@ PUT bookstore-rag/_settings
 GET bookstore-rag/_search?filter_path=hits.total.value
 { "size": 0, "query": { "match_all": {} } }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1803,7 +1803,7 @@ GET bookstore-rag/_search?filter_path=hits.total.value
 GET bookstore-rag/_search?search_pipeline=_none&filter_path=hits.total.value
 { "size": 0, "query": { "match_all": {} } }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1840,7 +1840,7 @@ PUT _cluster/settings
   "persistent": { "plugins.ml_commons.mcp_server_enabled": "true" }
 }
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1869,7 +1869,7 @@ POST _plugins/_ml/mcp/tools/_register
   ]
 }
 ```
-**Expected** output: one `"created": true` entry per node. All seven nodes answer on this cluster, including the cluster managers and the coordinator, which is normal; tool definitions fan out to every node:
+**Expected** - output: one `"created": true` entry per node. All seven nodes answer on this cluster, including the cluster managers and the coordinator, which is normal; tool definitions fan out to every node:
 
 ```json
 {
@@ -1887,7 +1887,7 @@ POST _plugins/_ml/mcp/tools/_register
 ```http
 GET _plugins/_ml/mcp/tools/_list
 ```
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -2002,7 +2002,7 @@ Tear down the MCP server. Tool registrations persist across sessions until you r
 ```
 curl -H "Authorization: Basic YOUR_BASE64_VALUE" -X POST "https://YOUR_CLUSTER_HOST:9200/_plugins/_ml/mcp/tools/_remove" -H "Content-Type: application/json" -d '["ListIndexTool", "IndexMappingTool", "SearchIndexTool"]'
 ```
-**Expected** `{"removed": true}` once per node. Then disable the server (this one works in Dev Tools):
+**Expected** - `{"removed": true}` once per node. Then disable the server (this one works in Dev Tools):
 ```http
 PUT _cluster/settings
 { "persistent": { "plugins.ml_commons.mcp_server_enabled": null } }

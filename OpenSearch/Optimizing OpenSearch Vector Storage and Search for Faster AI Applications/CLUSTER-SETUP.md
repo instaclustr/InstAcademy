@@ -84,13 +84,25 @@ Keep that tab open, or paste the three values somewhere handy. You'll need them 
 
 Two quick checks, and then you're done here.
 
-**Dev Tools (the main path).** Open the Dashboards URL, log in with your username and password, and find **Dev Tools** in the left menu. Run:
+**Dev Tools (the main path).** Open your Dashboards URL in a browser. It uses port **5601**, not 9200, and looks like this:
+
+```
+https://opensearch-dashboards.<your-cluster-id>.cnodes.io:5601
+```
+
+Log in with your cluster username and password, then open the menu at the top left, scroll to **Management**, and choose **Dev Tools**. You can also go straight to the console:
+
+```
+https://opensearch-dashboards.<your-cluster-id>.cnodes.io:5601/app/dev_tools#/console
+```
+
+Type this into the left pane and press **Ctrl+Enter** to run it:
 
 ```http
 GET _cluster/health
 ```
 
-A healthy new cluster answers with `"status": "green"` and `"number_of_data_nodes": 3`.
+A healthy new cluster answers with `"status": "green"` and `"number_of_data_nodes": 3`. That's your cluster talking back, and you're ready for Chapter 1.
 
 **Bruno (fast mode, optional).** If you plan to use the Bruno collection, set `baseUrl`, `username`, and `password` in its **Local** environment now. The [Bruno guide](bruno/README.md) covers the rest.
 

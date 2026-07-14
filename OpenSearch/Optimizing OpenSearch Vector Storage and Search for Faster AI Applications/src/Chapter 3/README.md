@@ -40,7 +40,7 @@ We will help you understand *why* hybrid beats any single method, then prove it 
 
 Good news to start the chapter: you already own the first piece. Every registered model belongs to a group for access control and versioning, and you created the `huggingface-models` group back in Chapter 2 Step 2. The sparse model you're about to register slots right into it, so there is nothing to create here. If you still have the `model_group_id` saved, skip straight to Step 2. If it got away from you, one search brings it back:
 
-**Request** — (If you need your modelId again) paste into Dev Tools:
+**Request** - (If you need your modelId again) paste into Dev Tools:
 
 ```http
 POST _plugins/_ml/model_groups/_search
@@ -60,7 +60,7 @@ Time to meet the other kind of embedding model. Chapter 2's dense model squeezed
 
 Replace `YOUR_MODEL_GROUP_ID`:
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 POST _plugins/_ml/models/_register
@@ -72,7 +72,7 @@ POST _plugins/_ml/models/_register
 }
 ```
 
-**Expected** JSON with a `task_id`.
+**Expected** - JSON with a `task_id`.
 
 ```json
 {
@@ -87,7 +87,7 @@ POST _plugins/_ml/models/_register
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
 
-**Expected** - The first poll will most likely show `'state':'CREATED'`. We are polling the task until 
+**Expected** - The first poll will most likely show `'state':'CREATED'`. We are polling the task until
 `"state": "COMPLETED"`.
 
 ```json
@@ -116,13 +116,13 @@ Registered is not the same as running. As you learned in Chapter 2, registration
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
-**Request** — paste into Dev Tools to deploy the model:
+**Request** - paste into Dev Tools to deploy the model:
 
 ```http
 POST _plugins/_ml/models/YOUR_SPARSE_MODEL_ID/_deploy
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -137,7 +137,7 @@ POST _plugins/_ml/models/YOUR_SPARSE_MODEL_ID/_deploy
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
 
-**Expected**
+**Expected Output:**
 
 ```json
 {
@@ -171,7 +171,7 @@ Same pattern as Chapter 2's pipeline, with one upgrade: this one has **two** pro
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
-**Request** — Create the sparse ingest pipeline by pasting this into Dev Tools:
+**Request** - Create the sparse ingest pipeline by pasting this into Dev Tools:
 
 ```http
 PUT _ingest/pipeline/nlp-ingest-pipeline
@@ -206,7 +206,7 @@ PUT _ingest/pipeline/nlp-ingest-pipeline
 }
 ```
 
-**Expected** result:
+**Expected** - result:
 
 ```json
 {
@@ -237,7 +237,7 @@ Now we'll build the home for these sparse-encoded chunks. This mapping looks dif
 > DELETE my-sparse-neural-index
 > ```
 
-**Request** — Create the sparse index by pasting into Dev Tools:
+**Request** - Create the sparse index by pasting into Dev Tools:
 
 ```http
 PUT my-sparse-neural-index
@@ -264,7 +264,7 @@ PUT my-sparse-neural-index
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -281,7 +281,7 @@ PUT my-sparse-neural-index
 
 Load the same 256-book catalog you used in Chapter 2, this time through the sparse pipeline. Every document gets chunked and then every chunk gets its own model inference, so this bulk works even harder than Chapter 2's did. Allow a minute or two for the full file to load.
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 POST _bulk?timeout=600s
@@ -799,7 +799,7 @@ POST _bulk?timeout=600s
 {"id": "12", "title": "Through the Looking-Glass", "passage_text": "\"Through the Looking-Glass\" by Lewis Carroll is a novel published in 1871. When Alice climbs through a mirror into a fantastical world, she discovers everything is reversed\u2014including logic itself. In this chess-themed realm, running keeps you stationary, walking away brings you closer, and nursery-rhyme characters come alive. Alice encounters peculiar beings including the severe Red Queen, quarrelsome twins Tweedledum and Tweedledee, and the opinionated Humpty Dumpty. Like its beloved predecessor, this sequel blends absurdist adventure with unforgettable imagery and phrases that remain part of our language today. (This is an automatically generated summary.)"}
 ```
 
-**Expected** `"errors": false`. If any item errors, the usual causes are an **undeployed model**, wrong **`model_id`** in Step 4, or the sparse field mapped as `sparse_vector` instead of `rank_features`.
+**Expected** - `"errors": false`. If any item errors, the usual causes are an **undeployed model**, wrong **`model_id`** in Step 4, or the sparse field mapped as `sparse_vector` instead of `rank_features`.
 
 ```json
 {
@@ -833,7 +833,7 @@ Refresh so hits are immediately searchable:
 POST my-sparse-neural-index/_refresh
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -853,7 +853,7 @@ The experiment begins here. Over the next three steps you'll run the *same* quer
 
 Since you'll be comparing ranked lists all chapter, the query trims the response to just what you need to record: `"_source": ["title"]` keeps only the title field, and the `filter_path` URL parameter strips the response envelope (`took`, `_shards`, totals), leaving a clean list of id, score, and title per hit. Every comparison query in this chapter uses the same trick. This one adds one more tool: a `highlight` block, which returns a short fragment from each matching summary with the matched terms wrapped in `<em>` tags — so you can see exactly which words BM25 rewarded without wading through full summaries.
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
@@ -871,7 +871,7 @@ GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hi
 }
 ```
 
-**Expected** Five hits ordered by BM25 `_score`, and the top of the list is sea-adventure keyword bait: *Kidnapped*, *Twenty Thousand Leagues under the Sea*, *Robinson Crusoe*, *Treasure Island*. Now read the `highlight` fragments — the `<em>` tags mark exactly which query words each summary matched (*voyage*, *sea*), because term overlap is all BM25 can reward. The most revealing hit is *Don Quijote*: check its highlight and you'll see it matched almost nothing but the word "a". It climbed to #4 despite having nothing to do with the sea. There are other thematically perfect books that don't surface at all because they use different words. This is the weakness of BM25 that we'll address in the next steps. (Hold onto this list)
+**Expected** - Five hits ordered by BM25 `_score`, and the top of the list is sea-adventure keyword bait: *Kidnapped*, *Twenty Thousand Leagues under the Sea*, *Robinson Crusoe*, *Treasure Island*. Now read the `highlight` fragments — the `<em>` tags mark exactly which query words each summary matched (*voyage*, *sea*), because term overlap is all BM25 can reward. The most revealing hit is *Don Quijote*: check its highlight and you'll see it matched almost nothing but the word "a". It climbed to #4 despite having nothing to do with the sea. There are other thematically perfect books that don't surface at all because they use different words. This is the weakness of BM25 that we'll address in the next steps. (Hold onto this list)
 ```json
 {
   "hits": {
@@ -912,7 +912,7 @@ Now run the identical text through the sparse model and watch the ranking change
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
@@ -940,7 +940,7 @@ GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hi
 }
 ```
 
-**Expected** Five hits. Put them next to your Step 7 baseline and read the two lists as one experiment:
+**Expected** - Five hits. Put them next to your Step 7 baseline and read the two lists as one experiment:
 
 | Rank | Step 7: lexical (BM25) | Step 8: sparse (neural) |
 |------|------------------------|-------------------------|
@@ -1003,7 +1003,7 @@ One more data point completes the picture. Your Chapter 2 index and dense model 
 
 Replace `YOUR_DENSE_MODEL_ID` with your **Chapter 2** model id (not the sparse one):
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 GET vector-search-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
@@ -1026,7 +1026,7 @@ GET vector-search-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.
 }
 ```
 
-**Expected** Five hits: *Gulliver's Travels*, *Life on the Mississippi*, *Robinson Crusoe*, *Treasure Island*, *Undine*. You now have all three retrieval styles ranked on the same query, so line them up:
+**Expected** - Five hits: *Gulliver's Travels*, *Life on the Mississippi*, *Robinson Crusoe*, *Treasure Island*, *Undine*. You now have all three retrieval styles ranked on the same query, so line them up:
 
 | Rank | Step 7: lexical (BM25) | Step 8: sparse | Step 9: dense |
 |------|------------------------|----------------|---------------|
@@ -1070,7 +1070,7 @@ BM25 scores (~0–20) and sparse scores (~0–10) live on different scales. Add 
 
 Time to turn the theory above into a reusable cluster object. The pipeline lives on the cluster rather than inside any one query, which is a bigger deal than it sounds: every hybrid search that references it by name gets the same min-max rescaling and 30/70 weighting, so when relevance tuning changes the weights later, you change them once here and every caller picks the change up instantly, with no application deploy. And creating it **before** running a `hybrid` query genuinely matters: without it, the two branches' raw scores just get summed and whichever scale is larger silently wins.
 
-**Request** — Create the normalization search piepline by pasting into Dev Tools:
+**Request** - Create the normalization search piepline by pasting into Dev Tools:
 
 ```http
 PUT _search/pipeline/nlp-search-normalization-pipeline
@@ -1094,7 +1094,7 @@ PUT _search/pipeline/nlp-search-normalization-pipeline
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1111,7 +1111,7 @@ Here's the payoff of the whole lesson: both retrieval methods in one request. Lo
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 GET my-sparse-neural-index/_search?search_pipeline=nlp-search-normalization-pipeline&filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
@@ -1152,7 +1152,7 @@ GET my-sparse-neural-index/_search?search_pipeline=nlp-search-normalization-pipe
 }
 ```
 
-**Expected** Five hits ranked by the combined, normalized score:
+**Expected** - Five hits ranked by the combined, normalized score:
 
 1. Twenty Thousand Leagues under the Sea (~0.91)
 2. Treasure Island (~0.75)
@@ -1199,7 +1199,7 @@ Reciprocal Rank Fusion ignores raw scores entirely and fuses results by **where*
 
 Now build the alternative fusion strategy so you can compare the two head-to-head. Structurally this pipeline is a sibling of the one from Lesson 3-2: same `phase_results_processors` slot, same position in the request flow, and the same 30/70 weighting, so the only variable in the comparison is the fusion strategy itself. The difference is the processor inside it.
 
-**Request** — Create the RRF search pipeline by pasting into Dev Tools:
+**Request** - Create the RRF search pipeline by pasting into Dev Tools:
 
 ```http
 PUT _search/pipeline/rrf-search-pipeline
@@ -1221,7 +1221,7 @@ PUT _search/pipeline/rrf-search-pipeline
 }
 ```
 
-**Expected** output:
+**Expected Output:**
 
 ```json
 {
@@ -1237,7 +1237,7 @@ Run your final experiment, and notice what you're *not* changing: the query body
 
 Replace `YOUR_SPARSE_MODEL_ID`:
 
-**Request** — paste into Dev Tools:
+**Request** - paste into Dev Tools:
 
 ```http
 GET my-sparse-neural-index/_search?search_pipeline=rrf-search-pipeline&filter_path=hits.hits._id,hits.hits._score,hits.hits._source,hits.hits.highlight
@@ -1278,7 +1278,7 @@ GET my-sparse-neural-index/_search?search_pipeline=rrf-search-pipeline&filter_pa
 }
 ```
 
-**Expected** Five hits ranked by fused reciprocal rank:
+**Expected** - Five hits ranked by fused reciprocal rank:
 
 1. Twenty Thousand Leagues under the Sea (~0.0242)
 2. Treasure Island (~0.0233)
