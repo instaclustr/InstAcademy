@@ -3,13 +3,12 @@
 # Chapter 1 — Configuring and optimizing vector search
 
 This is the hands-on companion to Chapter 1 of the video course. Everything the
-videos demonstrate — index settings, HNSW/IVF method parameters, exact k-NN,
+videos demonstrate (index settings, HNSW/IVF method parameters, exact k-NN,
 disk-based and memory-optimized storage, chunking, shard sizing, and dimension
-reduction — is turned into a request you can run yourself in **Dev Tools** (or
+reduction) is turned into a request you can run yourself in **Dev Tools** (or
 [Bruno fast mode](../../bruno/Chapter%201/)).
 
-The chapter is one continuous workshop, organized into four sections that match
-the lessons:
+The chapter is one continuous workshop, organized into three sections:
 
 | Section | Lesson | What you build |
 |---------|--------|----------------|
@@ -20,26 +19,20 @@ the lessons:
 Work through the sections in order — later steps reuse earlier indexes. A
 [cleanup section](#cleanup) at the end removes everything you created.
 
-## How to read a step
+## Before you start
 
-Every step uses the same layout (see the [lab guide](../../HANDS-ON-GUIDE.md)):
+- Make sure you have deployed an Instaclustr Free-Trial OpenSearch cluster. [Cluster setup](../../CLUSTER-SETUP.md) takes about 15 minutes.
+- Familiarize yourself with the workshop's layout. The [lab guide](../../HANDS-ON-GUIDE.md) explains how a step is structured and how to run it.
 
-- A concept from the video is described.
-- **Request** — code you'll paste into **Dev Tools** (Dashboards → Dev Tools).
-- **Expected** — what the output should look like.
-- **Save** — values you'll reuse later.
-- **Fast mode** — ability to run it as a full script with bruno instead of doing it manually.
+**Open Dev Tools now.** It's the console built into OpenSearch Dashboards, and it's where you'll run every request in this chapter. Go to your Dashboards URL (port **5601**, from the Connection Info tab in the Instaclustr console), log in with your cluster username and password, then open the menu at the top left and choose **Dev Tools** under Management. The direct link looks like this:
 
-## Prerequisites
+```
+https://opensearch-dashboards.<your-cluster-id>.cnodes.io:5601/app/dev_tools#/console
+```
 
-- A running **Instaclustr OpenSearch cluster** (a trial cluster works, **AI Search
-  Plugin** enabled) reachable from your browser — see [cluster setup](../../CLUSTER-SETUP.md).
-  Your IP must be on the firewall allow-list.
-- **OpenSearch 3.5+.**
-- **Dev Tools** to run the commands or [Bruno](../../bruno/README.md) configured with
-  `baseUrl`, `username`, `password` of the OpenSearch cluster.
-- Sample floating-point vectors used in these labs are tiny (8-dimensional) and
-  ship as bulk files under [`rest/bulk/`](../../rest/bulk/). Real embeddings used in Chapter 2.
+Type a request in the left pane, press **Ctrl+Enter** to run it, and the response appears on the right. Keep this tab open for the rest of the chapter.
+
+The vectors in this chapter are tiny (8 dimensions) and hand-written, so you can read them and reason about the distances yourself. Real embeddings from a real model arrive in Chapter 2.
 
 ---
 
@@ -68,12 +61,11 @@ dominate:
   segments means higher search latency, so merging segments is a core tuning
   lever (Step 5 below).
 
-### Step 1: Verify cluster connectivity (only if using Fast-mode/Bruno)
+### Step 1: Say hello to your cluster
 
-Every later step assumes basic auth and TLS work. `GET /` returns the cluster
-name and version — a five-second smoke test that saves hours of debugging bulk
-or model errors later. It also confirms your engine version so you know which
-features (like `on_disk` mode) are available.
+Start with the simplest possible request, so that if anything is wrong with your connection, you find out now instead of halfway through a bulk load. `GET /` asks the cluster to introduce itself and comes back with its name and version. It also confirms which OpenSearch version you're on, which decides what features are available to you later (such as `on_disk` mode in Step 6).
+
+Type it into Dev Tools and press **Ctrl+Enter**.
 
 **Request:**
 
