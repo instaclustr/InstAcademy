@@ -1,26 +1,14 @@
+← [Chapter 3](../Chapter%203/README.md)
+
 # Chapter 4 — Performance meets precision: RAG optimization in OpenSearch
 
-**Chapter 4** · [Vector Storage & Search for AI](../../README.md)
-
-← [Chapter 3](../Chapter%203/README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 5](../Chapter%205/README.md)
-
-Take a working RAG pipeline and make it production-ready, layer by layer: tune the **pipeline** (Lesson 4-1), the **index** (Lesson 4-2), and the **query** (Lesson 4-3), then expose it all to AI agents through the **built-in MCP server** (Lesson 4-4). Everything runs against one bookstore dataset so you can watch each optimization change the numbers.
+Here you'll make a working RAG pipeline and make it production-ready, layer by layer: tuning the **pipeline** (Lesson 4-1), the **index** (Lesson 4-2), and the **query** (Lesson 4-3), then exposing it all to AI agents through the **built-in MCP server** (Lesson 4-4). Everything runs against one bookstore dataset so you can watch each optimization change the numbers.
 
 ## One index, built right the first time
 
-This chapter builds a single chunked index — **`bookstore-rag`** (nested `content_chunks` + a 768-dim `content_embedding` on FAISS HNSW + exact-typed metadata) — up front, then pulls every pipeline, index, and query lever against it. **Index-time decisions are hard to undo**, so Lesson 4-2 examines what an unoptimized first attempt looks like and why this index is shaped the way it is.
+This chapter builds one chunked index, **`bookstore-rag`**. Every pipeline, index, and query technique that follows runs against that same index, so you can watch each optimization change the numbers. The order matters because **index-time decisions are hard to undo**: once documents land, most mapping choices are locked in. Lesson 4-2 looks back at what an unoptimized first attempt would have looked like and why this index is shaped the way it is.
 
 > **Data note.** The course bulk file ([`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson)) is 256 real book summaries enriched with deterministic `genre`, `price`, `rating`, `publication_year`, and `in_stock` fields so the filtering, reranking, and rank-evaluation steps return meaningful results. Values are stable across runs (derived from `book_id`).
-
-## Prerequisites
-
-- Complete [Chapter 1 · Lesson 1](../Chapter%201/README.md) — cluster connectivity.
-- A cluster with **ML Commons**, **k-NN**, and the **AI Search** plugin (the course Instaclustr cluster). See [cluster setup](../../CREATE_CLUSTER.md).
-- Open **OpenSearch Dashboards → Dev Tools** (learn mode) or the [Bruno `Chapter 4`](../../bruno/Chapter%204/) collection (fast mode — flat, numbered up to `52`; the numbering has gaps where steps were consolidated).
-- **Save as you go:** `model_group_id`, `model_id`, `task_id`. In Bruno, set them as `modelGroupId`, `modelId`, `taskId`, `agentId` environment variables.
-- For k-NN / hybrid / profiling / rank-eval steps, open [`bookstore-rag-query-vector.json`](bookstore-rag-query-vector.json) in this folder — a pre-baked 768-dimensional query vector. Paste its array wherever a step shows `[ /* paste 768 floats … */ ]`.
-
-> **OpenSearch 3.x note.** `nmslib` was removed in OpenSearch 3.0; **FAISS** is the production k-NN engine (Lucene remains available). This chapter uses `engine: faiss` with the `hnsw` method throughout. `text_chunking`, `_rank_eval`, and the MCP server APIs below were verified against the OpenSearch 3.x documentation.
 
 ---
 
@@ -51,25 +39,26 @@ POST _plugins/_ml/model_groups/_search
       {
         "_index": ".plugins-ml-model-group",
         "_id": "QxvYWZ8BCKwDOnnOFRwS",
-        "_source": { "name": "huggingface-models", "latest_version": 2 }
+        "_source": { "name": "huggingface-models", "latest_version": X }
       }
     ]
   }
 }
 ```
 
-Your `_id` will differ; everything else should look like this (the response includes more `_source` fields than shown).
+Your `_id` will differ; everything else should look similar to this (the response includes more `_source` fields than shown).
 
-**Save** — the group's `_id` as `model_group_id`.
+**Save** the group's `_id` as `model_group_id`.
 **Fast mode** — `02-find-model-group.bru`
-
-> **Never delete this group** — it contains models registered by other chapters; only remove models you personally registered into it. (On a fresh cluster with no group yet, create it with the `POST _plugins/_ml/model_groups/_register` body from Chapter 2 Step 2.)
 
 ### Step 2: Register `all-mpnet-base-v2`
 
-Here's a decision that matters more than most tuning knobs combined: which embedding model you use. Swapping models can move recall by 10 to 20% on domain data, dwarfing what any single index setting buys you. For this chapter you're upgrading from Chapter 2's DistilBERT to `all-mpnet-base-v2` (also 768-dim), a stronger general-English encoder and a solid default for RAG workloads. The registration flow is the familiar one. Replace `YOUR_MODEL_GROUP_ID`.
+Here's a decision that matters more than most tuning knobs combined: which embedding model you use. Swapping models can significantly impact recall on data, dwarfing what any single index setting buys you. For this chapter you're upgrading from Chapter 2's DistilBERT to `all-mpnet-base-v2` (also 768-dim), a stronger general-English encoder and a solid default for RAG workloads. 
 
-**Request**
+Replace `YOUR_MODEL_GROUP_ID`.
+
+**Request** - Register the all-mpnet-base-v2 model
+
 ```http
 POST _plugins/_ml/models/_register
 {
@@ -79,37 +68,69 @@ POST _plugins/_ml/models/_register
   "model_format": "TORCH_SCRIPT"
 }
 ```
-**Expected** a `task_id` immediately (`{"task_id": "...", "status": "CREATED"}`), because the ~430 MB download happens in the background. Poll `GET _plugins/_ml/tasks/YOUR_TASK_ID` until the state flips. On this cluster registration completed in about 80 seconds:
+
+**Expected** a `task_id` immediately, because the ~430 MB download happens in the background. 
 
 ```json
 {
-  "model_id": "uBzMXp8BG7RaESRuvw8A",
+  "task_id": "BBsjYZ8BCKwDOnnOuWRW",
+  "status": "CREATED"
+}
+```
+**Request** - Poll `GET _plugins/_ml/tasks/YOUR_TASK_ID` until `"state": "COMPLETED"`. On this cluster registration completed in about 80 seconds:
+
+```http
+GET _plugins/_ml/tasks/YOUR_TASK_ID
+```
+
+```json
+{
+  "model_id": "lhwjYZ8BG7RaESRuu03x",
   "task_type": "REGISTER_MODEL",
   "function_name": "TEXT_EMBEDDING",
   "state": "COMPLETED",
-  "worker_node": ["SEDgR4UkS96_RaYdAdJMMw"],
-  "create_time": 1784001904025,
-  "last_update_time": 1784001986007,
+  "worker_node": [
+    "SEDgR4UkS96_RaYdAdJMMw"
+  ],
+  "create_time": 1784041158949,
+  "last_update_time": 1784041231966,
   "is_async": true
 }
 ```
 
-**Save** — the `model_id` from the completed task.
+**Save** the `model_id` to be used later
+
 **Fast mode** — `03-register-mpnet-model.bru` → `04-poll-register-task.bru`
 
 ### Step 3: Deploy the model
 
-Same second half of the lifecycle you've run twice before: registration put the artifact on disk, and deploying loads it into memory so it can serve inference at ingest and query time.
+Registering the model put the artifact on disk, and deploying loads it into memory so it can serve inference at ingest and query time.
 
-**Request**
+**Request** - Deploy the model
 ```http
 POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
 ```
-**Expected** a `task_id`; poll until `COMPLETED` (about a minute on this cluster). The completed task lists the worker nodes that loaded the model, and with no dedicated ML nodes here, that means all three data nodes:
+**Expected** a `task_id`;
 
 ```json
 {
-  "model_id": "uBzMXp8BG7RaESRuvw8A",
+  "task_id": "KRsnYZ8BCKwDOnnOe2Tv",
+  "task_type": "DEPLOY_MODEL",
+  "status": "CREATED"
+}
+```
+
+**Request** - Poll the deploy task until `"state": "COMPLETED"` (about a minute on this cluster). Replace `YOUR_TASK_ID` with the `task_id` from the deploy response above:
+
+```http
+GET _plugins/_ml/tasks/YOUR_TASK_ID
+```
+
+**Expected** the completed task will list the worker nodes that loaded the model, and with no dedicated ML nodes here, that means all three data nodes:
+
+```json
+{
+  "model_id": "lhwjYZ8BG7RaESRuu03x",
   "task_type": "DEPLOY_MODEL",
   "function_name": "TEXT_EMBEDDING",
   "state": "COMPLETED",
@@ -118,18 +139,21 @@ POST _plugins/_ml/models/YOUR_MODEL_ID/_deploy
     "w5pYbppFT6-lxuh62xqkmw",
     "F9CA3Sq3ReSvZdflXArfzA"
   ],
+  "create_time": 1784041405422,
+  "last_update_time": 1784041462433,
   "is_async": true
 }
 ```
 
-Curious how the artifact got there? `GET _plugins/_ml/models/YOUR_MODEL_ID?filter_path=model_state,total_chunks` reports `"model_state": "DEPLOYED"` and `"total_chunks": 44`: the same chunked-storage mechanism you inspected in Chapter 2, just a bigger model. Write down the `model_id` (in Bruno, set `modelId` in the **Local** environment).
 **Fast mode** — `05-deploy-model.bru` → `06-poll-deploy-task.bru`
 
 ### Step 4: Create the chunking ingest pipeline
 
-This is the most sophisticated pipeline in the course, and it exists to solve a problem that quietly ruins RAG systems: a 2,000-word book description is far too long for one embedding, because models truncate past ~512 tokens and everything after that vanishes from search. Three processors work together to fix it. First, `text_chunking` splits `content` into overlapping segments; `token_limit: 384` uses about 75% of a 512-token budget (leaving headroom), and `overlap_rate: 0.2` keeps 20% overlap so a sentence straddling a boundary survives in at least one chunk (valid range is 0 to 0.5). Second, a small Painless script reshapes the raw chunk array into `{text, chunk_index}` objects so they fit the nested field you'll create next. Third, `text_embedding` embeds the whole `content` into `content_embedding` for vector search. Replace `YOUR_MODEL_ID`.
+This is the most sophisticated pipeline in the course, and it exists to solve a problem that quietly ruins RAG systems: a 2,000-word book description is far too long for one embedding, because models truncate past ~512 tokens and everything after that vanishes from search. Three processors work together to fix it. First, `text_chunking` splits `content` into overlapping segments; `token_limit: 384` uses about 75% of a 512-token budget (leaving headroom), and `overlap_rate: 0.2` keeps 20% overlap so a sentence straddling a boundary survives in at least one chunk (valid range is 0 to 0.5). Second, a small Painless script reshapes the raw chunk array into `{text, chunk_index}` objects so they fit the nested field you'll create next. Third, `text_embedding` embeds the whole `content` into `content_embedding` for vector search. 
 
 ![The chunking ingest pipeline](../../screenshots/chapter4/diagram-01-chunking-ingest-pipeline.png)
+
+Replace `YOUR_MODEL_ID`.
 
 **Request**
 ```http
@@ -155,7 +179,6 @@ PUT _ingest/pipeline/bookstore-chunking-pipeline
   ]
 }
 ```
-> **Structured documents.** For content with clear headers you can chunk with the `delimiter` algorithm (splits on `\n\n` by default) first, then apply `fixed_token_length` as a second pass for more coherent chunks.
 
 **Expected** output:
 
@@ -165,17 +188,17 @@ PUT _ingest/pipeline/bookstore-chunking-pipeline
 }
 ```
 
-The pipeline exists but has run nothing yet. It fires automatically in Step 6, because Step 5 wires it in as the index's `default_pipeline`.
+The pipeline exists but has run nothing yet. It will execute automatically in Step 6, because we will wire it in the next step to be the index's `default_pipeline`.
 
 **Fast mode** — `16-create-chunking-pipeline.bru`
 
 ### Step 5: Create the `bookstore-rag` index (FAISS HNSW, chunked)
 
-Now build the index this whole chapter revolves around. Every mapping choice here is deliberate, and together they're a checklist of the index-design lessons so far: **FAISS + HNSW** for fast approximate search, with `m=16, ef_construction=128` as a balanced starting point (`m` controls graph connectivity, `ef_construction` controls build care; both trade recall against memory and build time). `content_chunks` is `nested` so each chunk's text and index stay glued together as one queryable unit. `genre` is `keyword`, not `text`, because filters need exact matches, not full-text analysis. And `refresh_interval` starts at `30s` because a bookstore catalog updates nightly, not per second, so there's no reason to pay for one-second freshness.
+Now build the index this whole chapter revolves around. Every mapping choice here is deliberate, and together they're a checklist of the index-design lessons so far: **FAISS + HNSW** for fast approximate search, with `m=16, ef_construction=128` as a balanced starting point (`m` controls graph connectivity, `ef_construction` controls build care; both trade recall against memory and build time). `content_chunks` is `nested` so each chunk's text and index stay glued together as one queryable unit. `genre` is `keyword`, not `text`, because filters need exact matches, not full-text analysis. And `refresh_interval` starts at `30s` because a bookstore catalog updates nightly, not per second, so there's no reason to utilize additional resources for one-second freshness.
 
 ![Anatomy of the bookstore-rag index](../../screenshots/chapter4/diagram-02-bookstore-rag-index-anatomy.png)
 
-**Request** — delete first if re-running: `DELETE bookstore-rag`.
+**Request** — Create the `bookstore-rag` index
 ```http
 PUT bookstore-rag
 {
@@ -200,6 +223,7 @@ PUT bookstore-rag
   }
 }
 ```
+
 **Expected** output:
 
 ```json
@@ -214,14 +238,24 @@ PUT bookstore-rag
 
 ### Step 6: Fast bulk load (refresh off → bulk → force-merge → refresh on)
 
-Chapter 2 taught you the theory of this recipe; now run it for real. Turning refresh off during the load stops Lucene from cutting a new segment every second, the force merge afterward collapses the segment debris into a few large files, and restoring refresh makes everything visible in one shot. This four-move sequence (refresh off, bulk, force-merge, refresh on) is the standard production pattern for any large vector load, worth committing to memory. Expect several minutes on a trial cluster, since each of the 256 documents is chunked and embedded server-side on arrival.
+Chapter 2 taught you the theory of this recipe; now run it for real. Turning refresh off during the load stops Lucene from cutting a new segment every second, the force merge afterward collapses the segment debris into a few large files, and restoring refresh makes everything visible in one shot. This four-move sequence (refresh off, bulk, force-merge, refresh on) is the standard pattern for any large vector load, worth committing to memory. Expect it to take several minutes on your cluster, since each of the 256 documents is chunked and embedded server-side on arrival.
 
 **Request** — turn refresh off first:
+
 ```http
 PUT bookstore-rag/_settings
 { "index": { "refresh_interval": "-1" } }
 ```
-**Request** — bulk-load the 256 books. Every document passes through the chunking pipeline on arrival, so each one gets chunked and embedded server-side. Give it a generous timeout; on a busy cluster this takes several minutes (this run took about 40 seconds on an idle one). The same payload lives in [`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson) if you prefer to copy from a file.
+**Expected** output:
+
+```json
+{
+  "acknowledged": true
+}
+```
+
+**Request** — now we bulk-load the 256 books. Every document passes through the chunking pipeline on arrival, so each one gets chunked and embedded server-side. We'll give it a generous timeout (10 minutes or 600 seconds); on a busy cluster this takes several minutes. The same payload lives in [`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson) if you prefer to copy from a file.
+
 ```http
 POST _bulk?timeout=600s
 {"index": {"_index": "bookstore-rag", "_id": "45304"}}
@@ -736,21 +770,86 @@ POST _bulk?timeout=600s
 {"book_id": "67098", "title": "Winnie-the-Pooh", "authors": ["Milne, A. A. (Alan Alexander)"], "passage_text": "\"Winnie-the-Pooh\" by A. A. Milne is a children's book published in 1926. Set in the fictional Hundred Acre Wood, this collection of short stories follows the adventures of a lovable teddy bear named Winnie-the-Pooh and his friends, including Christopher Robin, Piglet, Eeyore, and Rabbit. Inspired by Milne's son's stuffed toys, these tales bring to life a charming world of honey hunts, lost tails, mysterious footprints, and friends getting into tight places. (This is an automatically generated summary.)", "content": "\"Winnie-the-Pooh\" by A. A. Milne is a children's book published in 1926. Set in the fictional Hundred Acre Wood, this collection of short stories follows the adventures of a lovable teddy bear named Winnie-the-Pooh and his friends, including Christopher Robin, Piglet, Eeyore, and Rabbit. Inspired by Milne's son's stuffed toys, these tales bring to life a charming world of honey hunts, lost tails, mysterious footprints, and friends getting into tight places. (This is an automatically generated summary.)", "author": "Milne, A. A. (Alan Alexander)", "genre": "science fiction", "price": 20.45, "rating": 4.1, "publication_year": 1992, "in_stock": true}
 {"index": {"_index": "bookstore-rag", "_id": "12"}}
 {"book_id": "12", "title": "Through the Looking-Glass", "authors": ["Carroll, Lewis"], "passage_text": "\"Through the Looking-Glass\" by Lewis Carroll is a novel published in 1871. When Alice climbs through a mirror into a fantastical world, she discovers everything is reversed\u2014including logic itself. In this chess-themed realm, running keeps you stationary, walking away brings you closer, and nursery-rhyme characters come alive. Alice encounters peculiar beings including the severe Red Queen, quarrelsome twins Tweedledum and Tweedledee, and the opinionated Humpty Dumpty. Like its beloved predecessor, this sequel blends absurdist adventure with unforgettable imagery and phrases that remain part of our language today. (This is an automatically generated summary.)", "content": "\"Through the Looking-Glass\" by Lewis Carroll is a novel published in 1871. When Alice climbs through a mirror into a fantastical world, she discovers everything is reversed\u2014including logic itself. In this chess-themed realm, running keeps you stationary, walking away brings you closer, and nursery-rhyme characters come alive. Alice encounters peculiar beings including the severe Red Queen, quarrelsome twins Tweedledum and Tweedledee, and the opinionated Humpty Dumpty. Like its beloved predecessor, this sequel blends absurdist adventure with unforgettable imagery and phrases that remain part of our language today. (This is an automatically generated summary.)", "author": "Carroll, Lewis", "genre": "philosophy", "price": 26.66, "rating": 2.9, "publication_year": 2024, "in_stock": false}
-```
-**Expected** `"errors": false` with 256 items, every one `"result": "created"` with status `201`. If items fail with "Model not ready yet", the model from Step 3 is not fully deployed; re-check its state and retry.
 
-**Request** — compact the segment debris, then restore refresh:
+```
+
+**Expected** `"errors": false` with 256 items, every one `"result": "created"` with status `201`. (If items fail with "Model not ready yet", the model from Step 3 is not fully deployed; re-check its state and retry.)
+
+```json
+{
+  "took": 2123,
+  "ingest_took": 43374,
+  "errors": false,
+  "items": [
+    {
+      "index": {
+        "_index": "bookstore-rag",
+        "_id": "45304",
+        "_version": 1,
+        "result": "created",
+        "_shards": {
+          "total": 2,
+          "successful": 2,
+          "failed": 0
+        },
+        "_seq_no": 0,
+        "_primary_term": 1,
+        "status": 201
+      }
+    },[...]
+```
+
+**Request** — next, we'll compact the segment debris, and then restore refresh:
+
 ```http
 POST bookstore-rag/_forcemerge?max_num_segments=5
 ```
+
+**Expected** output:
+
+```json
+{
+  "_shards": {
+    "total": 2,
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+**Request** — and now, restore our refresh interval:
+
 ```http
 PUT bookstore-rag/_settings
-{ "index": { "refresh_interval": "1s" } }
+{ "index": { "refresh_interval": "30s" } }
 ```
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true
+}
+```
+
+**Request** — Once we've restored the refresh interval, we'll go ahead and do a manual refresh on this index:
+
 ```http
 POST bookstore-rag/_refresh
 ```
-Then check the shard picture — shard count is a near-permanent, one-time decision. Target **10–30 GB/shard** for search-heavy RAG, **30–50 GB** for write-heavy, and for pure vector start at **50 GB**, reducing toward **10 GB** if queries are hybrid and latency-sensitive (`number_of_shards = total_data_size_GB / target_shard_size_GB`; at ~5 GB for 500k books, one primary shard is plenty):
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true
+}
+```
+
+Now check the shard picture. Shard count is a near-permanent decision, so it's worth a look while the index is fresh. The sizing targets: **10–30 GB per shard** for search-heavy RAG, **30–50 GB** for write-heavy workloads, and for pure vector work start at **50 GB** and move toward **10 GB** if your queries are hybrid and latency-sensitive. The math is simple: divide your total data size by the target shard size. Scaled to 500k books this catalog would be about 5 GB, so one primary shard is plenty.
+
+**Request** - List every shard copy of the index and how it's doing. The `h=` parameter keeps just the six columns that matter here: which shard, primary or replica (`prirep`), allocation state, Lucene document count, and size on disk. `format=json` returns JSON instead of the default text table so it reads like every other response in the course.
+
 ```http
 GET _cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=json
 ```
@@ -761,29 +860,41 @@ GET _cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=jso
   {
     "index": "bookstore-rag",
     "shard": "0",
-    "prirep": "p",
+    "prirep": "r",
     "state": "STARTED",
     "docs": "502",
-    "store": "163.9kb"
+    "store": "2mb"
   },
   {
     "index": "bookstore-rag",
     "shard": "0",
-    "prirep": "r",
+    "prirep": "p",
     "state": "STARTED",
     "docs": "502",
-    "store": "163.9kb"
+    "store": "2mb"
   }
 ]
 ```
 
-Wait, 502 documents when you loaded 256? That's the nested field at work: Lucene stores each `content_chunks` entry as its own hidden document alongside its parent, and `_cat/shards` counts Lucene documents. Run `GET bookstore-rag/_count` and you get the answer an application sees: `{"count": 256}`. The `store` number also grows for a while after the load as merged segments settle; check it again in a minute if you want the real size.
+Wait, 502 documents when you loaded 256? That's the nested field at work: Lucene stores each `content_chunks` entry as its own hidden document alongside its parent, and `_cat/shards` counts Lucene documents. **Run** `GET bookstore-rag/_count` and you get the answer an application sees: 
+
+```json
+{
+  "count": 256,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  }
+}
+```
 
 **Fast mode** — `19-disable-refresh.bru` → `20-bulk-bookstore-rag.bru` → `21-force-merge.bru` → `22-restore-refresh.bru` → `23-refresh-bookstore-rag.bru` → `24-cat-shards.bru`
 
 ### Step 7: k-NN search — the result-set-size lever
 
-Your first lever is the least glamorous and the easiest to ship today: ask for less. Vector search returns the top-`k` neighbors, and every extra result plus every unused field in `_source` is payload your cluster computes, serializes, and sends for nothing. One wasteful query is invisible; thousands per hour become real latency and real bandwidth. So request only what the page will show: `size: 10` and the five fields you actually display. Paste the stored query vector where marked.
+Your first lever is the least glamorous and the easiest to use: ask for less. One misconception to clear up before it makes sense: `k` does not control how much similarity math happens. The HNSW graph visits a bounded set of candidates on every query no matter what you ask for (that bound is `ef_search`, and it's exact k-NN that scores every vector in the index, which is exactly why this chapter doesn't use it). What your request does control is everything after the math: each returned hit has its stored fields read from disk, filtered, serialized, and sent over the network, and this index's raw `_source` carries a 768-number embedding plus every chunk of the book. One wasteful query is invisible; thousands per hour become real latency and real bandwidth. So request only what the page will show: `size: 10` and the five fields you actually display.
 
 **Request**
 ```http
@@ -793,7 +904,104 @@ GET bookstore-rag/_search
   "_source": ["title", "author", "genre", "price", "rating"],
   "query": {
     "knn": {
-      "content_embedding": { "vector": [ /* paste 768 floats from bookstore-rag-query-vector.json */ ], "k": 10 }
+      "content_embedding": { "vector": [
+          -0.72274804, 0.41321254, -0.016454158, -0.26167125, 0.14559725, 0.14592808, 0.6537714, -0.11037713,
+          -0.114465825, 0.18909205, 0.38118467, 0.17797352, -0.2581246, 0.1357544, 0.08791255, 0.14977679,
+          0.025075039, -0.16685882, -0.59627074, -0.109226316, -0.10564344, -0.4014701, 0.17575973, 0.10721079,
+          0.22122298, -0.05179187, 0.14900523, 0.2149368, -0.3717858, 0.16204645, -0.4332722, -0.16565955,
+          0.29577807, 0.2620248, -0.12507172, 0.26131508, -0.42445394, -0.08767605, 0.50347495, 0.05494609,
+          -0.47321662, -0.07447353, -0.36174572, 0.21912414, -0.103114195, -0.044891044, -0.45029828, 0.42404222,
+          -0.1074994, 0.08746214, 0.107004896, 0.23354025, -0.046190847, -0.57334685, -0.07392718, 0.24103211,
+          0.10571745, -0.33936822, -0.73158324, -0.30453873, 0.18474467, -0.016645554, 0.25031373, -0.18336724,
+          -0.15137027, 0.45624587, -0.0616582, 0.01998918, -0.8486786, 0.032559402, 0.45460197, 0.22903036,
+          -0.18114069, -0.650845, 0.19077452, -0.52231294, 0.08818927, 0.4066528, 0.25559947, 0.0053160936,
+          -0.3969785, 0.26721337, 0.3115037, 0.24166596, -0.17474256, -0.008221354, 0.48585287, 0.23581174,
+          -0.16307122, 0.20339376, 0.078453206, -0.10851361, -0.43311924, 0.31977975, 0.42800915, 0.2621617,
+          0.16748737, 0.0022518672, -0.56798476, -0.41212782, -0.29752195, 0.25052008, 0.12487541, 0.08517073,
+          0.49797377, 0.017074747, 0.55765796, -0.18143941, -0.048774786, 0.04425166, 0.5259056, 0.03470879,
+          -0.0035997122, -0.32772985, 0.11716893, 0.28888452, -0.14731303, -0.7221337, -0.3763936, -0.15666306,
+          0.46021613, 0.0021106824, -0.010831986, -0.2484829, -0.23658684, -0.120508276, -0.084076315, 0.1707883,
+          -0.32133347, -0.2050264, 0.34974474, -0.13034464, -0.100089505, 0.013775802, 0.021153353, -0.11238577,
+          -0.076726235, -0.14974597, -0.18686132, 0.24186452, -0.09198388, -0.00055629306, 0.22100948, 0.045402966,
+          0.16096978, -0.37114635, 0.22919914, -0.08706446, -0.0919104, -0.20055297, 0.105357595, 0.090088785,
+          -0.04702621, -0.54474247, 0.07492476, -0.10748231, 0.25343925, 0.317164, -0.36329976, -0.12062072,
+          0.16093428, 0.12728219, -0.40852442, -1.0462359, 0.13337879, 0.038288724, 0.28214252, -0.13625908,
+          -0.2649942, -0.27992186, 0.1656124, -0.13370542, 0.7836721, 0.62731797, -0.06391317, 0.39173323,
+          0.729962, 0.66707516, 0.044130124, 0.02857397, -0.42229936, 0.44650492, -0.08271408, -0.060063984,
+          0.14284775, -0.04600598, -0.04781346, -0.1448393, 0.33658138, -0.078074545, 0.05257741, -0.45870322,
+          0.048813045, 0.0437853, 0.45160395, -0.40782258, -0.3450237, -0.013291911, -0.2309159, -0.12813081,
+          -0.23961672, 0.40873608, 0.04222697, -0.04331, -0.04718083, -0.14159963, 0.17143182, 0.466742,
+          -0.35619467, 0.11404759, -0.2206648, -0.058717825, 0.1764606, 0.3839564, -0.22475345, -0.25929713,
+          0.19610687, -0.08545362, -0.1429616, -0.1947058, 0.061522275, -0.10972977, -0.76877904, 0.29675174,
+          0.5217985, 0.6199755, 0.14299951, -0.43167618, -0.084783405, 0.33869997, 0.043958157, 0.013163835,
+          0.09805272, -0.11370975, -0.15791704, 0.14524934, 0.005532656, 0.1703971, 0.43349516, -0.04201393,
+          0.23707338, 0.09455025, 0.013865203, 0.6635432, 0.1874996, -0.17230448, 0.54697967, -0.5446763,
+          -0.11094852, 0.025431199, 0.16744596, 0.41160274, -0.21393496, 0.26721463, -0.12347463, -0.7897255,
+          0.019061284, -0.3975962, 0.2512642, -0.1356007, -0.47119468, 0.17439891, -0.36804238, -0.14085796,
+          0.21925192, -0.18987596, 0.14156292, -0.26900098, -0.18828224, 0.0037869927, -0.2338032, 0.3088986,
+          0.08881466, 0.26997542, -0.02006638, -0.15465713, 0.4944153, 0.3252013, 0.4883281, -0.38005945,
+          -0.042820457, 0.07279916, -0.2832055, 0.13333526, 0.006627529, -0.50999236, 0.042478025, 0.1048688,
+          0.12231487, -0.24646087, 0.053978894, -0.24556783, 0.214183, -0.35124695, -0.5636927, 0.4688765,
+          -0.10285391, 0.048804197, -0.20874552, 0.056751803, -0.2413617, -0.040264443, 0.02658639, 0.031489234,
+          0.27129117, 0.06537059, -0.09948814, 0.108044125, -8.021319, 0.25658283, -0.07269264, -0.30529597,
+          0.2967638, 0.42866942, 0.0075203944, 0.11975256, -0.12788749, -0.27672294, -0.51439446, 0.41193613,
+          0.13674141, 0.17278232, 0.34980375, -0.23622578, 0.1375398, -0.73277116, -0.55365944, -0.030610787,
+          -0.0005789308, -0.30967757, 0.029141134, -0.30376557, 0.33337033, -0.047053486, -0.35736516, 0.3539955,
+          0.27615443, 0.10830049, 0.15990703, -0.41701958, 0.18330948, 0.26881263, -0.27501193, -0.052265212,
+          0.124958575, -0.20904878, 0.22051105, -0.6199936, -0.4035189, 0.11192692, -0.5949443, -0.12957075,
+          0.36544186, -0.34850988, -0.2616504, 0.45792124, 0.21786729, -0.08999512, 0.49320868, 0.01800727,
+          -0.45012137, 0.107740134, 0.4357898, 0.043960616, 0.10476315, 0.12779848, -0.07013141, 0.36221796,
+          -0.06430027, -0.22274818, -0.8109951, 0.13984814, 0.36136404, -0.08209937, -0.033669148, -0.09498521,
+          0.09013451, -0.065741956, 0.13413757, 0.2998836, -0.3942621, -0.95902634, 0.26328406, -0.11599862,
+          0.17292982, -0.1621291, -0.45174688, -0.0140675185, -0.050067615, -0.20785858, -0.25281996, 0.1276845,
+          0.33567363, -0.3895687, -0.16319306, 0.16067886, -0.072286814, -0.37095162, 0.30321676, -0.18204781,
+          -0.5787158, 0.4621743, 0.19980417, -0.27415177, -0.02717589, 0.29233512, 0.20745927, 0.3834473,
+          0.08047889, 0.070449516, 0.3412541, -0.21165788, 0.13807154, 0.022548588, -0.20124696, -0.33202195,
+          0.02839337, 0.2034525, 0.07624909, 0.30005553, -0.16415662, -0.09752364, 0.32757983, -0.49198142,
+          0.17120083, 0.36437616, 0.26678783, 0.17064378, -0.048305605, -0.022926303, -0.5702566, -0.06784799,
+          -0.0005659457, -0.17681319, 0.8593195, -0.020238005, 0.37848726, -0.096159056, 0.10144513, -0.07600692,
+          0.15718956, 0.3792207, 0.3106568, -0.2089853, -0.26127622, -0.7795881, -0.18202256, 0.48861435,
+          -0.2977684, -0.20725527, -0.22746548, -0.13041556, -0.42190087, 0.0150435595, 0.40800446, 0.38295928,
+          0.4389552, 0.3254128, -0.11797145, 0.47950605, 0.691797, -0.3336446, 0.26919794, 0.33224532,
+          -0.23445547, -0.002552467, -0.47768718, -0.19555408, 0.046564803, -0.33597, -0.7605978, -0.61391693,
+          -0.16056223, 0.037967537, -0.40511763, -0.18270367, -0.0029602975, -0.10303658, -0.07905489, 0.43153068,
+          -0.28145996, 0.382566, 0.23218906, 0.05369966, 0.080883875, -0.3400036, -0.5838552, -0.044699095,
+          -0.0690971, 0.40250427, -0.27013743, 0.44551337, 0.37692398, -0.1558204, -0.08952572, 0.060312085,
+          -0.1912303, 0.34554127, 0.11596548, 0.6518073, -0.018998351, -0.032762405, -0.26800048, -0.09251066,
+          -0.12574443, 0.05738329, 0.81456476, 0.3183808, 0.027302459, -0.03096847, 0.3443521, -0.4225992,
+          0.13171624, 0.082451664, -0.10373438, -0.30978158, 0.107433215, -0.048183523, 0.09157467, 0.15996309,
+          -0.17513594, 0.47578576, 0.30307814, -0.2016799, 0.16745706, -0.4080809, -0.05337543, -0.15026444,
+          -0.30859554, -0.19119523, 0.17912032, 0.08244435, -0.16269968, -0.18833874, 0.09131278, -0.056128714,
+          -0.006501419, 0.18202999, 0.3868273, -0.17903721, -0.8139402, -0.12817809, -0.05443815, 0.20049912,
+          0.31242076, 0.03407949, -0.1424554, 0.43517426, 0.250661, 0.10849144, 0.34670934, 0.14859056,
+          0.28932494, 0.49790102, -0.050553687, 0.07043272, -0.058127496, -0.08510109, -0.09435876, -0.39851332,
+          -0.3171632, 0.15116291, 0.5277487, -0.17856625, -0.12362953, 0.0546748, -0.19291554, -0.061336752,
+          0.0923514, 0.63123584, -0.5879041, 0.12888655, 0.41656286, -0.023519227, 0.12701161, 0.29833546,
+          0.006057621, -0.29223225, -0.41548163, -0.36461708, -0.088422075, 0.049837828, -0.2482149, 0.3243994,
+          -0.4269011, -0.06523414, -0.24057674, -0.18774301, -0.28939205, 0.47157705, -0.5138044, -0.48500305,
+          -0.4290117, -0.02763888, -0.045829415, -0.28753638, -0.03607277, -0.09341089, 0.14672741, -0.17579287,
+          0.083553605, -0.33634177, 0.3155992, -0.18654802, 0.16135675, 0.17957811, 0.39859423, 0.29786786,
+          0.285769, -0.16109283, 0.19506279, -0.35338873, -0.16802765, -0.16269517, -0.06782141, -0.14809242,
+          -0.3701519, 0.26058352, -0.08455878, -0.6716248, 0.32725433, 0.35303336, -0.23841295, -0.29764837,
+          0.29784048, 0.08574736, 0.24165519, 0.1783759, 0.18984209, -0.12505804, -0.046507902, -0.14089186,
+          0.47153202, -0.10919299, -0.07111155, 0.40649334, -0.07902239, 0.22228393, -0.0023710441, -0.11330132,
+          0.2406234, 0.42164147, -0.5341145, 0.47054332, 0.3023201, 0.4132467, -0.28550047, 0.4247038,
+          0.12844191, -0.093899496, -1.0602912, -0.21011443, 0.49228564, -0.009104324, 0.5519599, -0.00042268352,
+          -0.04643169, 0.4337437, -0.012732498, 0.45814443, 0.6165385, -0.024332391, 0.36715645, -0.3133083,
+          0.204956, 0.31093884, 0.21147382, 0.17447634, -0.004993796, 0.3470944, 0.21196963, 0.5102804,
+          0.06676556, 0.24107371, -0.04730336, 0.1537193, -0.10986376, -0.2966811, 0.24361107, -0.21408245,
+          -0.4048234, 0.243666, 0.031722415, 0.3936008, -0.1693954, -0.1335506, 0.15295304, 0.055004124,
+          -0.10010863, -0.12649822, 0.028870173, 0.08282411, 0.24173169, -0.07189205, 0.13184284, 0.0016273428,
+          -0.5241857, -0.24130726, -0.20464541, 0.10887323, 0.022429628, 0.37995747, -0.30101553, -0.6148422,
+          0.612789, 0.16343902, 0.07885685, -0.029958433, -0.22377118, -0.14020497, 0.09062301, 0.1494059,
+          0.5686447, -0.27633318, -0.32190374, 0.078763805, 0.22175421, 0.19944926, 0.49321792, -0.19752479,
+          -0.4087353, 0.4380346, -0.3818628, -0.53991604, -0.22684722, -0.08855395, -0.21378434, -0.008552803,
+          -0.61997044, 0.27471164, -0.8943059, 0.032635488, -0.70787233, 0.5741103, 0.33670196, -0.6685825,
+          -0.4369337, 0.08151764, 0.34648082, -0.04429864, -0.12960981, 0.06344593, 0.42155635, -0.44848904,
+          0.13707072, -0.16977471, -0.59911007, -0.15309912, 0.56641674, -0.16541135, -0.80050826, -0.37122387,
+          0.530662, 0.19530717, -0.21143952, 0.28828543, 0.3088569, 0.23196664, 0.045366, 0.2197325,
+          -0.4303389, -0.25442657, 0.19174094, -0.2794116, 0.35677552, 0.17876226, -0.04115167, -0.057422895
+        ], "k": 10 }
     }
   }
 }
@@ -808,17 +1016,17 @@ GET bookstore-rag/_search
 | 4 | 0.007384 | The Adventures of Ferdinand Count Fathom | romance | $21.21 | 4.6 |
 | 5 | 0.007382 | Little Women | mystery | $12.16 | 1.8 |
 
-Two things to notice. The scores sit in a tight band around 0.0074: L2 similarity across 768 dimensions compresses differences, so nearby ranks are close calls and the ordering matters more than the gaps. And the metadata will make a librarian wince (Great Expectations shows up later in the list as science fiction) because genre, price, and rating are synthetic fields derived from `book_id`, as the data note at the top of the chapter explains. They exist to make filtering and reranking demonstrable, and the next two steps put them to work.
+Two things stand out in these results. First, the scores sit in a tight band around 0.0074. L2 similarity across 768 dimensions produces very small differences between neighbors, so treat the ranking order as the signal and don't read much into the gaps between scores. Second, some of the metadata looks wrong on purpose: Great Expectations appears further down this list as science fiction because genre, price, and rating are synthetic fields derived from `book_id`. They exist so the filtering and reranking steps have realistic values to work with, and the next two steps put them to use.
 
 **Fast mode** — `25-knn-search.bru`
 
 ### Step 8: Filtered k-NN search — the filtering lever
 
-Now the biggest single performance win in RAG retrieval. A real customer question is rarely "find me anything similar"; it's "mystery, under $20, decently rated." Those constraints are exact metadata, and handing them to the engine **before** the vector pass means FAISS only scores books that already qualify instead of ranking the whole catalog and discarding most of the work. This is where those `keyword`, `float`, and `boolean` metadata fields from Step 5 pay off. Note the structure: `must` drives scoring, while `filter` clauses are cheap yes/no gates that never touch the score.
+Now let's cover the biggest single performance win in RAG retrieval. A real customer question is rarely "find me anything similar"; it's "mystery, under $20, decently rated." Those constraints are exact metadata, and handing them to the engine **before** the vector pass means FAISS only scores books that already qualify instead of ranking the whole catalog and discarding most of the work. This is where the `keyword`, `float`, and `boolean` mapping choices from Step 5 earn their keep, because exact-typed fields make these yes/no checks cheap. One clarification on the `bool` structure you're about to use: in an ordinary query, `must` clauses affect the score and `filter` clauses don't. Inside a `knn` filter, none of them touch the score, because the vector distance is the only score. Every clause here is just a gate, and keeping the `must`/`filter` split is a good habit for the regular queries you'll write elsewhere.
 
 ![Filtered k-NN versus post-filtering](../../screenshots/chapter4/diagram-03-filtered-knn-vs-post-filtering.png)
 
-**Request**
+**Request** - Run the same vector search as Step 7, but with the customer's constraints attached: the `filter` inside the `knn` clause narrows the candidates to mysteries priced at $20 or less with a rating of 4.0 or higher, and only those books get vector-scored.
 ```http
 GET bookstore-rag/_search
 {
@@ -827,7 +1035,104 @@ GET bookstore-rag/_search
   "query": {
     "knn": {
       "content_embedding": {
-        "vector": [ /* paste 768 floats */ ],
+        "vector": [
+          -0.72274804, 0.41321254, -0.016454158, -0.26167125, 0.14559725, 0.14592808, 0.6537714, -0.11037713,
+          -0.114465825, 0.18909205, 0.38118467, 0.17797352, -0.2581246, 0.1357544, 0.08791255, 0.14977679,
+          0.025075039, -0.16685882, -0.59627074, -0.109226316, -0.10564344, -0.4014701, 0.17575973, 0.10721079,
+          0.22122298, -0.05179187, 0.14900523, 0.2149368, -0.3717858, 0.16204645, -0.4332722, -0.16565955,
+          0.29577807, 0.2620248, -0.12507172, 0.26131508, -0.42445394, -0.08767605, 0.50347495, 0.05494609,
+          -0.47321662, -0.07447353, -0.36174572, 0.21912414, -0.103114195, -0.044891044, -0.45029828, 0.42404222,
+          -0.1074994, 0.08746214, 0.107004896, 0.23354025, -0.046190847, -0.57334685, -0.07392718, 0.24103211,
+          0.10571745, -0.33936822, -0.73158324, -0.30453873, 0.18474467, -0.016645554, 0.25031373, -0.18336724,
+          -0.15137027, 0.45624587, -0.0616582, 0.01998918, -0.8486786, 0.032559402, 0.45460197, 0.22903036,
+          -0.18114069, -0.650845, 0.19077452, -0.52231294, 0.08818927, 0.4066528, 0.25559947, 0.0053160936,
+          -0.3969785, 0.26721337, 0.3115037, 0.24166596, -0.17474256, -0.008221354, 0.48585287, 0.23581174,
+          -0.16307122, 0.20339376, 0.078453206, -0.10851361, -0.43311924, 0.31977975, 0.42800915, 0.2621617,
+          0.16748737, 0.0022518672, -0.56798476, -0.41212782, -0.29752195, 0.25052008, 0.12487541, 0.08517073,
+          0.49797377, 0.017074747, 0.55765796, -0.18143941, -0.048774786, 0.04425166, 0.5259056, 0.03470879,
+          -0.0035997122, -0.32772985, 0.11716893, 0.28888452, -0.14731303, -0.7221337, -0.3763936, -0.15666306,
+          0.46021613, 0.0021106824, -0.010831986, -0.2484829, -0.23658684, -0.120508276, -0.084076315, 0.1707883,
+          -0.32133347, -0.2050264, 0.34974474, -0.13034464, -0.100089505, 0.013775802, 0.021153353, -0.11238577,
+          -0.076726235, -0.14974597, -0.18686132, 0.24186452, -0.09198388, -0.00055629306, 0.22100948, 0.045402966,
+          0.16096978, -0.37114635, 0.22919914, -0.08706446, -0.0919104, -0.20055297, 0.105357595, 0.090088785,
+          -0.04702621, -0.54474247, 0.07492476, -0.10748231, 0.25343925, 0.317164, -0.36329976, -0.12062072,
+          0.16093428, 0.12728219, -0.40852442, -1.0462359, 0.13337879, 0.038288724, 0.28214252, -0.13625908,
+          -0.2649942, -0.27992186, 0.1656124, -0.13370542, 0.7836721, 0.62731797, -0.06391317, 0.39173323,
+          0.729962, 0.66707516, 0.044130124, 0.02857397, -0.42229936, 0.44650492, -0.08271408, -0.060063984,
+          0.14284775, -0.04600598, -0.04781346, -0.1448393, 0.33658138, -0.078074545, 0.05257741, -0.45870322,
+          0.048813045, 0.0437853, 0.45160395, -0.40782258, -0.3450237, -0.013291911, -0.2309159, -0.12813081,
+          -0.23961672, 0.40873608, 0.04222697, -0.04331, -0.04718083, -0.14159963, 0.17143182, 0.466742,
+          -0.35619467, 0.11404759, -0.2206648, -0.058717825, 0.1764606, 0.3839564, -0.22475345, -0.25929713,
+          0.19610687, -0.08545362, -0.1429616, -0.1947058, 0.061522275, -0.10972977, -0.76877904, 0.29675174,
+          0.5217985, 0.6199755, 0.14299951, -0.43167618, -0.084783405, 0.33869997, 0.043958157, 0.013163835,
+          0.09805272, -0.11370975, -0.15791704, 0.14524934, 0.005532656, 0.1703971, 0.43349516, -0.04201393,
+          0.23707338, 0.09455025, 0.013865203, 0.6635432, 0.1874996, -0.17230448, 0.54697967, -0.5446763,
+          -0.11094852, 0.025431199, 0.16744596, 0.41160274, -0.21393496, 0.26721463, -0.12347463, -0.7897255,
+          0.019061284, -0.3975962, 0.2512642, -0.1356007, -0.47119468, 0.17439891, -0.36804238, -0.14085796,
+          0.21925192, -0.18987596, 0.14156292, -0.26900098, -0.18828224, 0.0037869927, -0.2338032, 0.3088986,
+          0.08881466, 0.26997542, -0.02006638, -0.15465713, 0.4944153, 0.3252013, 0.4883281, -0.38005945,
+          -0.042820457, 0.07279916, -0.2832055, 0.13333526, 0.006627529, -0.50999236, 0.042478025, 0.1048688,
+          0.12231487, -0.24646087, 0.053978894, -0.24556783, 0.214183, -0.35124695, -0.5636927, 0.4688765,
+          -0.10285391, 0.048804197, -0.20874552, 0.056751803, -0.2413617, -0.040264443, 0.02658639, 0.031489234,
+          0.27129117, 0.06537059, -0.09948814, 0.108044125, -8.021319, 0.25658283, -0.07269264, -0.30529597,
+          0.2967638, 0.42866942, 0.0075203944, 0.11975256, -0.12788749, -0.27672294, -0.51439446, 0.41193613,
+          0.13674141, 0.17278232, 0.34980375, -0.23622578, 0.1375398, -0.73277116, -0.55365944, -0.030610787,
+          -0.0005789308, -0.30967757, 0.029141134, -0.30376557, 0.33337033, -0.047053486, -0.35736516, 0.3539955,
+          0.27615443, 0.10830049, 0.15990703, -0.41701958, 0.18330948, 0.26881263, -0.27501193, -0.052265212,
+          0.124958575, -0.20904878, 0.22051105, -0.6199936, -0.4035189, 0.11192692, -0.5949443, -0.12957075,
+          0.36544186, -0.34850988, -0.2616504, 0.45792124, 0.21786729, -0.08999512, 0.49320868, 0.01800727,
+          -0.45012137, 0.107740134, 0.4357898, 0.043960616, 0.10476315, 0.12779848, -0.07013141, 0.36221796,
+          -0.06430027, -0.22274818, -0.8109951, 0.13984814, 0.36136404, -0.08209937, -0.033669148, -0.09498521,
+          0.09013451, -0.065741956, 0.13413757, 0.2998836, -0.3942621, -0.95902634, 0.26328406, -0.11599862,
+          0.17292982, -0.1621291, -0.45174688, -0.0140675185, -0.050067615, -0.20785858, -0.25281996, 0.1276845,
+          0.33567363, -0.3895687, -0.16319306, 0.16067886, -0.072286814, -0.37095162, 0.30321676, -0.18204781,
+          -0.5787158, 0.4621743, 0.19980417, -0.27415177, -0.02717589, 0.29233512, 0.20745927, 0.3834473,
+          0.08047889, 0.070449516, 0.3412541, -0.21165788, 0.13807154, 0.022548588, -0.20124696, -0.33202195,
+          0.02839337, 0.2034525, 0.07624909, 0.30005553, -0.16415662, -0.09752364, 0.32757983, -0.49198142,
+          0.17120083, 0.36437616, 0.26678783, 0.17064378, -0.048305605, -0.022926303, -0.5702566, -0.06784799,
+          -0.0005659457, -0.17681319, 0.8593195, -0.020238005, 0.37848726, -0.096159056, 0.10144513, -0.07600692,
+          0.15718956, 0.3792207, 0.3106568, -0.2089853, -0.26127622, -0.7795881, -0.18202256, 0.48861435,
+          -0.2977684, -0.20725527, -0.22746548, -0.13041556, -0.42190087, 0.0150435595, 0.40800446, 0.38295928,
+          0.4389552, 0.3254128, -0.11797145, 0.47950605, 0.691797, -0.3336446, 0.26919794, 0.33224532,
+          -0.23445547, -0.002552467, -0.47768718, -0.19555408, 0.046564803, -0.33597, -0.7605978, -0.61391693,
+          -0.16056223, 0.037967537, -0.40511763, -0.18270367, -0.0029602975, -0.10303658, -0.07905489, 0.43153068,
+          -0.28145996, 0.382566, 0.23218906, 0.05369966, 0.080883875, -0.3400036, -0.5838552, -0.044699095,
+          -0.0690971, 0.40250427, -0.27013743, 0.44551337, 0.37692398, -0.1558204, -0.08952572, 0.060312085,
+          -0.1912303, 0.34554127, 0.11596548, 0.6518073, -0.018998351, -0.032762405, -0.26800048, -0.09251066,
+          -0.12574443, 0.05738329, 0.81456476, 0.3183808, 0.027302459, -0.03096847, 0.3443521, -0.4225992,
+          0.13171624, 0.082451664, -0.10373438, -0.30978158, 0.107433215, -0.048183523, 0.09157467, 0.15996309,
+          -0.17513594, 0.47578576, 0.30307814, -0.2016799, 0.16745706, -0.4080809, -0.05337543, -0.15026444,
+          -0.30859554, -0.19119523, 0.17912032, 0.08244435, -0.16269968, -0.18833874, 0.09131278, -0.056128714,
+          -0.006501419, 0.18202999, 0.3868273, -0.17903721, -0.8139402, -0.12817809, -0.05443815, 0.20049912,
+          0.31242076, 0.03407949, -0.1424554, 0.43517426, 0.250661, 0.10849144, 0.34670934, 0.14859056,
+          0.28932494, 0.49790102, -0.050553687, 0.07043272, -0.058127496, -0.08510109, -0.09435876, -0.39851332,
+          -0.3171632, 0.15116291, 0.5277487, -0.17856625, -0.12362953, 0.0546748, -0.19291554, -0.061336752,
+          0.0923514, 0.63123584, -0.5879041, 0.12888655, 0.41656286, -0.023519227, 0.12701161, 0.29833546,
+          0.006057621, -0.29223225, -0.41548163, -0.36461708, -0.088422075, 0.049837828, -0.2482149, 0.3243994,
+          -0.4269011, -0.06523414, -0.24057674, -0.18774301, -0.28939205, 0.47157705, -0.5138044, -0.48500305,
+          -0.4290117, -0.02763888, -0.045829415, -0.28753638, -0.03607277, -0.09341089, 0.14672741, -0.17579287,
+          0.083553605, -0.33634177, 0.3155992, -0.18654802, 0.16135675, 0.17957811, 0.39859423, 0.29786786,
+          0.285769, -0.16109283, 0.19506279, -0.35338873, -0.16802765, -0.16269517, -0.06782141, -0.14809242,
+          -0.3701519, 0.26058352, -0.08455878, -0.6716248, 0.32725433, 0.35303336, -0.23841295, -0.29764837,
+          0.29784048, 0.08574736, 0.24165519, 0.1783759, 0.18984209, -0.12505804, -0.046507902, -0.14089186,
+          0.47153202, -0.10919299, -0.07111155, 0.40649334, -0.07902239, 0.22228393, -0.0023710441, -0.11330132,
+          0.2406234, 0.42164147, -0.5341145, 0.47054332, 0.3023201, 0.4132467, -0.28550047, 0.4247038,
+          0.12844191, -0.093899496, -1.0602912, -0.21011443, 0.49228564, -0.009104324, 0.5519599, -0.00042268352,
+          -0.04643169, 0.4337437, -0.012732498, 0.45814443, 0.6165385, -0.024332391, 0.36715645, -0.3133083,
+          0.204956, 0.31093884, 0.21147382, 0.17447634, -0.004993796, 0.3470944, 0.21196963, 0.5102804,
+          0.06676556, 0.24107371, -0.04730336, 0.1537193, -0.10986376, -0.2966811, 0.24361107, -0.21408245,
+          -0.4048234, 0.243666, 0.031722415, 0.3936008, -0.1693954, -0.1335506, 0.15295304, 0.055004124,
+          -0.10010863, -0.12649822, 0.028870173, 0.08282411, 0.24173169, -0.07189205, 0.13184284, 0.0016273428,
+          -0.5241857, -0.24130726, -0.20464541, 0.10887323, 0.022429628, 0.37995747, -0.30101553, -0.6148422,
+          0.612789, 0.16343902, 0.07885685, -0.029958433, -0.22377118, -0.14020497, 0.09062301, 0.1494059,
+          0.5686447, -0.27633318, -0.32190374, 0.078763805, 0.22175421, 0.19944926, 0.49321792, -0.19752479,
+          -0.4087353, 0.4380346, -0.3818628, -0.53991604, -0.22684722, -0.08855395, -0.21378434, -0.008552803,
+          -0.61997044, 0.27471164, -0.8943059, 0.032635488, -0.70787233, 0.5741103, 0.33670196, -0.6685825,
+          -0.4369337, 0.08151764, 0.34648082, -0.04429864, -0.12960981, 0.06344593, 0.42155635, -0.44848904,
+          0.13707072, -0.16977471, -0.59911007, -0.15309912, 0.56641674, -0.16541135, -0.80050826, -0.37122387,
+          0.530662, 0.19530717, -0.21143952, 0.28828543, 0.3088569, 0.23196664, 0.045366, 0.2197325,
+          -0.4303389, -0.25442657, 0.19174094, -0.2794116, 0.35677552, 0.17876226, -0.04115167, -0.057422895
+        ],
         "k": 10,
         "filter": {
           "bool": {
@@ -864,7 +1169,7 @@ This should feel familiar from Chapter 3, and that's the point: hybrid search is
 
 ![Hybrid search score normalization and blending](../../screenshots/chapter4/diagram-04-hybrid-score-normalization.png)
 
-**Request** — create the pipeline:
+**Request** — create the hybrid pipeline:
 ```http
 PUT _search/pipeline/bookstore-hybrid-pipeline
 {
@@ -882,7 +1187,17 @@ PUT _search/pipeline/bookstore-hybrid-pipeline
   ]
 }
 ```
-**Request** — run the hybrid query through it:
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true
+}
+```
+
+**Request** — now we'll run the hybrid query through it:
+
 ```http
 GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
 {
@@ -892,13 +1207,111 @@ GET bookstore-rag/_search?search_pipeline=bookstore-hybrid-pipeline
     "hybrid": {
       "queries": [
         { "match": { "content": { "query": "mystery novel with an unreliable narrator" } } },
-        { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } }
+        { "knn": { "content_embedding": { "vector": [
+          -0.72274804, 0.41321254, -0.016454158, -0.26167125, 0.14559725, 0.14592808, 0.6537714, -0.11037713,
+          -0.114465825, 0.18909205, 0.38118467, 0.17797352, -0.2581246, 0.1357544, 0.08791255, 0.14977679,
+          0.025075039, -0.16685882, -0.59627074, -0.109226316, -0.10564344, -0.4014701, 0.17575973, 0.10721079,
+          0.22122298, -0.05179187, 0.14900523, 0.2149368, -0.3717858, 0.16204645, -0.4332722, -0.16565955,
+          0.29577807, 0.2620248, -0.12507172, 0.26131508, -0.42445394, -0.08767605, 0.50347495, 0.05494609,
+          -0.47321662, -0.07447353, -0.36174572, 0.21912414, -0.103114195, -0.044891044, -0.45029828, 0.42404222,
+          -0.1074994, 0.08746214, 0.107004896, 0.23354025, -0.046190847, -0.57334685, -0.07392718, 0.24103211,
+          0.10571745, -0.33936822, -0.73158324, -0.30453873, 0.18474467, -0.016645554, 0.25031373, -0.18336724,
+          -0.15137027, 0.45624587, -0.0616582, 0.01998918, -0.8486786, 0.032559402, 0.45460197, 0.22903036,
+          -0.18114069, -0.650845, 0.19077452, -0.52231294, 0.08818927, 0.4066528, 0.25559947, 0.0053160936,
+          -0.3969785, 0.26721337, 0.3115037, 0.24166596, -0.17474256, -0.008221354, 0.48585287, 0.23581174,
+          -0.16307122, 0.20339376, 0.078453206, -0.10851361, -0.43311924, 0.31977975, 0.42800915, 0.2621617,
+          0.16748737, 0.0022518672, -0.56798476, -0.41212782, -0.29752195, 0.25052008, 0.12487541, 0.08517073,
+          0.49797377, 0.017074747, 0.55765796, -0.18143941, -0.048774786, 0.04425166, 0.5259056, 0.03470879,
+          -0.0035997122, -0.32772985, 0.11716893, 0.28888452, -0.14731303, -0.7221337, -0.3763936, -0.15666306,
+          0.46021613, 0.0021106824, -0.010831986, -0.2484829, -0.23658684, -0.120508276, -0.084076315, 0.1707883,
+          -0.32133347, -0.2050264, 0.34974474, -0.13034464, -0.100089505, 0.013775802, 0.021153353, -0.11238577,
+          -0.076726235, -0.14974597, -0.18686132, 0.24186452, -0.09198388, -0.00055629306, 0.22100948, 0.045402966,
+          0.16096978, -0.37114635, 0.22919914, -0.08706446, -0.0919104, -0.20055297, 0.105357595, 0.090088785,
+          -0.04702621, -0.54474247, 0.07492476, -0.10748231, 0.25343925, 0.317164, -0.36329976, -0.12062072,
+          0.16093428, 0.12728219, -0.40852442, -1.0462359, 0.13337879, 0.038288724, 0.28214252, -0.13625908,
+          -0.2649942, -0.27992186, 0.1656124, -0.13370542, 0.7836721, 0.62731797, -0.06391317, 0.39173323,
+          0.729962, 0.66707516, 0.044130124, 0.02857397, -0.42229936, 0.44650492, -0.08271408, -0.060063984,
+          0.14284775, -0.04600598, -0.04781346, -0.1448393, 0.33658138, -0.078074545, 0.05257741, -0.45870322,
+          0.048813045, 0.0437853, 0.45160395, -0.40782258, -0.3450237, -0.013291911, -0.2309159, -0.12813081,
+          -0.23961672, 0.40873608, 0.04222697, -0.04331, -0.04718083, -0.14159963, 0.17143182, 0.466742,
+          -0.35619467, 0.11404759, -0.2206648, -0.058717825, 0.1764606, 0.3839564, -0.22475345, -0.25929713,
+          0.19610687, -0.08545362, -0.1429616, -0.1947058, 0.061522275, -0.10972977, -0.76877904, 0.29675174,
+          0.5217985, 0.6199755, 0.14299951, -0.43167618, -0.084783405, 0.33869997, 0.043958157, 0.013163835,
+          0.09805272, -0.11370975, -0.15791704, 0.14524934, 0.005532656, 0.1703971, 0.43349516, -0.04201393,
+          0.23707338, 0.09455025, 0.013865203, 0.6635432, 0.1874996, -0.17230448, 0.54697967, -0.5446763,
+          -0.11094852, 0.025431199, 0.16744596, 0.41160274, -0.21393496, 0.26721463, -0.12347463, -0.7897255,
+          0.019061284, -0.3975962, 0.2512642, -0.1356007, -0.47119468, 0.17439891, -0.36804238, -0.14085796,
+          0.21925192, -0.18987596, 0.14156292, -0.26900098, -0.18828224, 0.0037869927, -0.2338032, 0.3088986,
+          0.08881466, 0.26997542, -0.02006638, -0.15465713, 0.4944153, 0.3252013, 0.4883281, -0.38005945,
+          -0.042820457, 0.07279916, -0.2832055, 0.13333526, 0.006627529, -0.50999236, 0.042478025, 0.1048688,
+          0.12231487, -0.24646087, 0.053978894, -0.24556783, 0.214183, -0.35124695, -0.5636927, 0.4688765,
+          -0.10285391, 0.048804197, -0.20874552, 0.056751803, -0.2413617, -0.040264443, 0.02658639, 0.031489234,
+          0.27129117, 0.06537059, -0.09948814, 0.108044125, -8.021319, 0.25658283, -0.07269264, -0.30529597,
+          0.2967638, 0.42866942, 0.0075203944, 0.11975256, -0.12788749, -0.27672294, -0.51439446, 0.41193613,
+          0.13674141, 0.17278232, 0.34980375, -0.23622578, 0.1375398, -0.73277116, -0.55365944, -0.030610787,
+          -0.0005789308, -0.30967757, 0.029141134, -0.30376557, 0.33337033, -0.047053486, -0.35736516, 0.3539955,
+          0.27615443, 0.10830049, 0.15990703, -0.41701958, 0.18330948, 0.26881263, -0.27501193, -0.052265212,
+          0.124958575, -0.20904878, 0.22051105, -0.6199936, -0.4035189, 0.11192692, -0.5949443, -0.12957075,
+          0.36544186, -0.34850988, -0.2616504, 0.45792124, 0.21786729, -0.08999512, 0.49320868, 0.01800727,
+          -0.45012137, 0.107740134, 0.4357898, 0.043960616, 0.10476315, 0.12779848, -0.07013141, 0.36221796,
+          -0.06430027, -0.22274818, -0.8109951, 0.13984814, 0.36136404, -0.08209937, -0.033669148, -0.09498521,
+          0.09013451, -0.065741956, 0.13413757, 0.2998836, -0.3942621, -0.95902634, 0.26328406, -0.11599862,
+          0.17292982, -0.1621291, -0.45174688, -0.0140675185, -0.050067615, -0.20785858, -0.25281996, 0.1276845,
+          0.33567363, -0.3895687, -0.16319306, 0.16067886, -0.072286814, -0.37095162, 0.30321676, -0.18204781,
+          -0.5787158, 0.4621743, 0.19980417, -0.27415177, -0.02717589, 0.29233512, 0.20745927, 0.3834473,
+          0.08047889, 0.070449516, 0.3412541, -0.21165788, 0.13807154, 0.022548588, -0.20124696, -0.33202195,
+          0.02839337, 0.2034525, 0.07624909, 0.30005553, -0.16415662, -0.09752364, 0.32757983, -0.49198142,
+          0.17120083, 0.36437616, 0.26678783, 0.17064378, -0.048305605, -0.022926303, -0.5702566, -0.06784799,
+          -0.0005659457, -0.17681319, 0.8593195, -0.020238005, 0.37848726, -0.096159056, 0.10144513, -0.07600692,
+          0.15718956, 0.3792207, 0.3106568, -0.2089853, -0.26127622, -0.7795881, -0.18202256, 0.48861435,
+          -0.2977684, -0.20725527, -0.22746548, -0.13041556, -0.42190087, 0.0150435595, 0.40800446, 0.38295928,
+          0.4389552, 0.3254128, -0.11797145, 0.47950605, 0.691797, -0.3336446, 0.26919794, 0.33224532,
+          -0.23445547, -0.002552467, -0.47768718, -0.19555408, 0.046564803, -0.33597, -0.7605978, -0.61391693,
+          -0.16056223, 0.037967537, -0.40511763, -0.18270367, -0.0029602975, -0.10303658, -0.07905489, 0.43153068,
+          -0.28145996, 0.382566, 0.23218906, 0.05369966, 0.080883875, -0.3400036, -0.5838552, -0.044699095,
+          -0.0690971, 0.40250427, -0.27013743, 0.44551337, 0.37692398, -0.1558204, -0.08952572, 0.060312085,
+          -0.1912303, 0.34554127, 0.11596548, 0.6518073, -0.018998351, -0.032762405, -0.26800048, -0.09251066,
+          -0.12574443, 0.05738329, 0.81456476, 0.3183808, 0.027302459, -0.03096847, 0.3443521, -0.4225992,
+          0.13171624, 0.082451664, -0.10373438, -0.30978158, 0.107433215, -0.048183523, 0.09157467, 0.15996309,
+          -0.17513594, 0.47578576, 0.30307814, -0.2016799, 0.16745706, -0.4080809, -0.05337543, -0.15026444,
+          -0.30859554, -0.19119523, 0.17912032, 0.08244435, -0.16269968, -0.18833874, 0.09131278, -0.056128714,
+          -0.006501419, 0.18202999, 0.3868273, -0.17903721, -0.8139402, -0.12817809, -0.05443815, 0.20049912,
+          0.31242076, 0.03407949, -0.1424554, 0.43517426, 0.250661, 0.10849144, 0.34670934, 0.14859056,
+          0.28932494, 0.49790102, -0.050553687, 0.07043272, -0.058127496, -0.08510109, -0.09435876, -0.39851332,
+          -0.3171632, 0.15116291, 0.5277487, -0.17856625, -0.12362953, 0.0546748, -0.19291554, -0.061336752,
+          0.0923514, 0.63123584, -0.5879041, 0.12888655, 0.41656286, -0.023519227, 0.12701161, 0.29833546,
+          0.006057621, -0.29223225, -0.41548163, -0.36461708, -0.088422075, 0.049837828, -0.2482149, 0.3243994,
+          -0.4269011, -0.06523414, -0.24057674, -0.18774301, -0.28939205, 0.47157705, -0.5138044, -0.48500305,
+          -0.4290117, -0.02763888, -0.045829415, -0.28753638, -0.03607277, -0.09341089, 0.14672741, -0.17579287,
+          0.083553605, -0.33634177, 0.3155992, -0.18654802, 0.16135675, 0.17957811, 0.39859423, 0.29786786,
+          0.285769, -0.16109283, 0.19506279, -0.35338873, -0.16802765, -0.16269517, -0.06782141, -0.14809242,
+          -0.3701519, 0.26058352, -0.08455878, -0.6716248, 0.32725433, 0.35303336, -0.23841295, -0.29764837,
+          0.29784048, 0.08574736, 0.24165519, 0.1783759, 0.18984209, -0.12505804, -0.046507902, -0.14089186,
+          0.47153202, -0.10919299, -0.07111155, 0.40649334, -0.07902239, 0.22228393, -0.0023710441, -0.11330132,
+          0.2406234, 0.42164147, -0.5341145, 0.47054332, 0.3023201, 0.4132467, -0.28550047, 0.4247038,
+          0.12844191, -0.093899496, -1.0602912, -0.21011443, 0.49228564, -0.009104324, 0.5519599, -0.00042268352,
+          -0.04643169, 0.4337437, -0.012732498, 0.45814443, 0.6165385, -0.024332391, 0.36715645, -0.3133083,
+          0.204956, 0.31093884, 0.21147382, 0.17447634, -0.004993796, 0.3470944, 0.21196963, 0.5102804,
+          0.06676556, 0.24107371, -0.04730336, 0.1537193, -0.10986376, -0.2966811, 0.24361107, -0.21408245,
+          -0.4048234, 0.243666, 0.031722415, 0.3936008, -0.1693954, -0.1335506, 0.15295304, 0.055004124,
+          -0.10010863, -0.12649822, 0.028870173, 0.08282411, 0.24173169, -0.07189205, 0.13184284, 0.0016273428,
+          -0.5241857, -0.24130726, -0.20464541, 0.10887323, 0.022429628, 0.37995747, -0.30101553, -0.6148422,
+          0.612789, 0.16343902, 0.07885685, -0.029958433, -0.22377118, -0.14020497, 0.09062301, 0.1494059,
+          0.5686447, -0.27633318, -0.32190374, 0.078763805, 0.22175421, 0.19944926, 0.49321792, -0.19752479,
+          -0.4087353, 0.4380346, -0.3818628, -0.53991604, -0.22684722, -0.08855395, -0.21378434, -0.008552803,
+          -0.61997044, 0.27471164, -0.8943059, 0.032635488, -0.70787233, 0.5741103, 0.33670196, -0.6685825,
+          -0.4369337, 0.08151764, 0.34648082, -0.04429864, -0.12960981, 0.06344593, 0.42155635, -0.44848904,
+          0.13707072, -0.16977471, -0.59911007, -0.15309912, 0.56641674, -0.16541135, -0.80050826, -0.37122387,
+          0.530662, 0.19530717, -0.21143952, 0.28828543, 0.3088569, 0.23196664, 0.045366, 0.2197325,
+          -0.4303389, -0.25442657, 0.19174094, -0.2794116, 0.35677552, 0.17876226, -0.04115167, -0.057422895
+        ], "k": 10 } } }
       ]
     }
   }
 }
 ```
-**Expected** `"acknowledged": true` for the pipeline, then blended results. The top of this run:
+
+**Expected** - Blended results. The top results should look like:
 
 | Rank | Score | Title |
 |---|---|---|
@@ -921,7 +1334,7 @@ Similarity is not the same thing as "the result the business wants shown first."
 
 ![function_score reranking layers](../../screenshots/chapter4/diagram-05-function-score-reranking.png)
 
-**Request**
+**Request** - Run Step 7's vector search again, this time wrapped in a `function_score` query that adds three business boosts to each hit's similarity score: the book's rating times 0.1, a flat 1.2 for recent books (`publication_year` of 2020 or newer), and a flat 1.15 for anything in stock. `score_mode: sum` adds the three boosts together, and `boost_mode: sum` adds that total onto the vector score, which is what makes every final score auditable by hand.
 ```http
 GET bookstore-rag/_search
 {
@@ -929,7 +1342,104 @@ GET bookstore-rag/_search
   "_source": ["title", "author", "genre", "rating", "publication_year", "in_stock"],
   "query": {
     "function_score": {
-      "query": { "knn": { "content_embedding": { "vector": [ /* paste 768 floats */ ], "k": 10 } } },
+      "query": { "knn": { "content_embedding": { "vector": [
+          -0.72274804, 0.41321254, -0.016454158, -0.26167125, 0.14559725, 0.14592808, 0.6537714, -0.11037713,
+          -0.114465825, 0.18909205, 0.38118467, 0.17797352, -0.2581246, 0.1357544, 0.08791255, 0.14977679,
+          0.025075039, -0.16685882, -0.59627074, -0.109226316, -0.10564344, -0.4014701, 0.17575973, 0.10721079,
+          0.22122298, -0.05179187, 0.14900523, 0.2149368, -0.3717858, 0.16204645, -0.4332722, -0.16565955,
+          0.29577807, 0.2620248, -0.12507172, 0.26131508, -0.42445394, -0.08767605, 0.50347495, 0.05494609,
+          -0.47321662, -0.07447353, -0.36174572, 0.21912414, -0.103114195, -0.044891044, -0.45029828, 0.42404222,
+          -0.1074994, 0.08746214, 0.107004896, 0.23354025, -0.046190847, -0.57334685, -0.07392718, 0.24103211,
+          0.10571745, -0.33936822, -0.73158324, -0.30453873, 0.18474467, -0.016645554, 0.25031373, -0.18336724,
+          -0.15137027, 0.45624587, -0.0616582, 0.01998918, -0.8486786, 0.032559402, 0.45460197, 0.22903036,
+          -0.18114069, -0.650845, 0.19077452, -0.52231294, 0.08818927, 0.4066528, 0.25559947, 0.0053160936,
+          -0.3969785, 0.26721337, 0.3115037, 0.24166596, -0.17474256, -0.008221354, 0.48585287, 0.23581174,
+          -0.16307122, 0.20339376, 0.078453206, -0.10851361, -0.43311924, 0.31977975, 0.42800915, 0.2621617,
+          0.16748737, 0.0022518672, -0.56798476, -0.41212782, -0.29752195, 0.25052008, 0.12487541, 0.08517073,
+          0.49797377, 0.017074747, 0.55765796, -0.18143941, -0.048774786, 0.04425166, 0.5259056, 0.03470879,
+          -0.0035997122, -0.32772985, 0.11716893, 0.28888452, -0.14731303, -0.7221337, -0.3763936, -0.15666306,
+          0.46021613, 0.0021106824, -0.010831986, -0.2484829, -0.23658684, -0.120508276, -0.084076315, 0.1707883,
+          -0.32133347, -0.2050264, 0.34974474, -0.13034464, -0.100089505, 0.013775802, 0.021153353, -0.11238577,
+          -0.076726235, -0.14974597, -0.18686132, 0.24186452, -0.09198388, -0.00055629306, 0.22100948, 0.045402966,
+          0.16096978, -0.37114635, 0.22919914, -0.08706446, -0.0919104, -0.20055297, 0.105357595, 0.090088785,
+          -0.04702621, -0.54474247, 0.07492476, -0.10748231, 0.25343925, 0.317164, -0.36329976, -0.12062072,
+          0.16093428, 0.12728219, -0.40852442, -1.0462359, 0.13337879, 0.038288724, 0.28214252, -0.13625908,
+          -0.2649942, -0.27992186, 0.1656124, -0.13370542, 0.7836721, 0.62731797, -0.06391317, 0.39173323,
+          0.729962, 0.66707516, 0.044130124, 0.02857397, -0.42229936, 0.44650492, -0.08271408, -0.060063984,
+          0.14284775, -0.04600598, -0.04781346, -0.1448393, 0.33658138, -0.078074545, 0.05257741, -0.45870322,
+          0.048813045, 0.0437853, 0.45160395, -0.40782258, -0.3450237, -0.013291911, -0.2309159, -0.12813081,
+          -0.23961672, 0.40873608, 0.04222697, -0.04331, -0.04718083, -0.14159963, 0.17143182, 0.466742,
+          -0.35619467, 0.11404759, -0.2206648, -0.058717825, 0.1764606, 0.3839564, -0.22475345, -0.25929713,
+          0.19610687, -0.08545362, -0.1429616, -0.1947058, 0.061522275, -0.10972977, -0.76877904, 0.29675174,
+          0.5217985, 0.6199755, 0.14299951, -0.43167618, -0.084783405, 0.33869997, 0.043958157, 0.013163835,
+          0.09805272, -0.11370975, -0.15791704, 0.14524934, 0.005532656, 0.1703971, 0.43349516, -0.04201393,
+          0.23707338, 0.09455025, 0.013865203, 0.6635432, 0.1874996, -0.17230448, 0.54697967, -0.5446763,
+          -0.11094852, 0.025431199, 0.16744596, 0.41160274, -0.21393496, 0.26721463, -0.12347463, -0.7897255,
+          0.019061284, -0.3975962, 0.2512642, -0.1356007, -0.47119468, 0.17439891, -0.36804238, -0.14085796,
+          0.21925192, -0.18987596, 0.14156292, -0.26900098, -0.18828224, 0.0037869927, -0.2338032, 0.3088986,
+          0.08881466, 0.26997542, -0.02006638, -0.15465713, 0.4944153, 0.3252013, 0.4883281, -0.38005945,
+          -0.042820457, 0.07279916, -0.2832055, 0.13333526, 0.006627529, -0.50999236, 0.042478025, 0.1048688,
+          0.12231487, -0.24646087, 0.053978894, -0.24556783, 0.214183, -0.35124695, -0.5636927, 0.4688765,
+          -0.10285391, 0.048804197, -0.20874552, 0.056751803, -0.2413617, -0.040264443, 0.02658639, 0.031489234,
+          0.27129117, 0.06537059, -0.09948814, 0.108044125, -8.021319, 0.25658283, -0.07269264, -0.30529597,
+          0.2967638, 0.42866942, 0.0075203944, 0.11975256, -0.12788749, -0.27672294, -0.51439446, 0.41193613,
+          0.13674141, 0.17278232, 0.34980375, -0.23622578, 0.1375398, -0.73277116, -0.55365944, -0.030610787,
+          -0.0005789308, -0.30967757, 0.029141134, -0.30376557, 0.33337033, -0.047053486, -0.35736516, 0.3539955,
+          0.27615443, 0.10830049, 0.15990703, -0.41701958, 0.18330948, 0.26881263, -0.27501193, -0.052265212,
+          0.124958575, -0.20904878, 0.22051105, -0.6199936, -0.4035189, 0.11192692, -0.5949443, -0.12957075,
+          0.36544186, -0.34850988, -0.2616504, 0.45792124, 0.21786729, -0.08999512, 0.49320868, 0.01800727,
+          -0.45012137, 0.107740134, 0.4357898, 0.043960616, 0.10476315, 0.12779848, -0.07013141, 0.36221796,
+          -0.06430027, -0.22274818, -0.8109951, 0.13984814, 0.36136404, -0.08209937, -0.033669148, -0.09498521,
+          0.09013451, -0.065741956, 0.13413757, 0.2998836, -0.3942621, -0.95902634, 0.26328406, -0.11599862,
+          0.17292982, -0.1621291, -0.45174688, -0.0140675185, -0.050067615, -0.20785858, -0.25281996, 0.1276845,
+          0.33567363, -0.3895687, -0.16319306, 0.16067886, -0.072286814, -0.37095162, 0.30321676, -0.18204781,
+          -0.5787158, 0.4621743, 0.19980417, -0.27415177, -0.02717589, 0.29233512, 0.20745927, 0.3834473,
+          0.08047889, 0.070449516, 0.3412541, -0.21165788, 0.13807154, 0.022548588, -0.20124696, -0.33202195,
+          0.02839337, 0.2034525, 0.07624909, 0.30005553, -0.16415662, -0.09752364, 0.32757983, -0.49198142,
+          0.17120083, 0.36437616, 0.26678783, 0.17064378, -0.048305605, -0.022926303, -0.5702566, -0.06784799,
+          -0.0005659457, -0.17681319, 0.8593195, -0.020238005, 0.37848726, -0.096159056, 0.10144513, -0.07600692,
+          0.15718956, 0.3792207, 0.3106568, -0.2089853, -0.26127622, -0.7795881, -0.18202256, 0.48861435,
+          -0.2977684, -0.20725527, -0.22746548, -0.13041556, -0.42190087, 0.0150435595, 0.40800446, 0.38295928,
+          0.4389552, 0.3254128, -0.11797145, 0.47950605, 0.691797, -0.3336446, 0.26919794, 0.33224532,
+          -0.23445547, -0.002552467, -0.47768718, -0.19555408, 0.046564803, -0.33597, -0.7605978, -0.61391693,
+          -0.16056223, 0.037967537, -0.40511763, -0.18270367, -0.0029602975, -0.10303658, -0.07905489, 0.43153068,
+          -0.28145996, 0.382566, 0.23218906, 0.05369966, 0.080883875, -0.3400036, -0.5838552, -0.044699095,
+          -0.0690971, 0.40250427, -0.27013743, 0.44551337, 0.37692398, -0.1558204, -0.08952572, 0.060312085,
+          -0.1912303, 0.34554127, 0.11596548, 0.6518073, -0.018998351, -0.032762405, -0.26800048, -0.09251066,
+          -0.12574443, 0.05738329, 0.81456476, 0.3183808, 0.027302459, -0.03096847, 0.3443521, -0.4225992,
+          0.13171624, 0.082451664, -0.10373438, -0.30978158, 0.107433215, -0.048183523, 0.09157467, 0.15996309,
+          -0.17513594, 0.47578576, 0.30307814, -0.2016799, 0.16745706, -0.4080809, -0.05337543, -0.15026444,
+          -0.30859554, -0.19119523, 0.17912032, 0.08244435, -0.16269968, -0.18833874, 0.09131278, -0.056128714,
+          -0.006501419, 0.18202999, 0.3868273, -0.17903721, -0.8139402, -0.12817809, -0.05443815, 0.20049912,
+          0.31242076, 0.03407949, -0.1424554, 0.43517426, 0.250661, 0.10849144, 0.34670934, 0.14859056,
+          0.28932494, 0.49790102, -0.050553687, 0.07043272, -0.058127496, -0.08510109, -0.09435876, -0.39851332,
+          -0.3171632, 0.15116291, 0.5277487, -0.17856625, -0.12362953, 0.0546748, -0.19291554, -0.061336752,
+          0.0923514, 0.63123584, -0.5879041, 0.12888655, 0.41656286, -0.023519227, 0.12701161, 0.29833546,
+          0.006057621, -0.29223225, -0.41548163, -0.36461708, -0.088422075, 0.049837828, -0.2482149, 0.3243994,
+          -0.4269011, -0.06523414, -0.24057674, -0.18774301, -0.28939205, 0.47157705, -0.5138044, -0.48500305,
+          -0.4290117, -0.02763888, -0.045829415, -0.28753638, -0.03607277, -0.09341089, 0.14672741, -0.17579287,
+          0.083553605, -0.33634177, 0.3155992, -0.18654802, 0.16135675, 0.17957811, 0.39859423, 0.29786786,
+          0.285769, -0.16109283, 0.19506279, -0.35338873, -0.16802765, -0.16269517, -0.06782141, -0.14809242,
+          -0.3701519, 0.26058352, -0.08455878, -0.6716248, 0.32725433, 0.35303336, -0.23841295, -0.29764837,
+          0.29784048, 0.08574736, 0.24165519, 0.1783759, 0.18984209, -0.12505804, -0.046507902, -0.14089186,
+          0.47153202, -0.10919299, -0.07111155, 0.40649334, -0.07902239, 0.22228393, -0.0023710441, -0.11330132,
+          0.2406234, 0.42164147, -0.5341145, 0.47054332, 0.3023201, 0.4132467, -0.28550047, 0.4247038,
+          0.12844191, -0.093899496, -1.0602912, -0.21011443, 0.49228564, -0.009104324, 0.5519599, -0.00042268352,
+          -0.04643169, 0.4337437, -0.012732498, 0.45814443, 0.6165385, -0.024332391, 0.36715645, -0.3133083,
+          0.204956, 0.31093884, 0.21147382, 0.17447634, -0.004993796, 0.3470944, 0.21196963, 0.5102804,
+          0.06676556, 0.24107371, -0.04730336, 0.1537193, -0.10986376, -0.2966811, 0.24361107, -0.21408245,
+          -0.4048234, 0.243666, 0.031722415, 0.3936008, -0.1693954, -0.1335506, 0.15295304, 0.055004124,
+          -0.10010863, -0.12649822, 0.028870173, 0.08282411, 0.24173169, -0.07189205, 0.13184284, 0.0016273428,
+          -0.5241857, -0.24130726, -0.20464541, 0.10887323, 0.022429628, 0.37995747, -0.30101553, -0.6148422,
+          0.612789, 0.16343902, 0.07885685, -0.029958433, -0.22377118, -0.14020497, 0.09062301, 0.1494059,
+          0.5686447, -0.27633318, -0.32190374, 0.078763805, 0.22175421, 0.19944926, 0.49321792, -0.19752479,
+          -0.4087353, 0.4380346, -0.3818628, -0.53991604, -0.22684722, -0.08855395, -0.21378434, -0.008552803,
+          -0.61997044, 0.27471164, -0.8943059, 0.032635488, -0.70787233, 0.5741103, 0.33670196, -0.6685825,
+          -0.4369337, 0.08151764, 0.34648082, -0.04429864, -0.12960981, 0.06344593, 0.42155635, -0.44848904,
+          0.13707072, -0.16977471, -0.59911007, -0.15309912, 0.56641674, -0.16541135, -0.80050826, -0.37122387,
+          0.530662, 0.19530717, -0.21143952, 0.28828543, 0.3088569, 0.23196664, 0.045366, 0.2197325,
+          -0.4303389, -0.25442657, 0.19174094, -0.2794116, 0.35677552, 0.17876226, -0.04115167, -0.057422895
+        ], "k": 10 } } },
       "functions": [
         { "field_value_factor": { "field": "rating", "factor": 0.1, "missing": 3.0 } },
         { "filter": { "range": { "publication_year": { "gte": 2020 } } }, "weight": 1.2 },
@@ -960,9 +1470,9 @@ You can audit any score by hand, because `boost_mode: sum` just adds the pieces.
 
 # Lesson 4-2 — Optimizing indexes for RAG
 
-**Goal:** understand the index-design choices that are hard to change later — and see that the index you built in Lesson 4-1 already makes them: correct field types, native chunking, intentional shard sizing, and the fast-bulk recipe. One hands-on lever remains: warming and preloading the vector files.
+**Goal:** understand the index-design choices that are hard to change later and see that the index you built in Lesson 4-1 already makes them: correct field types, native chunking, intentional shard sizing, and the fast-bulk recipe. One hands-on lever remains: warming and preloading the vector files.
 
-**The unoptimized baseline (read-along).** A common starting point: a flat index with `text` on fields you actually filter on (ISBN, genre), no vector field, and the default 1-second refresh. It works for keyword search but is not RAG-ready. There's no need to create a bad index just to read its mapping back — study it here and spot the problems:
+**The unoptimized baseline (read-along).** A common starting point: a flat index with `text` on fields you actually filter on (ISBN, genre), no vector field, and the default 1-second refresh. It works for keyword search but is not RAG-ready. There's no need to create a bad index just to read its mapping back — study it here and spot the 3 problems:
 
 ```json
 {
@@ -977,58 +1487,159 @@ You can audit any score by hand, because `boost_mode: sum` just adds the pieces.
 }
 ```
 
-The three problems: no `knn_vector` field, `text` (not `keyword`) on `genre`/`isbn` — so filters run full-text analysis instead of exact matches — and the default 1-second refresh. The index you built in Steps 4–6 fixes all three.
+The three problems, and why each one hurts:
+
+1. **No `knn_vector` field.** Semantic search is simply impossible on this index; it can only ever match keywords. And because mappings are locked once documents land, adding vectors later means a full reindex of every document, not a settings change.
+2. **`text` instead of `keyword` on `genre` and `isbn`.** These fields are only ever filtered on exact values, but the `text` type runs every query through the analyzer: tokenizing, lowercasing, and relevance-scoring work that buys nothing here. Worse, an ISBN like `978-0143127740` gets tokenized into pieces, so an exact-match filter can misbehave entirely.
+3. **The default 1-second refresh.** Refreshing every second tells Lucene to cut a new segment every second during writes, and this catalog updates nightly. The index pays constant segment churn (which slows both indexing and search) to provide a freshness guarantee nobody asked for.
+
+The index you built in Steps 4–6 fixes all three.
 
 ### Step 11: Warm and preload the vector files
 
-Ever noticed how the first search after a restart is mysteriously slow, then everything speeds up? That's cold HNSW graphs: after a restart they sit on disk, and whoever searches first pays the loading bill. In production, "whoever searches first" is a customer. These two techniques make sure it never is: the **warmup** API proactively pulls graphs into native memory, and `index.store.preload` goes further by mmapping the k-NN `vec` (vectors) and `vem` (vector metadata) files into the OS file cache whenever the index opens, which is why it needs the close, set, open cycle below. Make warmup part of your deploy checklist after index creation and any large load.
+The first search after a restart is always slower than the ones that follow. The reason is cold HNSW graphs: they start on disk, nothing loads them into memory until a search asks for them, and so the first search waits for that load to finish. In production, that first search belongs to a customer. This step covers the two techniques that prevent it. The **warmup** API loads the graphs into native memory before any traffic arrives. The `index.store.preload` setting goes further: it tells the operating system to memory-map the k-NN files (`vec` holds the vectors, `vem` their metadata) into the file cache every time the index opens. Preload is a static setting, which is why it needs the close, set, open cycle below. Make warmup part of your deploy checklist after creating an index and after any large load.
 
-**Request** — warm the graphs, then confirm they loaded. The full `_plugins/_knn/stats` response is long, so filter it down to the number that answers the question:
+**Request** - Warm the graphs:
+
 ```http
 GET _plugins/_knn/warmup/bookstore-rag
 ```
+
+**Expected** output:
+
+```json
+{
+  "_shards": {
+    "total": 2,
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+**Request** - Confirm they actually loaded. The full `_plugins/_knn/stats` response covers dozens of counters, so use `filter_path` to keep just `graph_memory_usage`, the one number that proves the graphs are in memory:
+
 ```http
 GET _plugins/_knn/stats?filter_path=nodes.*.graph_memory_usage
 ```
-**Expected** warmup returns `{"_shards": {"total": 2, "successful": 2, "failed": 0}}` (one primary, one replica), and the stats show `graph_memory_usage: 774` (KB) on each of the two data nodes holding a copy. Those graphs are now in native memory before any customer asks for them.
+**Expected** - The two `774's` are your index's two shard copies. `bookstore-rag` has one primary and one replica, each with its own copy of the HNSW graph files. The warmup call loaded each copy into memory on whichever node hosts it — so the node holding the primary and the node holding the replica each report 774, and the value is in KB of native (off-heap) memory now occupied by the graph.
 
-**Request** — now set the preload, which needs the close, set, open cycle:
+The five zeros are nodes with nothing to load. Three of them can never hold data (your dedicated cluster managers and the coordinator-only node. The stats API reports every node regardless). The interesting zero is your third data node: it simply doesn't host a copy of this index's one shard, so it has no graph to warm. If the index had more shards or replicas, you'd see the numbers spread across all three data nodes.
+
+The `774` itself is sane math: `256 books × 768 dimensions × 4 bytes ≈ 768 KB of raw vectors`, plus a little HNSW link structure. The graph is mostly the vectors themselves at this scale.
+
+```json
+{
+  "nodes": {
+    "SEDgR4UkS96_RaYdAdJMMw": {
+      "graph_memory_usage": 774
+    },
+    "BnNel5ARRiCjRTNHxNIFGQ": {
+      "graph_memory_usage": 0
+    },
+    "cK0uLQjwTuyTO00iydQ3vg": {
+      "graph_memory_usage": 0
+    },
+    "w5pYbppFT6-lxuh62xqkmw": {
+      "graph_memory_usage": 774
+    },
+    "qn_icf3PSH-5-yV_StCi6g": {
+      "graph_memory_usage": 0
+    },
+    "8juFfT-sRfW__kvz6NbgOA": {
+      "graph_memory_usage": 0
+    },
+    "F9CA3Sq3ReSvZdflXArfzA": {
+      "graph_memory_usage": 0
+    }
+  }
+}
+```
+
+Now set the preload. It's a static setting, and static settings can only change while an index is closed, so this takes four calls: close, set, open, verify.
+
+**Request** - Close the index. A closed index refuses all reads and writes, so in production this happens in a maintenance window:
+
 ```http
 POST bookstore-rag/_close
 ```
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true,
+  "indices": {
+    "bookstore-rag": {
+      "closed": true
+    }
+  }
+}
+```
+
+The index is now offline. Any search against it fails until it reopens.
+
+**Request** - Set the preload while the index is closed. The two file types listed are the ones vector search touches: `vec` files hold the vectors and `vem` files hold their metadata. Listing them tells the operating system to memory-map both into the file cache every time this index opens:
+
 ```http
 PUT bookstore-rag/_settings
 { "index": { "store": { "preload": ["vec", "vem"] } } }
 ```
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true
+}
+```
+
+**Request** - Reopen the index:
+
 ```http
 POST bookstore-rag/_open
 ```
-```http
-GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
+
+**Expected** output:
+
+```json
+{
+  "acknowledged": true,
+  "shards_acknowledged": true
+}
 ```
-**Expected** each call acknowledges (`_close` also reports `"closed": true` for the index), and health comes back `"status": "green"` with 100% active shards within a few seconds. From now on, every time this index opens, the OS pre-maps its vector files instead of waiting for the first unlucky search.
 
-> **Circuit breaker — already configured.** You set `knn.memory.circuit_breaker.limit` to 50% in Chapter 2 Step 14; it's the same knob and still applies here. Raise it only if the stats above show `graph_memory_usage_percentage` pressing the limit — and remember it's a persistent, cluster-wide setting on a shared lab cluster.
+**Request** - Confirm the index recovered. Reopening triggers shard recovery, and `wait_for_status` makes this call block until the index is at least searchable again instead of returning a scary intermediate state:
+
+```http
+GET _cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s&filter_path=status,active_shards_percent_as_number
+```
+
+**Expected** output:
+
+```json
+{
+  "status": "green",
+  "active_shards_percent_as_number": 100.0
+}
+```
+
+The index is open and fully recovered, and from now on every time it opens, the operating system pre-maps its vector files instead of making the first search wait.
+
 **Fast mode** — `30-knn-warmup-bookstore-rag.bru` → `31-knn-stats-bookstore-rag.bru` → `32-close-index.bru` → `33-set-preload.bru` → `34-open-index.bru` → `35-cluster-health.bru`
-
-> **Production checklist (runbook).** 1) create chunking pipeline → 2) create index → 3) disable refresh → 4) bulk load → 5) force-merge + restore refresh → 6) warm k-NN → 7) verify shards + stats. Seven repeatable, verifiable steps.
 
 ---
 
 # Lesson 4-3 — Query optimization
 
-**Goal:** the fastest wins, because they need no re-indexing. Profile a query to find the bottleneck, measure retrieval quality with `_rank_eval`, and centralize query logic in search pipelines so application code never changes. Runs against `bookstore-rag`.
-
-> **Profiling and explain (read-along).** Two debugging tools worth knowing, neither worth running here:
->
-> - `"profile": true` on any search returns a per-component timing breakdown (`query`/`collector` in nanoseconds) — the tool for finding which clause is slow. **But on OpenSearch 3.5.0, `profile` + a `hybrid` query throws a 500 `null_pointer_exception`** in the neural-search plugin (verified live — the hybrid collector doesn't support the profiler wrapper). Profile the `match` and `knn` sub-queries independently instead; Chapter 5 profiles a plain query hands-on.
-> - `explain=true` returns a per-hit `_explanation` tree of sub-scorers (BM25 term weights, vector similarity, normalization contributions). Expensive — debugging only, never in production.
+**Goal:** query-side changes are the fastest optimizations to ship because they don't need re-indexing. This lesson measures retrieval quality with `_rank_eval`, then centralizes query logic in a search pipeline so application code never has to change. Both run against `bookstore-rag`.
 
 ### Step 12: Measure quality with `_rank_eval`
 
-How do you know a tuning change actually made search *better* and not just different? Eyeballing results doesn't scale, and "it looks right to me" is not a metric. `_rank_eval` is the unit test for search quality: you declare test queries along with the document IDs a good search should return (with relevance ratings), and OpenSearch scores the ranking with a metric like `mean_reciprocal_rank` or precision@k. Run it before and after any change (keyword vs hybrid, a new chunk size, a new model) and you have numbers instead of vibes. The IDs below are real books in the sample data (Moby Dick `2701`, Sherlock `1661`, Dracula `345`, Frankenstein `84`).
+How do you know a tuning change actually made search *better* and not just different? Eyeballing results doesn't scale, and "it looks right to me" is not a metric. `_rank_eval` is the unit test for search quality: you declare test queries along with the document IDs a good search should return (with relevance ratings), and OpenSearch scores the ranking with a metric like `mean_reciprocal_rank` or precision@k. Run it before and after any change (keyword vs hybrid, a new chunk size, a new model) and you'll have actual baseline numbers. The IDs below are real books in the sample data (Moby Dick `2701`, Sherlock `1661`, Dracula `345`, Frankenstein `84`).
 
-**Request**
+**Request** - Grade the current keyword search against three test queries. Each request pairs a query with the documents a good result list should contain and how relevant each one is (`rating`). The `mean_reciprocal_rank` metric then scores every query as 1 divided by the rank of its first relevant hit in the top 10, and averages the three into one overall number:
 ```http
 GET bookstore-rag/_rank_eval
 {
@@ -1068,17 +1679,74 @@ GET bookstore-rag/_rank_eval
 }
 ```
 
-(Trimmed; each `details` entry also lists the hits it judged and the unrated documents it found.) Read it like a report card. The whale query is perfect: Moby Dick came back at rank 1, so its reciprocal rank is 1/1. The gothic query found Dracula at rank 4 (1/4 = 0.25) and the detective query found Sherlock at rank 5 (1/5 = 0.2). Keyword search nails queries whose words literally appear in the text and limps on the rest, and now you have that as a number: 0.4833 overall. Swap the `match` clauses for the hybrid query from Step 9 and re-run, and you can prove whether hybrid actually helps this dataset instead of arguing about it.
+(above are trimmed results; each `details` entry also lists the hits it judged and the unrated documents it found.) Read it like a report card. The whale query is perfect: Moby Dick came back at rank 1, so its reciprocal rank is 1/1. The gothic query found Dracula at rank 4 (1/4 = 0.25) and the detective query found Sherlock at rank 5 (1/5 = 0.2). 
 
-**Fast mode** — `38-rank-eval.bru`
+Keyword search nails queries whose words literally appear in the text and struggles on the rest, and now you have that as a number: 0.4833 overall. Time for the before-and-after this API exists for.
+
+**Request** - Run the same evaluation again with hybrid queries, so every test query searches by keywords and by meaning at the same time. Each request pairs the original `match` clause with a `neural` clause that embeds the query text through your model at search time. That's also why this request needs a model id when the keyword version didn't: a `match` query never runs a model, but `neural` performs inference on every query. Replace `YOUR_MODEL_ID` in all three places. One platform note before you run it: `_rank_eval` does not accept a `search_pipeline` parameter, so this measures the hybrid ranking without Step 9's normalization.
+
+```http
+GET bookstore-rag/_rank_eval
+{
+  "requests": [
+    {
+      "id": "whale_query",
+      "request": { "query": { "hybrid": { "queries": [
+        { "match": { "content": { "query": "whale sea captain revenge" } } },
+        { "neural": { "content_embedding": { "query_text": "whale sea captain revenge", "model_id": "YOUR_MODEL_ID", "k": 10 } } }
+      ] } } },
+      "ratings": [ { "_index": "bookstore-rag", "_id": "2701", "rating": 3 } ]
+    },
+    {
+      "id": "detective_query",
+      "request": { "query": { "hybrid": { "queries": [
+        { "match": { "content": { "query": "detective mystery investigation" } } },
+        { "neural": { "content_embedding": { "query_text": "detective mystery investigation", "model_id": "YOUR_MODEL_ID", "k": 10 } } }
+      ] } } },
+      "ratings": [ { "_index": "bookstore-rag", "_id": "1661", "rating": 3 } ]
+    },
+    {
+      "id": "gothic_query",
+      "request": { "query": { "hybrid": { "queries": [
+        { "match": { "content": { "query": "gothic horror monster" } } },
+        { "neural": { "content_embedding": { "query_text": "gothic horror monster", "model_id": "YOUR_MODEL_ID", "k": 10 } } }
+      ] } } },
+      "ratings": [
+        { "_index": "bookstore-rag", "_id": "345", "rating": 3 },
+        { "_index": "bookstore-rag", "_id": "84", "rating": 2 }
+      ]
+    }
+  ],
+  "metric": { "mean_reciprocal_rank": { "k": 10, "relevant_rating_threshold": 1 } }
+}
+```
+
+**Expected** output (trimmed the same way):
+
+```json
+{
+  "metric_score": 0.4365,
+  "details": {
+    "whale_query": { "metric_score": 1.0 },
+    "gothic_query": { "metric_score": 0.1667 },
+    "detective_query": { "metric_score": 0.1429 }
+  }
+}
+```
+
+So which search was better? For these three test queries, keyword search won, and the metric says so directly. Mean reciprocal rank rewards putting the relevant books near the top: keyword scored 0.4833, while this hybrid scored 0.4365 because it pushed Dracula from rank 4 down to rank 6 and Sherlock from rank 5 down to rank 7. Higher score means better ranking. That head-to-head verdict is exactly what this API exists to produce, and exactly what eyeballing two result lists cannot.
+
+Two details keep that verdict in perspective. First, remember what was actually measured. `_rank_eval` cannot apply Step 9's normalization pipeline, so these hybrid queries ran without it, and hybrid with normalization (the version you would actually deploy) ranks differently. The fair conclusion is not "hybrid is worse than keyword." It is "hybrid without normalization is worse than keyword," which confirms what Step 9 taught: normalization is what makes hybrid search work. Second, this test suite is tiny. Three queries and four rated books are enough to learn the workflow. A production team grades dozens or hundreds of rated queries before trusting a verdict. The lasting habit is the measurement itself: every change gets a number, and a regression gets caught before a customer ever sees it.
+
+**Fast mode** — `36-rank-eval.bru` → `37-rank-eval-hybrid.bru`
 
 ### Step 13: A request-processor search pipeline, set as the index default
 
-Imagine the merchandising team decides out-of-stock books should never appear in search. Would you rather update every query in every service, or change one object on the cluster? Search pipelines make it the latter. They run three processor types: **request** (transform the query before it runs), **phase-results** (between query and fetch, where normalization lives), and **response** (modify results on the way out). Here a `filter_query` request processor injects `in_stock: true` into *every* search, and setting it as `index.search.default_pipeline` applies it automatically with no application deploy (note this is distinct from `index.default_pipeline`, which is ingest). Need one query to see everything anyway? Bypass with `?search_pipeline=_none`.
+Here's the situation this step solves: the merchandising team decides out-of-stock books should never appear in search results. You have two ways to make that happen. You could update every query in every application that talks to this cluster, or you could change one object on the cluster itself. Search pipelines are the second option. A search pipeline can run three kinds of processors: **request** processors transform the query before it runs, **phase-results** processors work between the query and fetch phases (Step 9's normalization lives there), and **response** processors modify results on the way out. In this step you create a `filter_query` request processor that adds `in_stock: true` to every search against the index, then set it as `index.search.default_pipeline` so it applies automatically, with no application deploy. Two details worth knowing: this setting is different from `index.default_pipeline`, which controls ingest, and any query that genuinely needs to see everything can bypass the default with `?search_pipeline=_none` override.
 
 ![The three processor stages of a search pipeline](../../screenshots/chapter4/diagram-06-search-pipeline-stages.png)
 
-**Request** — create the pipeline:
+**Request** - Create the search pipeline. It holds one `filter_query` request processor whose job is to add `in_stock: true` to any query that runs through it (the `tag` is just a label that shows up in debugging output):
 ```http
 PUT _search/pipeline/bookstore-stock-filter
 {
@@ -1088,27 +1756,68 @@ PUT _search/pipeline/bookstore-stock-filter
   ]
 }
 ```
-**Request** — make it the index default:
+**Expected** output:
+
+```json
+{
+  "acknowledged": true
+}
+```
+
+The pipeline exists on the cluster, but nothing uses it yet. Queries against `bookstore-rag` are still unfiltered.
+
+**Request** - Attach it to the index as the default search pipeline. From this moment, every search against `bookstore-rag` runs through the stock filter unless a query explicitly opts out:
 ```http
 PUT bookstore-rag/_settings
 { "index.search.default_pipeline": "bookstore-stock-filter" }
 ```
-**Expected** `"acknowledged": true` for both. Then prove the filter is really injecting itself into every search by counting with and without it:
+**Expected** output:
 
+```json
+{
+  "acknowledged": true
+}
+```
+
+**Request** - Prove the filter is really injecting itself. Count every book with a plain `match_all`, no filter mentioned anywhere in the query:
 ```http
 GET bookstore-rag/_search?filter_path=hits.total.value
 { "size": 0, "query": { "match_all": {} } }
 ```
+**Expected** output:
+
+```json
+{
+  "hits": {
+    "total": {
+      "value": 180
+    }
+  }
+}
+```
+
+180, not 256. The default pipeline quietly added `in_stock: true` to your query before it ran.
+
+**Request** - Now run the identical count with the pipeline bypassed. `?search_pipeline=_none` tells OpenSearch to skip the index default for this one request:
 ```http
 GET bookstore-rag/_search?search_pipeline=_none&filter_path=hits.total.value
 { "size": 0, "query": { "match_all": {} } }
 ```
+**Expected** output:
 
-**Expected** output: the first count is `180`, the second is `256`. Same index, same query, and 76 out-of-stock books vanished from the first one because the default pipeline quietly added `in_stock: true` to it. No application changed a line of code, and any query that genuinely needs to see everything can still bypass with `?search_pipeline=_none`.
+```json
+{
+  "hits": {
+    "total": {
+      "value": 256
+    }
+  }
+}
+```
+
+All 256 books are back. Same index, same query; the only difference is the pipeline, which means 76 out-of-stock books are now hidden from every search on this index without a single application changing a line of code.
 
 **Fast mode** — `39-create-stock-filter-pipeline.bru` → `40-set-default-search-pipeline.bru` → `41-stock-filter-count.bru` → `42-stock-filter-bypass-count.bru`
-
-> **Combining filtering and normalization (read-along).** In principle one pipeline can do both — a `filter_query` request processor for business rules plus a `normalization-processor` for hybrid relevance. **Don't build it on OpenSearch 3.5.0:** verified live, the filtering works but the blended scores come back raw and un-normalized when the two processor types share a pipeline (identical to a plain `knn` query's scores instead of the 0.0–1.0 range `bookstore-hybrid-pipeline` produces alone in Step 9). Running two separate pipelines back-to-back doesn't help either — only one search pipeline applies per request. Until the neural-search plugin fixes the interaction, put business-rule filters in a `bool` clause inside the hybrid query itself when you need normalized scores **and** filtering together.
 
 ---
 
@@ -1116,22 +1825,40 @@ GET bookstore-rag/_search?search_pipeline=_none&filter_path=hits.total.value
 
 **Goal:** expose the cluster to AI agents through the **Model Context Protocol (MCP)**. OpenSearch ships a built-in MCP server in ML Commons: flip one cluster setting and any MCP-compatible client can discover and call tools (list indexes, read mappings, run searches) without custom integration code.
 
-> **Version + environment.** The built-in MCP server APIs are recent: tool register/list were **introduced in 3.1**, the **Streamable HTTP** transport at `/_plugins/_ml/mcp` in **3.3**. Step 14 (enable + register tools) is safe on any 3.3+ cluster. The **appendix** steps (A1–A3: external LLM connector + conversational agent) require an **external LLM API key** and outbound network access, which the managed course cluster may not permit — treat them as an optional, read-along section and substitute your own provider/credentials.
+> Step 15 (connecting Claude Desktop) additionally needs **Node 18 or newer** on your own machine, not on the cluster.
 
 ### Step 14: Enable the MCP server and register tools
 
-Here's a fitting finale: everything you built this chapter becomes usable by AI agents, and it takes exactly two requests. One persistent setting turns the cluster into an MCP server exposed at `/_plugins/_ml/mcp` over the Streamable HTTP transport, no restart needed. (Verified on 3.5: there is no separate SSE endpoint on this version, so point every client at that one path.) Registering tools then gives connecting agents a menu of what they may do, and the core tools map to operations you've been running by hand all chapter: list indexes, read a mapping, run a search. Any MCP-compatible client (Claude Desktop, Cursor, a LangChain agent) can now discover your bookstore index and query it without a line of custom integration code.
+This is the chapter's finale, and it takes three short requests: one setting turns the cluster into an MCP server, one call registers the tools agents may use, and one call confirms the menu. The server is exposed at `/_plugins/_ml/mcp` over the Streamable HTTP transport with no restart needed. The three tools you'll register map to operations you've been running by hand all chapter: list indexes, read a mapping, run a search. Once they exist, any MCP-compatible client, such as Claude Desktop, Cursor, or a LangChain agent, can discover your bookstore index and query it without a line of custom integration code.
 
 ![The built-in MCP server architecture](../../screenshots/chapter4/diagram-07-mcp-server-architecture.png)
 
-**Request** — enable the server:
+**Request** - Turn on the MCP server. It's a single persistent cluster setting, and it takes effect immediately:
 ```http
 PUT _cluster/settings
 {
   "persistent": { "plugins.ml_commons.mcp_server_enabled": "true" }
 }
 ```
-**Request** — register the tools:
+**Expected** output:
+
+```json
+{
+  "acknowledged": true,
+  "persistent": {
+    "plugins": {
+      "ml_commons": {
+        "mcp_server_enabled": "true"
+      }
+    }
+  },
+  "transient": {}
+}
+```
+
+The endpoint is live, but it has no tools yet. An agent connecting right now would find an empty menu.
+
+**Request** - Register the three tools. This list is the complete set of things a connecting agent is allowed to do; anything not registered here does not exist as far as agents are concerned. Include the `name` field on every tool:
 ```http
 POST _plugins/_ml/mcp/tools/_register
 {
@@ -1142,152 +1869,147 @@ POST _plugins/_ml/mcp/tools/_register
   ]
 }
 ```
-Confirm:
+**Expected** output: one `"created": true` entry per node. All seven nodes answer on this cluster, including the cluster managers and the coordinator, which is normal; tool definitions fan out to every node:
+
+```json
+{
+  "SEDgR4UkS96_RaYdAdJMMw": { "created": true },
+  "BnNel5ARRiCjRTNHxNIFGQ": { "created": true },
+  "cK0uLQjwTuyTO00iydQ3vg": { "created": true },
+  "w5pYbppFT6-lxuh62xqkmw": { "created": true },
+  "qn_icf3PSH-5-yV_StCi6g": { "created": true },
+  "8juFfT-sRfW__kvz6NbgOA": { "created": true },
+  "F9CA3Sq3ReSvZdflXArfzA": { "created": true }
+}
+```
+
+**Request** - Confirm the menu agents will see:
 ```http
 GET _plugins/_ml/mcp/tools/_list
 ```
-**Expected** the setting echoes back, registration returns `"created": true` once per node (all seven on this cluster, including the cluster managers, which is normal: tool definitions fan out everywhere), and the list confirms the menu:
+**Expected** output:
 
 ```json
 {
   "tools": [
-    { "type": "ListIndexTool", "name": "ListIndexTool", "description": "List indexes in the cluster", "create_time": 1784002449610 },
-    { "type": "IndexMappingTool", "name": "IndexMappingTool", "description": "Read an index mapping", "create_time": 1784002449610 },
-    { "type": "SearchIndexTool", "name": "SearchIndexTool", "description": "Run a search query against an index", "create_time": 1784002449610 }
+    {
+      "type": "ListIndexTool",
+      "name": "ListIndexTool",
+      "description": "List indexes in the cluster",
+      "create_time": 1784052830551
+    },
+    {
+      "type": "IndexMappingTool",
+      "name": "IndexMappingTool",
+      "description": "Read an index mapping",
+      "create_time": 1784052830557
+    },
+    {
+      "type": "SearchIndexTool",
+      "name": "SearchIndexTool",
+      "description": "Run a search query against an index",
+      "create_time": 1784052830557
+    }
   ]
 }
 ```
 
-Two practical notes, both verified on this cluster. Always include the `name` field when registering: omit it and you get a confusing 400 error instead of a "name is required" message. And registrations persist across sessions in a system index until you remove them, which is why the Cleanup section tears this down explicitly.
+That's the whole setup. One thing to remember: these registrations persist across sessions in a system index until you remove them, which is why the Cleanup section tears this down explicitly rather than leaving it as optional housekeeping.
 
 **Fast mode** — `43-enable-mcp-server.bru` → `44-register-mcp-tools.bru` → `45-list-mcp-tools.bru`
 
-## Appendix (optional): LLM-driven agents
+### Step 15: Connect Claude Desktop and talk to your index (Optional, Claude free-version works)
 
-### A1: Connect an external LLM
+Step 14 opened the door; this step walks an agent through it. If you use Claude Desktop (Cursor and LangChain agents follow the same pattern), the app already is the agent: it hosts the LLM, runs the reasoning loop, and holds the conversation. The only things it needs from you are Step 14's endpoint and a way to authenticate.
 
-The MCP server exposes tools, but tools don't use themselves: an LLM is the brain that decides which one to call and when. ML Commons connects to one through a **connector**, the same register/deploy lifecycle you know, pointed at a remote API instead of a local artifact. Replace the credential with your own; this creates the connector and model in one call.
+One piece of plumbing makes the connection work. Claude Desktop runs its configured MCP servers as local child processes and talks to them over stdio, while your cluster's MCP server is remote, speaks Streamable HTTP, and requires basic auth, so a small bridge process has to translate between the two. The popular `mcp-remote` bridge cannot do this job today (verified during course production: it omits custom auth headers from its connection test, receives a 401, and fails into an OAuth flow this server doesn't have). This course therefore ships its own zero-dependency bridge, [`mcp-basic-auth-bridge.mjs`](mcp-basic-auth-bridge.mjs), in this chapter's folder. It needs only Node 18 or newer.
 
-**Request**
-```http
-POST _plugins/_ml/models/_register
+**1. Build your authorization header.** The MCP endpoint uses the same basic-auth credentials you've used all course (your Instaclustr cluster username and password, from the console's connection info). Basic auth means one header, `Authorization: Basic <value>`, where the value is `username:password` encoded in base64:
+
+```
+printf '%s' "YOUR_USERNAME:YOUR_PASSWORD" | base64
+```
+
+(On Windows PowerShell: `[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("YOUR_USERNAME:YOUR_PASSWORD"))`.) Use `printf`, not `echo`: `echo` appends a newline that ends up inside the encoded value and breaks authentication in a way that looks like a wrong password.
+
+**2. Prove the header works before touching Claude Desktop.** This takes ten seconds and saves an hour of guessing which layer is broken:
+
+```
+curl -H "Authorization: Basic YOUR_BASE64_VALUE" "https://YOUR_CLUSTER_HOST:9200/_plugins/_ml/mcp/tools/_list"
+```
+
+If you get the three registered tools back, authentication is correct. If you get a 401, fix the header first (wrong credentials, stray newline, or quotes that got encoded). If the request hangs, your machine's IP is missing from the cluster's firewall allow-list.
+
+**3. Add the server to Claude Desktop.** Open Claude Desktop, go to **Settings → Developer → Edit Config**. That opens `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`, Windows: `%APPDATA%\Claude\claude_desktop_config.json`). Add this block, using the absolute path to the bridge file and passing the base64 value from step 1 as the second argument (just the value, without the word `Basic`):
+
+```json
 {
-  "name": "Bookstore Agent LLM",
-  "function_name": "remote",
-  "description": "GPT model for bookstore agent",
-  "connector": {
-    "name": "OpenAI Chat Connector",
-    "description": "Connector to OpenAI chat completions",
-    "version": 1,
-    "protocol": "http",
-    "parameters": { "model": "gpt-4o" },
-    "credential": { "openAI_key": "<YOUR_OPENAI_API_KEY>" },
-    "actions": [
-      {
-        "action_type": "predict",
-        "method": "POST",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "headers": { "Authorization": "Bearer ${credential.openAI_key}" },
-        "request_body": "{ \"model\": \"${parameters.model}\", \"messages\": ${parameters.messages} }"
-      }
-    ]
+  "mcpServers": {
+    "opensearch-bookstore": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/src/Chapter 4/mcp-basic-auth-bridge.mjs",
+        "https://YOUR_CLUSTER_HOST:9200/_plugins/_ml/mcp",
+        "YOUR_BASE64_VALUE"
+      ]
+    }
   }
 }
 ```
-**Expected** — a `task_id`; poll for the `model_id`, then `POST _plugins/_ml/models/<model_id>/_deploy`. Bedrock, Anthropic Claude, and Cohere use the same connector framework (see the OpenSearch connectors docs).
-**Save** — `model_id`.
-**Fast mode** — `46-register-llm-connector-model.bru`
 
-### A2: Register a conversational agent
+Notes on the bridge file and Node, per platform:
 
-Now wire the brain to the hands. An agent coordinates the LLM and the tools using the ReAct pattern (Reason, Act, Observe): the model thinks about what it needs, calls a tool, looks at the result, and repeats until it can answer. `memory.type: conversation_index` stores chat history so follow-up questions have context, and the tools array is the complete list of what the LLM is *allowed* to call, which is your safety boundary as much as its capability list. Replace `YOUR_MODEL_ID`.
+- The bridge is a single self-contained file. Keep it in your clone of this repo, or copy just that one file to any stable location and point the config there. If the file moves later, the connector fails with the same "Server disconnected" message, so pick a spot where it can live permanently.
+- macOS: if Claude Desktop reports "Server disconnected", the usual cause is that it cannot find `node`, because desktop apps do not inherit your shell's PATH. Replace `"command": "node"` with the absolute path that `which node` prints in your terminal (Homebrew installs typically live under `/opt/homebrew`).
+- Windows: install Node 18 or newer from nodejs.org, which adds `node` to the system PATH, so `"command": "node"` normally works as written. The path in `args` needs doubled backslashes in JSON, for example `"C:\\Users\\you\\mcp-basic-auth-bridge.mjs"`, and the config file lives at `%APPDATA%\Claude\claude_desktop_config.json`.
 
-![The ReAct agent loop](../../screenshots/chapter4/diagram-08-react-agent-loop.png)
+**4. Restart and have a conversation.** Fully quit Claude Desktop and reopen it (a window close is not enough). The three OpenSearch tools appear behind the tools icon in the chat input. Then put the agent through the chapter's own material with these four questions:
 
-**Request**
-```http
-POST _plugins/_ml/agents/_register
-{
-  "name": "Bookstore Search Agent",
-  "type": "conversational",
-  "description": "AI agent for bookstore search and recommendations",
-  "llm": {
-    "model_id": "YOUR_MODEL_ID",
-    "parameters": { "max_iteration": 10, "response_filter": "$.choices[0].message.content" }
-  },
-  "memory": { "type": "conversation_index" },
-  "parameters": { "_llm_interface": "openai/v1/chat/completions" },
-  "tools": [
-    { "type": "ListIndexTool",    "name": "ListIndexTool" },
-    { "type": "IndexMappingTool", "name": "IndexMappingTool" },
-    { "type": "SearchIndexTool",  "name": "SearchIndexTool", "parameters": { "input": "${parameters.question}" } },
-    { "type": "QueryPlanningTool" }
-  ],
-  "app_type": "os_chat"
-}
-```
-**Expected** — an `agent_id`.
-**Save** — `agent_id`.
-**Fast mode** — `47-register-conversational-agent.bru`
+1. **"What indexes are in my OpenSearch cluster?"** It calls `ListIndexTool`, and `bookstore-rag` appears in the listing.
+![what-indexes-are-in-my-cluster](../../screenshots/chapter4/what-indexes-are-in-my-cluster.png)
 
-### A3: Run the agent
+2. **"What fields does the bookstore-rag index have?"** It calls `IndexMappingTool`, and everything you designed in Step 5 comes back: the nested chunks, the 768-dimension vector field, the keyword metadata.
+![what-indexes-are-in-my-cluster](../../screenshots/chapter4/what-fields-does-index-have.png)
 
-Ask your question and watch the reasoning trace that comes back: the agent discovers the index (`ListIndexTool`), reads its fields (`IndexMappingTool`), then builds and runs a filtered query (`SearchIndexTool` / `QueryPlanningTool`) before answering. Every one of those moves is something you did manually this chapter; the agent just chains them on its own. The response includes a `memory_id`, and passing it back in the second request is what turns "a query" into "a conversation."
+3. **"Find mystery books under 20 dollars with a rating of at least 4."** It calls `SearchIndexTool`, and here's the chapter's best surprise: this is Step 8's filtered query in plain English, but the agent finds **four** books, not Step 8's six. That is not a bug. Step 13's default search pipeline filters the agent's searches too, and two of the six qualifying mysteries (Don Quijote and the Pliny volume) are out of stock. The business rule you installed in Step 13 now governs every consumer of this index, including an AI agent that showed up later, which is exactly what a default pipeline is for. (Your agent may also stumble once on genre capitalization, since `genre` is a case-sensitive `keyword` field, then check the actual values and correct itself. Watching it recover is half the fun.)
+![what-indexes-are-in-my-cluster](../../screenshots/chapter4/find-mystery-books.png)
 
-**Request**
-```http
-POST _plugins/_ml/agents/YOUR_AGENT_ID/_execute
-{
-  "parameters": { "question": "Find me highly rated mystery novels published after 2020 that are currently in stock" }
-}
-```
-Follow-up (reuse the returned `memory_id`):
-```http
-POST _plugins/_ml/agents/YOUR_AGENT_ID/_execute
-{
-  "parameters": { "question": "Which of those has the best reviews?", "memory_id": "<memory_id_from_previous>" }
-}
-```
-**Expected** — a final answer plus the reasoning trace and a `memory_id`.
-**Fast mode** — `48-execute-agent.bru`
+4. **"Which of those is the cheapest?"** The agent answers from the conversation it's already holding, and the correct answer is Metamorphosis at $7.16.
+![what-indexes-are-in-my-cluster](../../screenshots/chapter4/which-is-cheapest.png)
 
-**External MCP clients.** Any MCP client can connect to the same server — point it at `{{baseUrl}}/_plugins/_ml/mcp` (Streamable HTTP) with your cluster credentials. LangChain agents, Claude Desktop, or Cursor can reuse the exact indexes and pipelines you built this chapter.
+An AI agent just reproduced your hand-built results, obeyed your business rules without being told about them, and answered follow-ups from memory, using tools you registered against an index you built. That's the chapter, end to end.
 
-**Security.** The MCP server and agents inherit the caller's permissions. In production, create a dedicated read-only service account scoped to `bookstore-rag`, restrict which tools the agent can access (no `delete_index` for a customer-facing agent), and require TLS + authentication for external clients.
-
----
+>**Security.** The MCP server and every agent connecting through it inherit the caller's permissions. In production, create a dedicated read-only service account scoped to `bookstore-rag`, register only the tools such an agent should have (nothing delete-capable for a customer-facing setup), and require TLS and authentication for external clients.
 
 ## Chapter 4 wrap-up
 
 Step back and look at what is running on your cluster right now. One index holds 256 books, chunked and embedded on arrival by a pipeline nobody has to call. Queries against it can filter before the vector pass, blend keyword precision with semantic reach, and rerank by business rules you can audit by hand. Its graphs are pre-warmed so no customer ever pays the cold-start bill, a rank-eval suite gives every future tuning change a score instead of an opinion, a default search pipeline enforces a business rule on every query without an application deploy, and an AI agent can discover and search all of it through MCP. That's not a demo anymore. That's a production retrieval service.
 
-One thing this chapter deliberately did not do is generate an answer from the retrieved chunks. Generation always lives with an LLM outside the cluster, whichever way you wire it: your application calls the LLM with the chunks OpenSearch returned, ML Commons calls a remote LLM through a connector (the optional appendix), or the agent holding the LLM reaches into OpenSearch as a tool (Step 14). Retrieval is the part OpenSearch owns, and it's the part you just optimized end to end.
+One thing this chapter deliberately did not do is generate an answer from the retrieved chunks. Generation always lives with an LLM outside the cluster, whichever way you wire it: your application calls the LLM with the chunks OpenSearch returned, or the agent holding the LLM reaches into OpenSearch as a tool, exactly what Claude Desktop did in Step 15. (OpenSearch can also call out to a remote LLM itself through an ML Commons connector, a server-side pattern beyond this course's scope.) Retrieval is the part OpenSearch owns, and it's the part you just optimized end to end.
 
 Chapter 5 asks the question that comes after "it works": what happens when it has to keep working? Data outgrows shard plans, clusters go yellow, memory gets tight. The final chapter is the operations playbook for everything you've built.
 
-## What you learned
-
-- **Pipeline:** FAISS HNSW vs Lucene, result-set/filtering discipline, k-NN caching, hybrid normalization, and reranking with business signals.
-- **Index:** native `text_chunking`, `nested` chunks, intentional shard sizing, the fast-bulk recipe, and vector warm/preload.
-- **Query:** profiling, `_rank_eval`, and centralizing filters + normalization in search pipelines.
-- **Agents:** enabling the built-in MCP server and (optionally) wiring an LLM-driven conversational agent.
-
 ## Cleanup
 
-Remove what this chapter created (order: search pipelines, indexes, ingest pipelines, model):
-```http
-DELETE _search/pipeline/bookstore-hybrid-pipeline
-DELETE _search/pipeline/bookstore-stock-filter
-DELETE bookstore-rag
-DELETE _ingest/pipeline/bookstore-chunking-pipeline
+Remove what this chapter created (order: search pipelines, indexes, ingest pipelines, model) one-at-a-time:
+
+`DELETE _search/pipeline/bookstore-hybrid-pipeline`
+`DELETE _search/pipeline/bookstore-stock-filter`
+`DELETE bookstore-rag`
+`DELETE _ingest/pipeline/bookstore-chunking-pipeline`
+
+Tear down the MCP server. Tool registrations persist across sessions until you remove them, and one quirk applies: the `_remove` body is a bare JSON array, which the Dev Tools console cannot send (it fails to parse the request before sending anything). Run this one from a terminal, reusing the authorization value from Step 15, or use the Bruno request:
 ```
-If you ran Step 14, also tear down the MCP server. Tool registrations persist across sessions until you remove them, so this is not optional housekeeping:
-```http
-POST _plugins/_ml/mcp/tools/_remove
-["ListIndexTool", "IndexMappingTool", "SearchIndexTool"]
+curl -H "Authorization: Basic YOUR_BASE64_VALUE" -X POST "https://YOUR_CLUSTER_HOST:9200/_plugins/_ml/mcp/tools/_remove" -H "Content-Type: application/json" -d '["ListIndexTool", "IndexMappingTool", "SearchIndexTool"]'
 ```
+**Expected** `{"removed": true}` once per node. Then disable the server (this one works in Dev Tools):
 ```http
 PUT _cluster/settings
 { "persistent": { "plugins.ml_commons.mcp_server_enabled": null } }
 ```
+
 Optionally undeploy the model (`POST _plugins/_ml/models/YOUR_MODEL_ID/_undeploy`) if no other chapter needs it. **Fast mode** — `50-cleanup-delete-bookstore-rag.bru` → `51-cleanup-remove-mcp-tools.bru` → `52-cleanup-disable-mcp-server.bru`. (Earlier revisions of this workshop also created `bookstore-rag-index`, `books-unoptimized`, and the `bookstore-rag-ingest-pipeline` — delete them too if present; a `404` means they're already gone.)
+
+## Next chapter
+
+[Chapter 5](../Chapter%205/README.md) — production operations: break a cluster on purpose and triage it back to green, automate the index lifecycle with ISM, measure exactly what fp16 quantization saves, and finish with the query toolkit (caching, profiling, slow logs) that keeps it all fast.

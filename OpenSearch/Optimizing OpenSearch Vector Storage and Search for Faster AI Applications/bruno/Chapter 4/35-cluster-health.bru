@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/_cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s
+  url: {{baseUrl}}/_cluster/health/bookstore-rag?wait_for_status=yellow&timeout=60s&filter_path=status,active_shards_percent_as_number
   body: none
   auth: basic
 }

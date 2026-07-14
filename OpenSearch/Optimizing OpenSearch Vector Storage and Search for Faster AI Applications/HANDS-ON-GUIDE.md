@@ -71,7 +71,7 @@ In Bruno, use the **Poll ML task** request in the same chapter folder.
 
 Every lesson has hands-on steps in its chapter workshop. Architectural topics that would require mutating a shared cluster (shard-count math, allocation awareness, the shrink recipe, search backpressure) appear inline as read-along reference blocks rather than separate lessons.
 
-Lesson 4-4 (MCP server, steps for OpenSearch 3.3+) includes an optional appendix that needs an external LLM API key.
+Lesson 4-4 (MCP server, steps for OpenSearch 3.3+) ends by connecting Claude Desktop to the cluster, which needs Node 18+ on your own machine.
 
 ## Course order
 
