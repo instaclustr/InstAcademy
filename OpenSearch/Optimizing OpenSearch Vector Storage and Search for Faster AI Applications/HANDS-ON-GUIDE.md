@@ -1,8 +1,8 @@
-← [Course index](README.md) · [Cluster setup](CLUSTER-SETUP.md) · [Bruno collection](bruno/README.md) · **Next:** [Chapter 1](src/Chapter%201/README.md)
+← [Course index](README.md) · [Cluster setup](CLUSTER-SETUP.md) · [Bruno collection](bruno/README.md) · **Next:** [Chapter 1](chapters/Chapter%201/README.md)
 
 # How to run the labs
 
-This page is the entry point for the hands-on part of the course. Read it once, then work through the chapters in order. Each chapter is a single workshop page at `src/Chapter N/README.md` that walks through every step of that chapter, and you run those steps against your own OpenSearch cluster.
+This page is the entry point for the hands-on part of the course. Read it once, then work through the chapters in order. Each chapter is a single workshop page at `chapters/Chapter N/README.md` that walks through every step of that chapter, and you run those steps against your own OpenSearch cluster.
 
 **Before you start:** you need a running cluster and its connection details. If you don't have one yet, go to [cluster setup](CLUSTER-SETUP.md) first; it takes about 15 minutes.
 
@@ -78,13 +78,13 @@ Registration can take a minute or two, because the cluster is downloading a mode
 
 | Chapter | What you build |
 |---|---|
-| [Chapter 1](src/Chapter%201/README.md) | Vector fundamentals: k-NN indexes, HNSW and IVF, quantization and storage modes |
-| [Chapter 2](src/Chapter%202/README.md) | A neural search pipeline: deploy an embedding model, embed at ingest, search by meaning |
-| [Chapter 3](src/Chapter%203/README.md) | Sparse encoding, hybrid search, and comparing score normalization against RRF |
-| [Chapter 4](src/Chapter%204/README.md) | Production RAG: chunking, filtering, reranking, quality measurement, and connecting an AI agent over MCP |
-| [Chapter 5](src/Chapter%205/README.md) | Running it in production: shard triage, index lifecycle, memory savings, and query tuning |
+| [Chapter 1](chapters/Chapter%201/README.md) | Vector fundamentals: k-NN indexes, HNSW and IVF, quantization and storage modes |
+| [Chapter 2](chapters/Chapter%202/README.md) | A neural search pipeline: deploy an embedding model, embed at ingest, search by meaning |
+| [Chapter 3](chapters/Chapter%203/README.md) | Sparse encoding, hybrid search, and comparing score normalization against RRF |
+| [Chapter 4](chapters/Chapter%204/README.md) | Production RAG: chunking, filtering, reranking, quality measurement, and connecting an AI agent over MCP |
+| [Chapter 5](chapters/Chapter%205/README.md) | Running it in production: shard triage, index lifecycle, memory savings, and query tuning |
 
 ---
 
 ### Ready to start some hands-on fun??
-**Make sure your Cluster is ready** and start with [Chapter 1](src/Chapter%201/README.md)!
+**Make sure your Cluster is ready** and start with [Chapter 1](chapters/Chapter%201/README.md)!

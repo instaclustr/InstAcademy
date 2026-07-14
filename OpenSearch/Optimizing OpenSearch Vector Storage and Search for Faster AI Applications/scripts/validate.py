@@ -44,7 +44,7 @@ def canon(lines):
 def check_bruno():
     print("\nBruno collection vs chapter READMEs")
     for ch in CHAPTERS:
-        readme_path = f"src/Chapter {ch}/README.md"
+        readme_path = f"chapters/Chapter {ch}/README.md"
         folder = f"bruno/Chapter {ch}"
         text = open(readme_path).read()
         refs = sorted(set(re.findall(r"\b(\d{2}-[a-z0-9-]+\.bru)\b", text)))
@@ -98,7 +98,7 @@ def check_bulk():
     # every ndjson parses, and matches its README block when one is inlined
     readme_blocks = []
     for ch in CHAPTERS:
-        text = open(f"src/Chapter {ch}/README.md").read()
+        text = open(f"chapters/Chapter {ch}/README.md").read()
         for m in re.finditer(r"```(?:http)?\n(POST _bulk[^\n]*)\n(.*?)```", text, re.S):
             payload = m.group(2)
             if payload.lstrip().startswith("{ /*"):  # paste-from-file placeholder

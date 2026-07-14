@@ -1,4 +1,4 @@
-← [Course index](README.md) · [How to run labs](HANDS-ON-GUIDE.md) · **Next:** [Chapter 1](src/Chapter%201/README.md)
+← [Course index](README.md) · [How to run labs](HANDS-ON-GUIDE.md) · **Next:** [Chapter 1](chapters/Chapter%201/README.md)
 
 # Set up your OpenSearch cluster
 
@@ -104,4 +104,4 @@ https://opensearch-dashboards.<your-cluster-id>.cnodes.io:5601/app/dev_tools#/co
 
 ---
 
-## **Cluster running? Connection details saved?** Then head to [Chapter 1](src/Chapter%201/README.md), or read [how to run the labs](HANDS-ON-GUIDE.md) first if you haven't yet.
+## **Cluster running? Connection details saved?** Then head to [Chapter 1](chapters/Chapter%201/README.md), or read [how to run the labs](HANDS-ON-GUIDE.md) first if you haven't yet.

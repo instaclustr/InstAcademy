@@ -1948,7 +1948,7 @@ If you get the three registered tools back, authentication is correct. If you ge
     "opensearch-bookstore": {
       "command": "node",
       "args": [
-        "/absolute/path/to/src/Chapter 4/mcp-basic-auth-bridge.mjs",
+        "/absolute/path/to/chapters/Chapter 4/mcp-basic-auth-bridge.mjs",
         "https://YOUR_CLUSTER_HOST:9200/_plugins/_ml/mcp",
         "YOUR_BASE64_VALUE"
       ]

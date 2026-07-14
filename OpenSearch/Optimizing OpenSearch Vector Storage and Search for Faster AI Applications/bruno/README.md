@@ -29,7 +29,7 @@ Run the same REST calls as the chapter workshop READMEs without typing them into
 
 ## How to run a chapter
 
-1. Open the chapter folder (e.g. `Chapter 2`). Requests are numbered in workshop order and match the steps in that chapter's README under `src/Chapter …/README.md`.
+1. Open the chapter folder (e.g. `Chapter 2`). Requests are numbered in workshop order and match the steps in that chapter's README under `chapters/Chapter …/README.md`.
 2. Run requests **top to bottom** (`seq` order).
 3. After **Register model** or **Deploy model**, if the response contains `task_id`:
    - Set `taskId` in the environment (or edit the Poll request URL).
@@ -50,7 +50,7 @@ bruno/
   Chapter 5/           # 01–72 · shards, index optimization, security, query tuning
 ```
 
-Each chapter folder is **flat** — requests are numbered `01-…`, `02-…` in the same order as the steps in the matching chapter workshop (`src/Chapter …/README.md`).
+Each chapter folder is **flat** — requests are numbered `01-…`, `02-…` in the same order as the steps in the matching chapter workshop (`chapters/Chapter …/README.md`).
 
 ## Learn mode vs fast mode
 

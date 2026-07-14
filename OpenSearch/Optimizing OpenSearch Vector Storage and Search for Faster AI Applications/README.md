@@ -16,23 +16,23 @@ Everything is hands-on: **72 steps across five chapters**, each one a real reque
 |---|---|
 | **1. [Set up your cluster](CLUSTER-SETUP.md)** | Sign up for a free trial, create an OpenSearch cluster with the AI Search Plugin, open the firewall, and collect your connection details. About 15 minutes. |
 | **2. [Learn how to run the labs](HANDS-ON-GUIDE.md)** | How a chapter is laid out, how to reach Dev Tools, and the two ways to run each step. Read this once. |
-| **3. [Start Chapter 1](src/Chapter%201/README.md)** | Build your first vector index and search it. |
+| **3. [Start Chapter 1](chapters/Chapter%201/README.md)** | Build your first vector index and search it. |
 
 ## The five chapters
 
 | | Chapter | What you build |
 |---|---|---|
-| **1** | [Configuring and optimizing vector search](src/Chapter%201/README.md) | k-NN indexes from scratch: HNSW and IVF, quantization, storage modes, and the memory and shard levers everything else builds on |
-| **2** | [Building neural search pipelines](src/Chapter%202/README.md) | Deploy a real embedding model inside the cluster, embed documents at ingest time, and search by meaning instead of keywords |
-| **3** | [Mastering hybrid search](src/Chapter%203/README.md) | Sparse encoding, then hybrid search: compare lexical, sparse, dense, and two ways of fusing them side by side on the same query |
-| **4** | [RAG optimization](src/Chapter%204/README.md) | A production retrieval layer: chunking, filtered k-NN, reranking with business rules, measured quality, and an AI agent querying your index over MCP |
-| **5** | [Production optimizations](src/Chapter%205/README.md) | Break a cluster and triage it back to green, automate the index lifecycle, prove what fp16 quantization saves, and tune queries with real measurements |
+| **1** | [Configuring and optimizing vector search](chapters/Chapter%201/README.md) | k-NN indexes from scratch: HNSW and IVF, quantization, storage modes, and the memory and shard levers everything else builds on |
+| **2** | [Building neural search pipelines](chapters/Chapter%202/README.md) | Deploy a real embedding model inside the cluster, embed documents at ingest time, and search by meaning instead of keywords |
+| **3** | [Mastering hybrid search](chapters/Chapter%203/README.md) | Sparse encoding, then hybrid search: compare lexical, sparse, dense, and two ways of fusing them side by side on the same query |
+| **4** | [RAG optimization](chapters/Chapter%204/README.md) | A production retrieval layer: chunking, filtered k-NN, reranking with business rules, measured quality, and an AI agent querying your index over MCP |
+| **5** | [Production optimizations](chapters/Chapter%205/README.md) | Break a cluster and triage it back to green, automate the index lifecycle, prove what fp16 quantization saves, and tune queries with real measurements |
 
 ## What's in this repository
 
 | Path | What it is |
 |---|---|
-| [`src/Chapter N/`](src/Chapter%201/) | The five chapter workshops. This is the course |
+| [`chapters/Chapter N/`](chapters/Chapter%201/) | The five chapter workshops. This is the course |
 | [`bruno/`](bruno/) | Fast mode: every request in the course as a Bruno collection |
 | [`rest/bulk/`](rest/bulk/) | The bulk payloads Bruno sends (the same data printed in each chapter) |
 | [`screenshots/`](screenshots/) | Diagrams and console captures used by the chapters |
