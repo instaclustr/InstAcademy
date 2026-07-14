@@ -33,8 +33,7 @@ Everything is hands-on: **72 steps across five chapters**, each one a real reque
 | Path | What it is |
 |---|---|
 | [`chapters/Chapter N/`](chapters/Chapter%201/) | The five chapter workshops. This is the course |
-| [`bruno/`](bruno/) | Fast mode: every request in the course as a Bruno collection |
-| [`rest/bulk/`](rest/bulk/) | The bulk payloads Bruno sends (the same data printed in each chapter) |
+| [`bruno/`](bruno/) | Fast mode: every request in the course as a Bruno collection, with the bulk data each chapter sends |
 | [`screenshots/`](screenshots/) | Diagrams and console captures used by the chapters |
 | [`CLUSTER-SETUP.md`](CLUSTER-SETUP.md) | Sign-up, cluster creation, firewall, connection details |
 | [`HANDS-ON-GUIDE.md`](HANDS-ON-GUIDE.md) | How to run the labs |

@@ -8,7 +8,7 @@ Here you'll make a working RAG pipeline and make it production-ready, layer by l
 
 This chapter builds one chunked index, **`bookstore-rag`**. Every pipeline, index, and query technique that follows runs against that same index, so you can watch each optimization change the numbers. The order matters because **index-time decisions are hard to undo**: once documents land, most mapping choices are locked in. Lesson 4-2 looks back at what an unoptimized first attempt would have looked like and why this index is shaped the way it is.
 
-> **Data note.** The course bulk file ([`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson)) is 256 real book summaries enriched with deterministic `genre`, `price`, `rating`, `publication_year`, and `in_stock` fields so the filtering, reranking, and rank-evaluation steps return meaningful results. Values are stable across runs (derived from `book_id`).
+> **Data note.** The course bulk file ([`chapter-4-bookstore-rag.ndjson`](../../bruno/Chapter%204/chapter-4-bookstore-rag.ndjson)) is 256 real book summaries enriched with deterministic `genre`, `price`, `rating`, `publication_year`, and `in_stock` fields so the filtering, reranking, and rank-evaluation steps return meaningful results. Values are stable across runs (derived from `book_id`).
 
 ---
 
@@ -254,7 +254,7 @@ PUT bookstore-rag/_settings
 }
 ```
 
-**Request** - now we bulk-load the 256 books. Every document passes through the chunking pipeline on arrival, so each one gets chunked and embedded server-side. We'll give it a generous timeout (10 minutes or 600 seconds); on a busy cluster this takes several minutes. The same payload lives in [`rest/bulk/chapter-4-bookstore-rag.ndjson`](../../rest/bulk/chapter-4-bookstore-rag.ndjson) if you prefer to copy from a file.
+**Request** - now we bulk-load the 256 books. Every document passes through the chunking pipeline on arrival, so each one gets chunked and embedded server-side. We'll give it a generous timeout (10 minutes or 600 seconds); on a busy cluster this takes several minutes. The same payload lives in [`chapter-4-bookstore-rag.ndjson`](../../bruno/Chapter%204/chapter-4-bookstore-rag.ndjson) if you prefer to copy from a file.
 
 ```http
 POST _bulk?timeout=600s

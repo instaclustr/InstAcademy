@@ -26,7 +26,7 @@ These keep the course trustworthy. Anything that breaks one of them will be sent
 
 **Every Expected block is a real response.** The output shown in a step must be what the cluster actually returned when someone ran that exact request, not an idealized or hand-written example. If you change a request, re-run it and paste the new response. If a number in the prose (a score, a document count, a memory figure) came from a run, and your change moves it, update the prose too.
 
-**The chapter README is the source of truth.** Bulk payloads are inlined in the README so a student can copy any block and run it as printed. The NDJSON files in `rest/bulk/` are the machine-readable mirror the Bruno collection sends, and they must stay byte-identical to the README block. Change one, regenerate the other.
+**The chapter README is the source of truth.** Bulk payloads are inlined in the README so a student can copy any block and run it as printed. The `.ndjson` file beside each bulk request in `bruno/Chapter N/` is the machine-readable mirror the Bruno collection sends, and it must stay byte-identical to the README block. Change one, regenerate the other.
 
 **Bruno stays in sync with the README.** If you add, remove, or edit a request in a chapter:
 

@@ -35,7 +35,7 @@ Run the same REST calls as the chapter workshop READMEs without typing them into
    - Set `taskId` in the environment (or edit the Poll request URL).
    - Run **Poll ML task** repeatedly until `"state": "COMPLETED"`.
    - Copy `model_id` into `modelId`.
-4. Bulk requests use body files under [`../rest/bulk/`](../rest/bulk/). In Bruno, the file path is relative to the request file.
+4. Bulk requests send an `.ndjson` file that sits in the same chapter folder as the request. In Bruno, the file path is relative to the request file.
 
 ## Folder layout
 
@@ -59,6 +59,6 @@ Each chapter folder is **flat** — requests are numbered `01-…`, `02-…` in 
 | Where | Dev Tools in Dashboards | Bruno app |
 | Goal | Understand each API | Same outcome, less typing |
 | ML tasks | You poll manually in Dev Tools | **Poll ML task** request |
-| Bulk data | Small inline examples + `rest/bulk/` files | Bruno file bodies |
+| Bulk data | Printed in the chapter page | The `.ndjson` file beside the request |
 
 Start with [Learn mode](../HANDS-ON-GUIDE.md) at least once; use Bruno when you need speed or recovery.

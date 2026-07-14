@@ -108,10 +108,17 @@ def check_bulk():
             except json.JSONDecodeError as e:
                 fail(f"Chapter {ch}: an inline bulk block is not valid JSON ({e})")
 
-    for path in sorted(os.listdir("rest/bulk")):
-        if not path.endswith(".ndjson"):
-            continue
-        full = os.path.join("rest/bulk", path)
+    ndjson_files = []
+    for ch in CHAPTERS:
+        folder = f"bruno/Chapter {ch}"
+        ndjson_files += [
+            os.path.join(folder, f)
+            for f in sorted(os.listdir(folder))
+            if f.endswith(".ndjson")
+        ]
+
+    for full in ndjson_files:
+        path = os.path.basename(full)
         try:
             file_lines = canon(open(full).read().splitlines())
         except json.JSONDecodeError as e:
