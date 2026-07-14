@@ -1,0 +1,20 @@
+meta {
+  name: Count bypassing the stock filter
+  type: http
+  seq: 42
+}
+
+get {
+  url: {{baseUrl}}/bookstore-rag/_search?search_pipeline=_none&filter_path=hits.total.value
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{ "size": 0, "query": { "match_all": {} } }
+}

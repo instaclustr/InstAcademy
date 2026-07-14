@@ -1,11 +1,11 @@
 meta {
-  name: Bulk index 20 256-dim vectors
+  name: Bulk ingest bookstore-rag
   type: http
-  seq: 26
+  seq: 20
 }
 
 post {
-  url: {{baseUrl}}/_bulk
+  url: {{baseUrl}}/_bulk?timeout=600s
   body: file
   auth: basic
 }
@@ -16,6 +16,6 @@ auth:basic {
 }
 
 body:file {
-file: ../../rest/bulk/chapter-1-lesson-3-vector-index.ndjson
+file: ../../rest/bulk/chapter-4-bookstore-rag.ndjson
   contentType: application/x-ndjson
 }

@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/_plugins/_knn/stats
+  url: {{baseUrl}}/_plugins/_knn/stats?filter_path=nodes.*.graph_memory_usage
   body: none
   auth: basic
 }

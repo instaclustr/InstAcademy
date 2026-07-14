@@ -1,0 +1,20 @@
+meta {
+  name: Cleanup: deregister MCP tools
+  type: http
+  seq: 51
+}
+
+post {
+  url: {{baseUrl}}/_plugins/_ml/mcp/tools/_remove
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+["ListIndexTool", "IndexMappingTool", "SearchIndexTool"]
+}

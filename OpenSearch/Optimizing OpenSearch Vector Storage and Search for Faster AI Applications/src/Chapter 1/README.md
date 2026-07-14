@@ -57,6 +57,8 @@ might use 3 dimensions for red/green/blue); higher dimensionality captures more
 nuance at the cost of more storage and compute. OpenSearch stores embeddings in a
 `knn_vector` field and searches them by distance.
 
+![From raw data to a point in vector space](../../screenshots/chapter1/diagram-01-data-to-vectors.png)
+
 **Concept — the cost/performance balance.** Tuning a vector index is always a
 trade between **search performance** and **operational cost**, where cost breaks
 down into three resources: **CPU, RAM, and storage**. Two structural knobs
@@ -395,6 +397,8 @@ collapses them — here down to one segment — which is a common optimization f
 read-heavy indexes that are no longer being written. (Only force-merge indexes
 that are done ingesting; it is expensive.)
 
+![Inside the index: nodes, shards, and segments, before and after force-merge](../../screenshots/chapter1/diagram-02-shards-segments-force-merge.png)
+
 You'll see we have 2 total shards and both were successful.
 
 **Request** — This command will show us where the shards are in our cluster
@@ -473,6 +477,8 @@ through a two-phase quantize-then-rescore search. You enable it with
 We will use 16x in our call, which means OpenSearch is quantizing (shrinking) the 
 stored representation to about 1/16th the size of the full float32 precision.
 
+![Disk-based storage: the two-phase quantize-then-rescore search](../../screenshots/chapter1/diagram-03-disk-based-two-phase-search.png)
+
 **Request**
 
 ```http
@@ -528,6 +534,8 @@ PUT vector-disk-demo
     vectors are skipped — fast even on huge datasets, with lower memory than
     HNSW, but it requires a **training** step first. IVF is `faiss`-only.
 
+![HNSW layered graph versus IVF centroid buckets](../../screenshots/chapter1/diagram-04-hnsw-vs-ivf.png)
+
 You'll run all three against the same 10 product vectors and compare.
 
 ### Step 7: Create the products index (HNSW)
@@ -577,6 +585,8 @@ PUT products-hnsw
 
 Ten small products (three rough clusters: electronics, books, outdoor) give the
 search methods something to distinguish.
+
+![The 10 product vectors: three clusters and the query point](../../screenshots/chapter1/diagram-05-product-vector-clusters.png)
 
 **Request** — run the following command to index 10 products
 
@@ -759,6 +769,8 @@ model. `nprobes` (how many buckets to scan at query time) can be set now or per
 query. Training needs at least `nlist` vectors; we use `nlist: 4` against 10
 vectors. Training is asynchronous — the call returns immediately with a
 `model_id`.
+
+![The IVF pipeline: train a model, then build the index from it](../../screenshots/chapter1/diagram-06-ivf-training-pipeline.png)
 
 **Request**
 
@@ -969,6 +981,8 @@ too long and they silently **truncate** it, losing context and producing a poor
 embedding. **Chunking** splits a long document into smaller pieces, embeds each
 piece separately, and stores each chunk as its own document linked back to the
 parent. 
+
+![Truncation versus chunking for long documents](../../screenshots/chapter1/diagram-07-truncation-vs-chunking.png)
 
 **Benefits:** every chunk fits the model (better embeddings) and smaller
 chunks give sharper semantic matches. 
@@ -1263,6 +1277,8 @@ document, millions of times over, and pays it in RAM as well as disk, because
 the HNSW graph lives in memory. This is why right-sizing dimensions is one of
 the highest-leverage cost decisions in a vector deployment, and why catching an
 over-dimensioned index early beats migrating one later.
+
+![Dimension reduction: 256 floats in, 128 floats out](../../screenshots/chapter1/diagram-08-dimension-reduction.png)
 
 ![index-sizes](../../screenshots/chapter1/step16-footprint-comparison.png)
 

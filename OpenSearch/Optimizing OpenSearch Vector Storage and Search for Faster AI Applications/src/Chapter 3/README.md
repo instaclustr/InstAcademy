@@ -56,6 +56,8 @@ POST _plugins/_ml/model_groups/_search
 
 Time to meet the other kind of embedding model. Chapter 2's dense model squeezed meaning into 768 floats; this one produces something quite different, a map of tokens to weights where only the terms that matter get a value. That shape is what lets sparse search live in an ordinary inverted index and stay nearly as cheap as BM25. The registration flow is the same as previous chapters: register the model, receive the `task_id`, & poll the task until the artifact finishes downloading.
 
+![Lexical vs sparse vs dense: three ways to represent the same text](../../screenshots/chapter3/diagram-01-three-ways-represent-query.png)
+
 Replace `YOUR_MODEL_GROUP_ID`:
 
 **Request** — paste into Dev Tools:
@@ -165,6 +167,8 @@ Same pattern as Chapter 2's pipeline, with one upgrade: this one has **two** pro
 - **`sparse_encoding`** calls your deployed model. 
 - **`prune_type: max_ratio` / `prune_ratio: 0.1`** drops tokens weighted below 10% of the max to keep vectors small.
 
+![The two-processor ingest pipeline with chunk overlap](../../screenshots/chapter3/diagram-02-ingest-pipeline-chunk-encode.png)
+
 Replace `YOUR_SPARSE_MODEL_ID`:
 
 **Request** — Create the sparse ingest pipeline by pasting this into Dev Tools:
@@ -221,6 +225,8 @@ Now we'll build the home for these sparse-encoded chunks. This mapping looks dif
 - **`default_pipeline`** — every document indexed here runs `nlp-ingest-pipeline` automatically, so clients send plain text only.
 - **`rank_features`** on `sparse_encoding` — the sparse model emits **string** token keys; the `sparse_vector` type only accepts numeric keys and would fail at index time with `[sparse_vector] fields should be valid integer`.
 - **`nested`** on `passage_embedding` — each chunk becomes an independently queryable sub-document, so a query can score the single **best** chunk per book (`score_mode: max`).
+
+![rank_features vs knn_vector: why sparse needs a different field type](../../screenshots/chapter3/diagram-03-rank-features-vs-knn-vector.png)
 
 > **Re-running this chapter?** Mappings are mostly immutable, so a leftover index
 > from a previous attempt must be deleted before you can recreate it (Step 6's
@@ -1030,6 +1036,8 @@ GET vector-search-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.
 | 4 | Don Quijote | Four Arthurian Romances | Treasure Island |
 | 5 | Treasure Island | Kidnapped | Undine |
 
+![Three retrieval methods, one query: the ranking bump chart](../../screenshots/chapter3/diagram-04-three-rankings-bump-chart.png)
+
 Three observations:
 
 - **Only one book survives all three lists: *Treasure Island*.** Every method reads this query differently, and the one unanimous pick is a strong signal of true relevance. That intuition, agreement across methods as evidence, is the entire premise behind rank fusion in Lesson 3-3.
@@ -1055,6 +1063,8 @@ BM25 scores (~0–20) and sparse scores (~0–10) live on different scales. Add 
 - **`normalization.technique`** — `min_max` rescales each branch to [0, 1].
 - **`combination.technique`** — `arithmetic_mean` = weighted average.
 - **`weights`** — one per sub-query, must sum to **1.0**. Here `[0.3, 0.7]` trusts the sparse branch more than keyword.
+
+![How the hybrid query and normalization pipeline fit together](../../screenshots/chapter3/diagram-05-hybrid-normalization-pipeline.png)
 
 ### **Step 1: Create the normalization search pipeline**
 
@@ -1157,6 +1167,8 @@ Hold this against your Step 7 and Step 8 lists and the fusion logic becomes visi
 - **The noise stays out.** *Don Quijote*, the stopword freeloader, is gone for good. *Four Arthurian Romances* likely sits just outside at #6; with the weights at 30/70 it needed at least a little keyword support to make the cut. (Step 3 shows how flipping the weights changes its fate.)
 - **For the first time, the scores themselves are readable.** After min-max normalization each branch contributes 0 to 1, so the combined score roughly decodes as "how much did each method like this?" Check the math on your own hits: Twenty Thousand Leagues scored ~0.9 because it was sparse's #1 (0.7 × ~1.0) *and* a strong lexical hit (0.3 × ~0.65). Kidnapped's ~0.46 is lexical's #1 (0.3 × 1.0) plus a weak sparse tail (0.7 × ~0.23). Gulliver's ~0.20 is almost pure sparse with no keyword help. The score now encodes *agreement*, which raw BM25 and sparse numbers never could.
 
+![Reading the fused score: stacked contributions per book](../../screenshots/chapter3/diagram-06-fused-score-stacked-contributions.png)
+
 **Save** the **top-5 order**; you will compare it against the RRF ranking in Lesson 3-3.
 
 **Fast mode** `bruno/Chapter 3/16-hybrid-normalized-search.bru`
@@ -1176,6 +1188,8 @@ In this lesson you'll build the RRF pipeline, run the *identical* hybrid query t
 Reciprocal Rank Fusion ignores raw scores entirely and fuses results by **where** each document ranks in each result list.
 
 `rank_j` is the document's position in result list *j* and `k` is the **rank constant**. A document ranked highly in several lists accumulates a large reciprocal-rank sum. Because it uses ranks, not scores, RRF **needs no score normalization and no labeled data to tune**, it just works.
+
+![RRF math, worked on the chapter's own results](../../screenshots/chapter3/diagram-07-rrf-worked-math.png)
 
 - **`rank_constant`** (default **60**) softens the advantage of top ranks. **Larger** `k` → scores more uniform, top hits matter less; **smaller** `k` → bigger gaps between ranks. We use `40`.
 - **Trade-off:** RRF trades a little peak precision for simplicity and robustness. If you have the resources to tune weights with labeled data, score-based normalization can edge it out; for most workloads RRF delivers strong results with minimal config.
@@ -1286,6 +1300,8 @@ What *does* differ is the shape of the scores, and RRF's are fully auditable in 
 | 4 | Don Quijote | Four Arthurian Romances | Treasure Island | Robinson Crusoe | Robinson Crusoe |
 | 5 | Treasure Island | Kidnapped | Undine | Gulliver's Travels | Gulliver's Travels |
 
+![The chapter finale: five rankings side by side](../../screenshots/chapter3/diagram-08-five-rankings-side-by-side.png)
+
 Read it column by column and the chapter's argument writes itself. No single method was complete: lexical carried a stopword freeloader (*Don Quijote*). Sparse demoted a literal match. Dense wandered off theme (*Undine*, *Life on the Mississippi*). Both fusion strategies fixed all of that the same way: consensus picks promoted to the top, each branch's blind spot covered by the other.
 
 **Fast mode** `bruno/Chapter 3/18-hybrid-rrf-search.bru`
@@ -1328,7 +1344,7 @@ POST _plugins/_ml/models/YOUR_SPARSE_MODEL_ID/_undeploy
 DELETE _plugins/_ml/models/YOUR_SPARSE_MODEL_ID
 ```
 
-**Fast mode** `bruno/Chapter 3/19-cleanup.bru` (delete pipelines + index).
+**Fast mode** `bruno/Chapter 3/19-cleanup.bru` (sends the first DELETE; its docs note lists the other three requests to run by hand).
 
 ### Chapter 2 cleanup (deferred until now)
 

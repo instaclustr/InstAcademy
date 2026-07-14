@@ -43,6 +43,8 @@ We will start by registering and deploying `msmarco-distilbert-base-tas-b` with 
 
 Neural search needs a model that turns text into vectors **inside** the cluster. ML Commons is OpenSearch's built-in framework for that: you **register** a model (metadata + artifact download), **deploy** it (load weights into node memory), and then any ingest pipeline or query can call it — no external model server to host, scale, or monitor.
 
+![ML Commons model lifecycle state diagram](../../screenshots/chapter2/diagram-01-ml-commons-model-lifecycle.png)
+
 ### Step 1 — Enable ML Commons cluster settings
 
 
@@ -118,6 +120,8 @@ POST _plugins/_ml/model_groups/_register
 ### Step 3 — Register the embedding model
 
 Registering the model downloads and validates the pretrained **`msmarco-distilbert-base-tas-b`** artifact on the cluster and assigns it a **`model_id`**. `TORCH_SCRIPT` selects the TorchScript serialization. This runs asynchronously and returns a `task_id`.
+
+![Register and deploy sequence diagram with task polling](../../screenshots/chapter2/diagram-02-register-deploy-sequence.png)
 
 Replace `YOUR_MODEL_GROUP_ID` with the id from Step 2.
 
@@ -272,6 +276,8 @@ POST _plugins/_ml/_predict/text_embedding/YOUR_MODEL_ID
 Think of an ingest pipeline as a checkpoint that every document passes through on its way into an index. It is a named, server-side chain of **processors**, and each processor gets a chance to transform the document before it is stored. Ours will hold a single `text_embedding` processor: it reads the document's text, calls the model you just deployed, and writes the resulting 768-dimension vector into the document alongside the original text.
 
 Attach that pipeline to an index as its `default_pipeline` and the whole embedding workflow disappears from view: clients write plain text, exactly as they would to any ordinary index, and OpenSearch quietly embeds every document as it arrives. There is no application-side embedding code to maintain and no batch job to schedule, and it behaves identically whether you index one document or bulk-insert thousands.
+
+![Ingest pipeline embedding at index time](../../screenshots/chapter2/diagram-03-ingest-pipeline-embedding.png)
 
 **IMPORTANT** Order matters: We need to create the **pipeline** before the **index** (the index references it in `default_pipeline`).
 
@@ -1014,6 +1020,8 @@ PUT vector-search-index/_settings
 
 This is the moment the chapter promised. Read the query below before you run it: there is no keyword, no filter, no vector, just a sentence describing an idea. OpenSearch embeds that sentence with the **same** model used at ingest, then finds the stored vectors closest to it in meaning. Documents come back ranked by *what they are about*, not which words they happen to share with your query. Because Step 10 set a default model, you don't even pass a `model_id`.
 
+![Neural query flow with the enricher and the shared model](../../screenshots/chapter2/diagram-04-neural-query-flow.png)
+
 **Request**
 
 ```http
@@ -1108,6 +1116,8 @@ You already produced a **dense** vector in Step 5 — a flat list of 768 floatin
 
 Only meaningful terms appear. You'll register, deploy, and search with a sparse model hands-on in **Chapter 3** so there's no need to load a second model into this chapter's memory budget just to look at its output.
 
+![Dense versus sparse embedding shapes](../../screenshots/chapter2/diagram-05-dense-vs-sparse-embeddings.png)
+
 ### Decision framework
 
 1. **Start from the use case.** 
@@ -1175,6 +1185,8 @@ GET _plugins/_ml/models/YOUR_MODEL_ID
   "is_hidden": false
 }
 ```
+
+![Chunked model storage and deployment onto worker nodes](../../screenshots/chapter2/diagram-06-chunked-model-deployment.png)
 
 **Request** — runtime profile:
 
@@ -1287,6 +1299,8 @@ Everything works now, and that's exactly when the next set of questions arrives:
 
 Here's a fact that surprises most people the first time a vector node falls over: HNSW graphs don't live in the JVM heap you monitor. They live in **native** memory outside it, which means a vector index can exhaust a node's RAM while every heap dashboard shows green. The k-NN circuit breaker is the guardrail: it caps native usage and evicts least-recently-used graphs before the node OOMs, defaulting to **50%** of the memory left after the heap ([docs](https://docs.opensearch.org/latest/vector-search/settings/)). Setting it explicitly, as you do here, makes the guardrail visible to your whole team; lower it on memory-tight nodes, raise it (carefully) on vector-heavy ones.
 
+![Node memory layout and the k-NN circuit breaker](../../screenshots/chapter2/diagram-07-node-memory-circuit-breaker.png)
+
 **Request**
 
 ```http
@@ -1371,6 +1385,8 @@ In this search, the filter runs first. "term": { "bookshelves": "Category: Roman
 Then **the neural part runs against only that subset**. query_text: "a tragic romance" gets embedded into a 768-dim vector by your deployed model (no model_id needed — Step 10's enricher injects it), and the HNSW search looks for the k: 10 nearest stored passage_embedding vectors among the romance-shelved books only. So the semantic ranking, which romance books are most "tragic romance"-flavored, never wastes work scoring philosophy texts or sea adventures that a user browsing the Romance shelf could never want.
 
 The _source excludes is response hygiene: every hit carries a 768-float embedding you'd never display, so stripping passage_embedding keeps the response payload small.
+
+![Filter before vectors funnel](../../screenshots/chapter2/diagram-08-filter-before-vectors-funnel.png)
 
 **Request**
 

@@ -1,0 +1,16 @@
+meta {
+  name: Inspect shard sizes
+  type: http
+  seq: 24
+}
+
+get {
+  url: {{baseUrl}}/_cat/shards/bookstore-rag?v&h=index,shard,prirep,state,docs,store&format=json
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}

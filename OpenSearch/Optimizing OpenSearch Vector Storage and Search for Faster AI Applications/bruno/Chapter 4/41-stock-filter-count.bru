@@ -1,0 +1,20 @@
+meta {
+  name: Count with default stock filter
+  type: http
+  seq: 41
+}
+
+get {
+  url: {{baseUrl}}/bookstore-rag/_search?filter_path=hits.total.value
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+{ "size": 0, "query": { "match_all": {} } }
+}
