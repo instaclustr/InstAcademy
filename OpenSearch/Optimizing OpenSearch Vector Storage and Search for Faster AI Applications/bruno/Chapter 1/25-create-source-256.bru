@@ -16,18 +16,18 @@ auth:basic {
 }
 
 body:json {
-{
-  "settings": { "index": { "knn": true } },
-  "mappings": {
-    "properties": {
-      "title": { "type": "text" },
-      "my_vector": {
-        "type": "knn_vector",
-        "dimension": 256,
-        "space_type": "l2",
-        "method": { "name": "hnsw", "engine": "faiss" }
+  {
+    "settings": { "index": { "knn": true } },
+    "mappings": {
+      "properties": {
+        "title": { "type": "text" },
+        "my_vector": {
+          "type": "knn_vector",
+          "dimension": 256,
+          "space_type": "l2",
+          "method": { "name": "hnsw", "engine": "faiss" }
+        }
       }
     }
   }
-}
 }

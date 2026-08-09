@@ -20,13 +20,13 @@ auth:basic {
 }
 
 body:json {
-{
-  "request_processors": [
-    {
-      "neural_query_enricher": {
-        "default_model_id": "{{modelId}}"
+  {
+    "request_processors": [
+      {
+        "neural_query_enricher": {
+          "default_model_id": "{{modelId}}"
+        }
       }
-    }
-  ]
-}
+    ]
+  }
 }

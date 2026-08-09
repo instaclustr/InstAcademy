@@ -20,16 +20,16 @@ auth:basic {
 }
 
 body:json {
-{
-  "training_index": "products-hnsw",
-  "training_field": "product_vector",
-  "dimension": 8,
-  "description": "IVF model for Chapter 1 products",
-  "space_type": "l2",
-  "method": {
-    "name": "ivf",
-    "engine": "faiss",
-    "parameters": { "nlist": 4, "nprobes": 2 }
+  {
+    "training_index": "products-hnsw",
+    "training_field": "product_vector",
+    "dimension": 8,
+    "description": "IVF model for Chapter 1 products",
+    "space_type": "l2",
+    "method": {
+      "name": "ivf",
+      "engine": "faiss",
+      "parameters": { "nlist": 4, "nprobes": 2 }
+    }
   }
-}
 }

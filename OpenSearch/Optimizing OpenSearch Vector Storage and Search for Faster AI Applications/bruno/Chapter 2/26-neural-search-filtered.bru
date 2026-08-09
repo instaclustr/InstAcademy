@@ -20,18 +20,18 @@ auth:basic {
 }
 
 body:json {
-{
-  "_source": { "excludes": ["passage_embedding"] },
-  "query": {
-    "neural": {
-      "passage_embedding": {
-        "query_text": "a tragic romance",
-        "k": 10,
-        "filter": {
-          "term": { "bookshelves": "Category: Romance" }
+  {
+    "_source": { "excludes": ["passage_embedding"] },
+    "query": {
+      "neural": {
+        "passage_embedding": {
+          "query_text": "a tragic romance",
+          "k": 10,
+          "filter": {
+            "term": { "bookshelves": "Category: Romance" }
+          }
         }
       }
     }
   }
-}
 }

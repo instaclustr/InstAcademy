@@ -16,21 +16,21 @@ auth:basic {
 }
 
 body:json {
-{
-  "size": 3,
-  "query": {
-    "script_score": {
-      "query": { "match_all": {} },
-      "script": {
-        "source": "knn_score",
-        "lang": "knn",
-        "params": {
-          "field": "product_vector",
-          "query_value": [0.90, 0.90, 0.10, 0.10, 0.05, 0.05, 0.10, 0.10],
-          "space_type": "l2"
+  {
+    "size": 3,
+    "query": {
+      "script_score": {
+        "query": { "match_all": {} },
+        "script": {
+          "source": "knn_score",
+          "lang": "knn",
+          "params": {
+            "field": "product_vector",
+            "query_value": [0.90, 0.90, 0.10, 0.10, 0.05, 0.05, 0.10, 0.10],
+            "space_type": "l2"
+          }
         }
       }
     }
   }
-}
 }
