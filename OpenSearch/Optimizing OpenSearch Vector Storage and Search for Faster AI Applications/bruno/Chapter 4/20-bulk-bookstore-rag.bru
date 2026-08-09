@@ -16,6 +16,5 @@ auth:basic {
 }
 
 body:file {
-file: chapter-4-bookstore-rag.ndjson
-  contentType: application/x-ndjson
+  file: @file(Chapter 4/chapter-4-bookstore-rag.ndjson) @contentType(application/x-ndjson)
 }

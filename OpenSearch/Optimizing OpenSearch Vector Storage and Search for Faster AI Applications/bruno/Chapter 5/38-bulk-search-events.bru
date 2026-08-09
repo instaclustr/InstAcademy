@@ -16,6 +16,5 @@ auth:basic {
 }
 
 body:file {
-file: chapter-5-searches-events.ndjson
-  contentType: application/x-ndjson
+  file: @file(Chapter 5/chapter-5-searches-events.ndjson) @contentType(application/x-ndjson)
 }
