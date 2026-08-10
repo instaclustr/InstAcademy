@@ -20,18 +20,18 @@ auth:basic {
 }
 
 body:json {
-{
-  "description": "Post processor for hybrid RRF search",
-  "phase_results_processors": [
-    {
-      "score-ranker-processor": {
-        "combination": {
-          "technique": "rrf",
-          "rank_constant": 40,
-          "parameters": { "weights": [0.3, 0.7] }
+  {
+    "description": "Post processor for hybrid RRF search",
+    "phase_results_processors": [
+      {
+        "score-ranker-processor": {
+          "combination": {
+            "technique": "rrf",
+            "rank_constant": 40,
+            "parameters": { "weights": [0.3, 0.7] }
+          }
         }
       }
-    }
-  ]
-}
+    ]
+  }
 }

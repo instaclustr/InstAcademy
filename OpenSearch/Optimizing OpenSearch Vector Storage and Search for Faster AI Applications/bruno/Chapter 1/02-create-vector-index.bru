@@ -16,30 +16,30 @@ auth:basic {
 }
 
 body:json {
-{
-  "settings": {
-    "index": {
-      "knn": true,
-      "knn.algo_param.ef_search": 100
-    }
-  },
-  "mappings": {
-    "properties": {
-      "title": { "type": "text" },
-      "my_vector": {
-        "type": "knn_vector",
-        "dimension": 8,
-        "space_type": "l2",
-        "method": {
-          "name": "hnsw",
-          "engine": "faiss",
-          "parameters": {
-            "m": 16,
-            "ef_construction": 100
+  {
+    "settings": {
+      "index": {
+        "knn": true,
+        "knn.algo_param.ef_search": 100
+      }
+    },
+    "mappings": {
+      "properties": {
+        "title": { "type": "text" },
+        "my_vector": {
+          "type": "knn_vector",
+          "dimension": 8,
+          "space_type": "l2",
+          "method": {
+            "name": "hnsw",
+            "engine": "faiss",
+            "parameters": {
+              "m": 16,
+              "ef_construction": 100
+            }
           }
         }
       }
     }
   }
-}
 }

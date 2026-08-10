@@ -16,36 +16,36 @@ auth:basic {
 }
 
 body:json {
-{
-  "_source": { "excludes": ["passage_embedding"] },
-  "query": {
-    "bool": {
-      "filter": { "wildcard": { "id": "*1" } },
-      "should": [
-        {
-          "script_score": {
-            "query": {
-              "neural": {
-                "passage_embedding": {
-                  "query_text": "historical fiction with an underdog story",
-                  "model_id": "{{modelId}}",
-                  "k": 100
+  {
+    "_source": { "excludes": ["passage_embedding"] },
+    "query": {
+      "bool": {
+        "filter": { "wildcard": { "id": "*1" } },
+        "should": [
+          {
+            "script_score": {
+              "query": {
+                "neural": {
+                  "passage_embedding": {
+                    "query_text": "historical fiction with an underdog story",
+                    "model_id": "{{modelId}}",
+                    "k": 100
+                  }
                 }
-              }
-            },
-            "script": { "source": "_score * 1.5" }
+              },
+              "script": { "source": "_score * 1.5" }
+            }
+          },
+          {
+            "script_score": {
+              "query": {
+                "match": { "passage_text": "historical fiction with an underdog story" }
+              },
+              "script": { "source": "_score * 1.7" }
+            }
           }
-        },
-        {
-          "script_score": {
-            "query": {
-              "match": { "passage_text": "historical fiction with an underdog story" }
-            },
-            "script": { "source": "_score * 1.7" }
-          }
-        }
-      ]
+        ]
+      }
     }
   }
-}
 }

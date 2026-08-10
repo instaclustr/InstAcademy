@@ -16,12 +16,12 @@ auth:basic {
 }
 
 body:json {
-{
-  "source": { "index": "my-vector-index" },
-  "dest": { "index": "my-optimized-vector-index" },
-  "script": {
-    "source": "ctx._source.my_vector = ctx._source.my_vector.subList(0, 128);",
-    "lang": "painless"
+  {
+    "source": { "index": "my-vector-index" },
+    "dest": { "index": "my-optimized-vector-index" },
+    "script": {
+      "source": "ctx._source.my_vector = ctx._source.my_vector.subList(0, 128);",
+      "lang": "painless"
+    }
   }
-}
 }

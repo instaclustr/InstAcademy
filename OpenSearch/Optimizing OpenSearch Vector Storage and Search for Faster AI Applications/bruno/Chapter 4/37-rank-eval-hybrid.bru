@@ -16,36 +16,36 @@ auth:basic {
 }
 
 body:json {
-{
-  "requests": [
-    {
-      "id": "whale_query",
-      "request": { "query": { "hybrid": { "queries": [
-        { "match": { "content": { "query": "whale sea captain revenge" } } },
-        { "neural": { "content_embedding": { "query_text": "whale sea captain revenge", "model_id": "{{modelId}}", "k": 10 } } }
-      ] } } },
-      "ratings": [ { "_index": "bookstore-rag", "_id": "2701", "rating": 3 } ]
-    },
-    {
-      "id": "detective_query",
-      "request": { "query": { "hybrid": { "queries": [
-        { "match": { "content": { "query": "detective mystery investigation" } } },
-        { "neural": { "content_embedding": { "query_text": "detective mystery investigation", "model_id": "{{modelId}}", "k": 10 } } }
-      ] } } },
-      "ratings": [ { "_index": "bookstore-rag", "_id": "1661", "rating": 3 } ]
-    },
-    {
-      "id": "gothic_query",
-      "request": { "query": { "hybrid": { "queries": [
-        { "match": { "content": { "query": "gothic horror monster" } } },
-        { "neural": { "content_embedding": { "query_text": "gothic horror monster", "model_id": "{{modelId}}", "k": 10 } } }
-      ] } } },
-      "ratings": [
-        { "_index": "bookstore-rag", "_id": "345", "rating": 3 },
-        { "_index": "bookstore-rag", "_id": "84", "rating": 2 }
-      ]
-    }
-  ],
-  "metric": { "mean_reciprocal_rank": { "k": 10, "relevant_rating_threshold": 1 } }
-}
+  {
+    "requests": [
+      {
+        "id": "whale_query",
+        "request": { "query": { "hybrid": { "queries": [
+          { "match": { "content": { "query": "whale sea captain revenge" } } },
+          { "neural": { "content_embedding": { "query_text": "whale sea captain revenge", "model_id": "{{modelId}}", "k": 10 } } }
+        ] } } },
+        "ratings": [ { "_index": "bookstore-rag", "_id": "2701", "rating": 3 } ]
+      },
+      {
+        "id": "detective_query",
+        "request": { "query": { "hybrid": { "queries": [
+          { "match": { "content": { "query": "detective mystery investigation" } } },
+          { "neural": { "content_embedding": { "query_text": "detective mystery investigation", "model_id": "{{modelId}}", "k": 10 } } }
+        ] } } },
+        "ratings": [ { "_index": "bookstore-rag", "_id": "1661", "rating": 3 } ]
+      },
+      {
+        "id": "gothic_query",
+        "request": { "query": { "hybrid": { "queries": [
+          { "match": { "content": { "query": "gothic horror monster" } } },
+          { "neural": { "content_embedding": { "query_text": "gothic horror monster", "model_id": "{{modelId}}", "k": 10 } } }
+        ] } } },
+        "ratings": [
+          { "_index": "bookstore-rag", "_id": "345", "rating": 3 },
+          { "_index": "bookstore-rag", "_id": "84", "rating": 2 }
+        ]
+      }
+    ],
+    "metric": { "mean_reciprocal_rank": { "k": 10, "relevant_rating_threshold": 1 } }
+  }
 }

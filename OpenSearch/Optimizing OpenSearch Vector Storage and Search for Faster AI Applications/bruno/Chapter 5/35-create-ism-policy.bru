@@ -16,23 +16,23 @@ auth:basic {
 }
 
 body:json {
-{
-  "policy": {
-    "description": "Demo: roll over at 5 docs, delete after 90 days",
-    "default_state": "hot",
-    "states": [
-      {
-        "name": "hot",
-        "actions": [ { "rollover": { "min_doc_count": 5 } } ],
-        "transitions": [ { "state_name": "delete", "conditions": { "min_index_age": "90d" } } ]
-      },
-      {
-        "name": "delete",
-        "actions": [ { "delete": {} } ],
-        "transitions": []
-      }
-    ],
-    "ism_template": [ { "index_patterns": [ "searches-*" ], "priority": 100 } ]
+  {
+    "policy": {
+      "description": "Demo: roll over at 5 docs, delete after 90 days",
+      "default_state": "hot",
+      "states": [
+        {
+          "name": "hot",
+          "actions": [ { "rollover": { "min_doc_count": 5 } } ],
+          "transitions": [ { "state_name": "delete", "conditions": { "min_index_age": "90d" } } ]
+        },
+        {
+          "name": "delete",
+          "actions": [ { "delete": {} } ],
+          "transitions": []
+        }
+      ],
+      "ism_template": [ { "index_patterns": [ "searches-*" ], "priority": 100 } ]
+    }
   }
-}
 }

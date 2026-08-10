@@ -16,17 +16,17 @@ auth:basic {
 }
 
 body:json {
-{
-  "description": "Generate passage_embedding from passage_text at index time",
-  "processors": [
-    {
-      "text_embedding": {
-        "model_id": "{{modelId}}",
-        "field_map": {
-          "passage_text": "passage_embedding"
+  {
+    "description": "Generate passage_embedding from passage_text at index time",
+    "processors": [
+      {
+        "text_embedding": {
+          "model_id": "{{modelId}}",
+          "field_map": {
+            "passage_text": "passage_embedding"
+          }
         }
       }
-    }
-  ]
-}
+    ]
+  }
 }

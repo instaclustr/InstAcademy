@@ -16,23 +16,23 @@ auth:basic {
 }
 
 body:json {
-{
-  "settings": {
-    "index": {
-      "number_of_shards": 2,
-      "number_of_replicas": 1,
-      "default_pipeline": "nlp-ingest-pipeline"
-    }
-  },
-  "mappings": {
-    "properties": {
-      "passage_text": { "type": "text" },
-      "passage_chunk": { "type": "text" },
-      "passage_embedding": {
-        "type": "nested",
-        "properties": { "sparse_encoding": { "type": "rank_features" } }
+  {
+    "settings": {
+      "index": {
+        "number_of_shards": 2,
+        "number_of_replicas": 1,
+        "default_pipeline": "nlp-ingest-pipeline"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "passage_text": { "type": "text" },
+        "passage_chunk": { "type": "text" },
+        "passage_embedding": {
+          "type": "nested",
+          "properties": { "sparse_encoding": { "type": "rank_features" } }
+        }
       }
     }
   }
-}
 }

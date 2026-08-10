@@ -20,15 +20,15 @@ auth:basic {
 }
 
 body:json {
-{
-  "_source": { "excludes": ["passage_embedding"] },
-  "query": {
-    "neural": {
-      "passage_embedding": {
-        "query_text": "an ambitious scientist who comes to regret his own creation",
-        "k": 10
+  {
+    "_source": { "excludes": ["passage_embedding"] },
+    "query": {
+      "neural": {
+        "passage_embedding": {
+          "query_text": "an ambitious scientist who comes to regret his own creation",
+          "k": 10
+        }
       }
     }
   }
-}
 }

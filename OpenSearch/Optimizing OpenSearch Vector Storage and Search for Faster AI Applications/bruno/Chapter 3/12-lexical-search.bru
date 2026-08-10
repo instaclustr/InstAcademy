@@ -20,16 +20,16 @@ auth:basic {
 }
 
 body:json {
-{
-  "_source": ["title"],
-  "size": 5,
-  "query": {
-    "match": {
-      "passage_text": "a hero on a dangerous sea voyage"
+  {
+    "_source": ["title"],
+    "size": 5,
+    "query": {
+      "match": {
+        "passage_text": "a hero on a dangerous sea voyage"
+      }
+    },
+    "highlight": {
+      "fields": { "passage_text": { "fragment_size": 120, "number_of_fragments": 1 } }
     }
-  },
-  "highlight": {
-    "fields": { "passage_text": { "fragment_size": 120, "number_of_fragments": 1 } }
   }
-}
 }

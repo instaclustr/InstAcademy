@@ -16,18 +16,18 @@ auth:basic {
 }
 
 body:json {
-{
-  "settings": { "index": { "knn": true } },
-  "mappings": {
-    "properties": {
-      "my_vector": {
-        "type": "knn_vector",
-        "dimension": 8,
-        "space_type": "l2",
-        "mode": "on_disk",
-        "compression_level": "16x"
+  {
+    "settings": { "index": { "knn": true } },
+    "mappings": {
+      "properties": {
+        "my_vector": {
+          "type": "knn_vector",
+          "dimension": 8,
+          "space_type": "l2",
+          "mode": "on_disk",
+          "compression_level": "16x"
+        }
       }
     }
   }
-}
 }

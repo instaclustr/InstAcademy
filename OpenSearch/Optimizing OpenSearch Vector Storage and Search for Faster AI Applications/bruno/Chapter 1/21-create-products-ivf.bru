@@ -16,17 +16,17 @@ auth:basic {
 }
 
 body:json {
-{
-  "settings": { "index": { "knn": true } },
-  "mappings": {
-    "properties": {
-      "title": { "type": "text" },
-      "category": { "type": "keyword" },
-      "product_vector": {
-        "type": "knn_vector",
-        "model_id": "{{ivfModelId}}"
+  {
+    "settings": { "index": { "knn": true } },
+    "mappings": {
+      "properties": {
+        "title": { "type": "text" },
+        "category": { "type": "keyword" },
+        "product_vector": {
+          "type": "knn_vector",
+          "model_id": "{{ivfModelId}}"
+        }
       }
     }
   }
-}
 }

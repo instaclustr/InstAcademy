@@ -20,37 +20,37 @@ auth:basic {
 }
 
 body:json {
-{
-  "_source": [
-    "title"
-  ],
-  "size": 5,
-  "query": {
-    "nested": {
-      "path": "passage_embedding",
-      "score_mode": "max",
-      "query": {
-        "neural_sparse": {
-          "passage_embedding.sparse_encoding": {
-            "query_text": "a hero on a dangerous sea voyage",
-            "model_id": "{{sparseModelId}}"
+  {
+    "_source": [
+      "title"
+    ],
+    "size": 5,
+    "query": {
+      "nested": {
+        "path": "passage_embedding",
+        "score_mode": "max",
+        "query": {
+          "neural_sparse": {
+            "passage_embedding.sparse_encoding": {
+              "query_text": "a hero on a dangerous sea voyage",
+              "model_id": "{{sparseModelId}}"
+            }
           }
         }
       }
-    }
-  },
-  "highlight": {
-    "fields": {
-      "passage_text": {
-        "fragment_size": 120,
-        "number_of_fragments": 1
-      }
     },
-    "highlight_query": {
-      "match": {
-        "passage_text": "a hero on a dangerous sea voyage"
+    "highlight": {
+      "fields": {
+        "passage_text": {
+          "fragment_size": 120,
+          "number_of_fragments": 1
+        }
+      },
+      "highlight_query": {
+        "match": {
+          "passage_text": "a hero on a dangerous sea voyage"
+        }
       }
     }
   }
-}
 }

@@ -16,25 +16,25 @@ auth:basic {
 }
 
 body:json {
-{
-  "description": "Hybrid search pipeline for bookstore RAG",
-  "phase_results_processors": [
-    {
-      "normalization-processor": {
-        "normalization": {
-          "technique": "min_max"
-        },
-        "combination": {
-          "technique": "arithmetic_mean",
-          "parameters": {
-            "weights": [
-              0.3,
-              0.7
-            ]
+  {
+    "description": "Hybrid search pipeline for bookstore RAG",
+    "phase_results_processors": [
+      {
+        "normalization-processor": {
+          "normalization": {
+            "technique": "min_max"
+          },
+          "combination": {
+            "technique": "arithmetic_mean",
+            "parameters": {
+              "weights": [
+                0.3,
+                0.7
+              ]
+            }
           }
         }
       }
-    }
-  ]
-}
+    ]
+  }
 }

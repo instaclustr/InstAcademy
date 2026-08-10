@@ -16,30 +16,30 @@ auth:basic {
 }
 
 body:json {
-{
-  "settings": {
-    "index.knn": true,
-    "default_pipeline": "vector-search-embeddings-pipeline"
-  },
-  "mappings": {
-    "properties": {
-      "id": { "type": "text" },
-      "title": { "type": "text" },
-      "authors": { "type": "object", "enabled": false },
-      "subjects": { "type": "keyword" },
-      "bookshelves": { "type": "keyword" },
-      "passage_text": { "type": "text" },
-      "passage_embedding": {
-        "type": "knn_vector",
-        "dimension": 768,
-        "method": {
-          "engine": "lucene",
-          "space_type": "l2",
-          "name": "hnsw",
-          "parameters": {}
+  {
+    "settings": {
+      "index.knn": true,
+      "default_pipeline": "vector-search-embeddings-pipeline"
+    },
+    "mappings": {
+      "properties": {
+        "id": { "type": "text" },
+        "title": { "type": "text" },
+        "authors": { "type": "object", "enabled": false },
+        "subjects": { "type": "keyword" },
+        "bookshelves": { "type": "keyword" },
+        "passage_text": { "type": "text" },
+        "passage_embedding": {
+          "type": "knn_vector",
+          "dimension": 768,
+          "method": {
+            "engine": "lucene",
+            "space_type": "l2",
+            "name": "hnsw",
+            "parameters": {}
+          }
         }
       }
     }
   }
-}
 }

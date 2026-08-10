@@ -16,19 +16,19 @@ auth:basic {
 }
 
 body:json {
-{
-  "description": "Filter out-of-stock books from every search",
-  "request_processors": [
-    {
-      "filter_query": {
-        "query": {
-          "term": {
-            "in_stock": true
-          }
-        },
-        "tag": "stock_filter"
+  {
+    "description": "Filter out-of-stock books from every search",
+    "request_processors": [
+      {
+        "filter_query": {
+          "query": {
+            "term": {
+              "in_stock": true
+            }
+          },
+          "tag": "stock_filter"
+        }
       }
-    }
-  ]
-}
+    ]
+  }
 }
