@@ -5,15 +5,15 @@
 This repository holds the hands-on labs for [InstAcademy](https://www.instaclustr.com/instacademy-courses/), the free course library from NetApp Instaclustr. The video lessons live in the library; the labs live here.
 
 > [!NOTE]
-> **The names and handles below are placeholders.** Fill them in before this repository goes public.
+> **This is a one-person project for now.** Brian Graf owns every area below. The table is split by area so it's ready to hand off pieces as other maintainers join.
 
 ## Who maintains what
 
 | Area | Maintainer | GitHub |
 |---|---|---|
-| Repository owner, course direction | Brian Graf | `@TBD` |
-| OpenSearch track | TBD | `@TBD` |
-| Course content review, technical accuracy | TBD | `@TBD` |
+| Repository owner, course direction | Brian Graf | [`@TheBrianGraf`](https://github.com/TheBrianGraf) |
+| OpenSearch track | Brian Graf | [`@TheBrianGraf`](https://github.com/TheBrianGraf) |
+| Course content review, technical accuracy | Brian Graf | [`@TheBrianGraf`](https://github.com/TheBrianGraf) |
 
 Maintainers are responsible for reviewing pull requests in their area, keeping the courses accurate against current engine versions, and triaging issues.
 
@@ -40,4 +40,4 @@ Courses follow the layout and house rules in [`CONTRIBUTING.md`](CONTRIBUTING.md
 
 ## Code of conduct
 
-This repository follows the NetApp code of conduct. **TODO: link the official policy here before going public.**
+This repository follows the [Instaclustr Code of Conduct](https://github.com/instaclustr/.github/blob/main/CODE_OF_CONDUCT.md) (Contributor Covenant), which applies org-wide across NetApp Instaclustr's open-source repositories.
