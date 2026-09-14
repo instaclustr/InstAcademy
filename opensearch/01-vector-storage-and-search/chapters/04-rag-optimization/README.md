@@ -2,7 +2,7 @@
 
 # Chapter 4 — Performance meets precision: RAG optimization in OpenSearch
 
-🎯 Chapter 4 of 5 · 🧪 **15 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/04-rag-optimization/) · 💰 Cluster must be `RUNNING`
+🎯 Chapter 4 of 5 · 🧪 **15 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/04-rag-optimization/)
 
 Here you'll make a working RAG pipeline and make it production-ready, layer by layer: tuning the **pipeline** (Lesson 4-1), the **index** (Lesson 4-2), and the **query** (Lesson 4-3), then exposing it all to AI agents through the **built-in MCP server** (Lesson 4-4). Everything runs against one bookstore dataset so you can watch each optimization change the numbers.
 

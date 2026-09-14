@@ -2,7 +2,7 @@
 
 # Chapter 5 — Production optimizations for OpenSearch clusters
 
-🎯 Chapter 5 of 5 · 🧪 **11 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/05-production-optimizations/) · 💰 Cluster must be `RUNNING`
+🎯 Chapter 5 of 5 · 🧪 **11 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/05-production-optimizations/)
 
 You spent four chapters making vector search fast. This final chapter is about keeping it that way in production, where data outgrows its shard plan, clusters go yellow, memory gets tight, and the query that was instant in the demo becomes the slow one at peak traffic.
 

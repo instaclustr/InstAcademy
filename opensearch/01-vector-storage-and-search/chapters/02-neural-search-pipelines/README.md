@@ -1,7 +1,7 @@
 ← **Previous:** [Chapter 1](../01-configuring-vector-search/README.md) · [Course index](../../README.md) · [How to run labs](../../HANDS-ON-GUIDE.md) · **Next:** [Chapter 3](../03-hybrid-search/README.md) →
 # Chapter 2 — Building neural search pipelines
 
-🎯 Chapter 2 of 5 · 🧪 **13 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/02-neural-search-pipelines/) · 💰 Cluster must be `RUNNING`
+🎯 Chapter 2 of 5 · 🧪 **13 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/02-neural-search-pipelines/)
 
 In Chapter 1 you built vector indexes by hand, typing 8-dimensional vectors
 This chapter removes the pre-created vectors. You'll deploy a real 

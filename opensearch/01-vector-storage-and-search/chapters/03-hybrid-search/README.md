@@ -2,43 +2,51 @@
 
 # Chapter 3 — Mastering hybrid search in OpenSearch
 
-🎯 Chapter 3 of 5 · 🧪 **13 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/03-hybrid-search/) · 💰 Cluster must be `RUNNING`
+🎯 Chapter 3 of 5 · 🧪 **13 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/03-hybrid-search/)
 
 No single retrieval method wins on its own. **Lexical BM25** nails exact terms but misses intent; **neural** search understands meaning but stumbles on rare jargon. **Hybrid search** runs both and merges the results, giving you precision *and* recall. This chapter builds a working hybrid pipeline end-to-end and compares two ways to merge results: **score normalization** and **Reciprocal Rank Fusion (RRF)**.
 
 ## 🎯 What you build
 
-| Lesson | You add | Key idea |
-|--------|---------|----------|
-| [3-1](#lesson-3-1--hybrid-search-how-it-works-and-why-it-matters) | Sparse model, ingest pipeline, sparse index, data — then run each method alone | Dense vs sparse vs lexical: see how each ranks the *same* query differently |
-| [3-2](#lesson-3-2--creating-your-own-hybrid-search-in-opensearch) | `normalization-processor` search pipeline + `hybrid` query | Score-based fusion: rescale then weight-combine BM25 and sparse scores |
-| [3-3](#lesson-3-3--enhance-search-accuracy-with-reciprocal-rank-fusion-rrf) | `score-ranker-processor` search pipeline + same `hybrid` query | Rank-based fusion: merge by rank position, no weight tuning needed |
+
+| Lesson                                                                      | You add                                                                        | Key idea                                                                    |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| [3-1](#lesson-3-1--hybrid-search-how-it-works-and-why-it-matters)           | Sparse model, ingest pipeline, sparse index, data — then run each method alone | Dense vs sparse vs lexical: see how each ranks the *same* query differently |
+| [3-2](#lesson-3-2--creating-your-own-hybrid-search-in-opensearch)           | `normalization-processor` search pipeline + `hybrid` query                     | Score-based fusion: rescale then weight-combine BM25 and sparse scores      |
+| [3-3](#lesson-3-3--enhance-search-accuracy-with-reciprocal-rank-fusion-rrf) | `score-ranker-processor` search pipeline + same `hybrid` query                 | Rank-based fusion: merge by rank position, no weight tuning needed          |
+
+
+
 
 ## 📋 Prerequisites
 
 - An Instaclustr cluster with **ML Commons / AI Search** enabled.
-- *(Optional)* Chapter 2's **dense** model (`msmarco-distilbert-base-tas-b`) and **`vector-search-index`**, used only by the dense comparison in Step 9. If you ran Chapter 2's full cleanup, that's fine; simply skip Step 9, or rebuild them (Chapter 2 Steps 2–9) if you want the three-way lexical/sparse/dense comparison.
-
-- Open **OpenSearch Dashboards → Dev Tools** (Learn mode) or the **[Bruno `Chapter 3`](../../bruno/03-hybrid-search/)** collection (Fast mode).
+- *(Optional)* Chapter 2's **dense** model (`msmarco-distilbert-base-tas-b`) and `vector-search-index`, used only by the dense comparison in Step 9. If you ran Chapter 2's full cleanup, that's fine; simply skip Step 9, or rebuild them (Chapter 2 Steps 2–9) if you want the three-way lexical/sparse/dense comparison.
+- Open **OpenSearch Dashboards → Dev Tools** (Learn mode) or the **[Bruno](../../bruno/03-hybrid-search/)** `Chapter 3` collection (Fast mode).
 
 **Save the following id's while you work** (notepad or Bruno environment):
 
-| Variable | Set after | Used in |
-|----------|-----------|---------|
-| `model_group_id` | Chapter 2 Step 2 (looked up in Step 1) | Step 2 (register sparse model) |
-| `sparse_model_id` (`ML_MODEL_ID`) | Step 3 deploy | Steps 4, 8 (ingest + sparse/hybrid queries) |
-| `dense_model_id` *(optional)* | Chapter 2 Lesson 1 | Step 9 only — skip if Chapter 2 was cleaned up |
-| `task_id` | register / deploy | Polling |
+
+| Variable                          | Set after                              | Used in                                        |
+| --------------------------------- | -------------------------------------- | ---------------------------------------------- |
+| `model_group_id`                  | Chapter 2 Step 2 (looked up in Step 1) | Step 2 (register sparse model)                 |
+| `sparse_model_id` (`ML_MODEL_ID`) | Step 3 deploy                          | Steps 4, 8 (ingest + sparse/hybrid queries)    |
+| `dense_model_id` *(optional)*     | Chapter 2 Lesson 1                     | Step 9 only — skip if Chapter 2 was cleaned up |
+| `task_id`                         | register / deploy                      | Polling                                        |
+
 
 > **Two models, two ids.** Chapter 3 uses a **sparse** encoding model; Chapter 2 used a **dense** one. Keep both ids straight (in Bruno: `sparseModelId` vs `modelId`).
 
 ---
+
+
 
 ## Lesson 3-1 — Hybrid search: how it works and why it matters
 
 We will help you understand *why* hybrid beats any single method, then prove it by building the sparse foundation and running **lexical**, **sparse**, and **dense** search in isolation on the same query.
 
 ### Step 1: Reuse the model group from Chapter 2
+
 Good news to start the chapter: you already own the first piece. Every registered model belongs to a group for access control and versioning, and you created the `huggingface-models` group back in Chapter 2 Step 2. The sparse model you're about to register slots right into it, so there is nothing to create here. If you still have the `model_group_id` saved, skip straight to Step 2. If it got away from you, one search brings it back:
 
 **Request** - (If you need your modelId again) paste into Dev Tools:
@@ -52,8 +60,8 @@ POST _plugins/_ml/model_groups/_search
 
 **Fast mode** `bruno/03-hybrid-search/02-find-model-group.bru`
 
-
 ### Step 2: Register the neural sparse encoding model
+
 Time to meet the other kind of embedding model. Chapter 2's dense model squeezed meaning into 768 floats; this one produces something quite different, a map of tokens to weights where only the terms that matter get a value. That shape is what lets sparse search live in an ordinary inverted index and stay nearly as cheap as BM25. The registration flow is the same as previous chapters: register the model, receive the `task_id`, & poll the task until the artifact finishes downloading.
 
 ![Lexical vs sparse vs dense: three ways to represent the same text](../../assets/03-hybrid-search/diagram-01-three-ways-represent-query.png)
@@ -105,12 +113,12 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 }
 ```
 
-**Save** the `model_id` from the completed task — this is your **`sparse_model_id`**.
+**Save** the `model_id` from the completed task — this is your `sparse_model_id`.
 
 **Fast mode** `bruno/03-hybrid-search/03-register-sparse-model.bru` → `bruno/03-hybrid-search/04-poll-register-task.bru`
 
-
 ### Step 3: Deploy the sparse model
+
 Registered is not the same as running. As you learned in Chapter 2, registration parks the artifact on disk, and deploy is what loads the weights into node memory. Once this completes, both your ingest pipeline (next step) and `neural_sparse` queries (Step 8) can call the model on demand.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
@@ -132,6 +140,7 @@ POST _plugins/_ml/models/YOUR_SPARSE_MODEL_ID/_deploy
 ```
 
 **Request** - Poll the `task_id` until `"state":"COMPLETED"`:
+
 ```http
 GET _plugins/_ml/tasks/YOUR_TASK_ID
 ```
@@ -158,12 +167,13 @@ GET _plugins/_ml/tasks/YOUR_TASK_ID
 **Fast mode** `bruno/03-hybrid-search/05-deploy-sparse-model.bru` → `bruno/03-hybrid-search/06-poll-deploy-task.bru`
 
 ### Step 4: Create the sparse ingest pipeline
+
 Same pattern as Chapter 2's pipeline, with one upgrade: this one has **two** processors working in sequence. First `text_chunking` slices each book's `passage_text` into small token windows, then `sparse_encoding` runs every chunk through your model. That means a long document fans out into multiple independently searchable chunks (short summaries may stay as one or two), which is the chunking concept from Chapter 1, now happening automatically at ingest. As always, create the pipeline **before** the index so the index can reference it.
 
-- **`text_chunking` / `fixed_token_length`** splits by token count. **`token_limit: 128`** is a realistic production size (typical range 128–512). Chunk size matters more than it looks: with tiny chunks (say, 5 tokens), each fragment is nearly meaningless, and because the query scores each book by its *best* chunk, long documents with hundreds of fragments win a "chunk lottery" and garbage floats to the top of your results. Real chunks carry real meaning, so ranking works.
-- **`overlap_rate: 0.2`** keeps phrases that straddle a chunk boundary intact in at least one chunk (valid range 0–0.5; more overlap = more inference cost).
-- **`sparse_encoding`** calls your deployed model. 
-- **`prune_type: max_ratio` / `prune_ratio: 0.1`** drops tokens weighted below 10% of the max to keep vectors small.
+- `text_chunking` **/** `fixed_token_length` splits by token count. `token_limit: 128` is a realistic production size (typical range 128–512). Chunk size matters more than it looks: with tiny chunks (say, 5 tokens), each fragment is nearly meaningless, and because the query scores each book by its *best* chunk, long documents with hundreds of fragments win a "chunk lottery" and garbage floats to the top of your results. Real chunks carry real meaning, so ranking works.
+- `overlap_rate: 0.2` keeps phrases that straddle a chunk boundary intact in at least one chunk (valid range 0–0.5; more overlap = more inference cost).
+- `sparse_encoding` calls your deployed model.
+- `prune_type: max_ratio` **/** `prune_ratio: 0.1` drops tokens weighted below 10% of the max to keep vectors small.
 
 ![The two-processor ingest pipeline with chunk overlap](../../assets/03-hybrid-search/diagram-02-ingest-pipeline-chunk-encode.png)
 
@@ -215,13 +225,14 @@ PUT _ingest/pipeline/nlp-ingest-pipeline
 **Fast mode** `bruno/03-hybrid-search/07-create-sparse-ingest-pipeline.bru`
 
 ### Step 5: Create the sparse index
+
 Now we'll build the home for these sparse-encoded chunks. This mapping looks different from the indexes you've made so far, and each difference is doing a specific job. It's worth reading the three choices below before you run the request. The one that trips people up most: sparse embeddings do **not** go in a `knn_vector` field, rather, into a `rank_features` field because the two embedding types have different data structures. `knn_vector` is a fixed-length array of floats whereas a sparse embedding is a map with variable length.
 
 **Why each mapping choice:**
 
-- **`default_pipeline`** — every document indexed here runs `nlp-ingest-pipeline` automatically, so clients send plain text only.
-- **`rank_features`** on `sparse_encoding` — the sparse model emits **string** token keys; the `sparse_vector` type only accepts numeric keys and would fail at index time with `[sparse_vector] fields should be valid integer`.
-- **`nested`** on `passage_embedding` — each chunk becomes an independently queryable sub-document, so a query can score the single **best** chunk per book (`score_mode: max`).
+- `default_pipeline` — every document indexed here runs `nlp-ingest-pipeline` automatically, so clients send plain text only.
+- `rank_features` on `sparse_encoding` — the sparse model emits **string** token keys; the `sparse_vector` type only accepts numeric keys and would fail at index time with `[sparse_vector] fields should be valid integer`.
+- `nested` on `passage_embedding` — each chunk becomes an independently queryable sub-document, so a query can score the single **best** chunk per book (`score_mode: max`).
 
 ![rank_features vs knn_vector: why sparse needs a different field type](../../assets/03-hybrid-search/diagram-03-rank-features-vs-knn-vector.png)
 
@@ -230,7 +241,7 @@ Now we'll build the home for these sparse-encoded chunks. This mapping looks dif
 > troubleshooting note also sends you back here). First time through, skip this; a `404` 
 > means there was nothing to delete.
 >
->```http
+> ```http
 > DELETE my-sparse-neural-index
 > ```
 
@@ -273,8 +284,8 @@ PUT my-sparse-neural-index
 
 **Fast mode** `bruno/03-hybrid-search/08-delete-sparse-index.bru` (optional) → `bruno/03-hybrid-search/09-create-sparse-index.bru`
 
-
 ### Step 6: Bulk index the sample books
+
 Load the same 256-book catalog you used in Chapter 2, this time through the sparse pipeline. Every document gets chunked and then every chunk gets its own model inference, so this bulk works even harder than Chapter 2's did. Allow a minute or two for the full file to load.
 
 **Request** - paste into Dev Tools:
@@ -795,7 +806,9 @@ POST _bulk?timeout=600s
 {"id": "12", "title": "Through the Looking-Glass", "passage_text": "\"Through the Looking-Glass\" by Lewis Carroll is a novel published in 1871. When Alice climbs through a mirror into a fantastical world, she discovers everything is reversed\u2014including logic itself. In this chess-themed realm, running keeps you stationary, walking away brings you closer, and nursery-rhyme characters come alive. Alice encounters peculiar beings including the severe Red Queen, quarrelsome twins Tweedledum and Tweedledee, and the opinionated Humpty Dumpty. Like its beloved predecessor, this sequel blends absurdist adventure with unforgettable imagery and phrases that remain part of our language today. (This is an automatically generated summary.)"}
 ```
 
-**Expected** - `"errors": false`. If any item errors, the usual causes are an **undeployed model**, wrong **`model_id`** in Step 4, or the sparse field mapped as `sparse_vector` instead of `rank_features`.
+
+
+**Expected** - `"errors": false`. If any item errors, the usual causes are an **undeployed model**, wrong `model_id` in Step 4, or the sparse field mapped as `sparse_vector` instead of `rank_features`.
 
 ```json
 {
@@ -821,7 +834,7 @@ POST _bulk?timeout=600s
     },[...]
 ```
 
-> **If items fail with `Model not ready yet` or `Failed to get data object from index .plugins-ml-model`:** the model is not fully deployed on every ML node. Check `GET _plugins/_ml/models/YOUR_SPARSE_MODEL_ID` and confirm `model_state` is `DEPLOYED` (not `PARTIALLY_DEPLOYED` or `DEPLOY_FAILED`). If it isn't, re-run the deploy from Step 3, wait for the task to reach `COMPLETED`, then delete and recreate the index (Steps 5–6 ordering) and retry the bulk. This is standard ML Commons behavior, not a problem with your request.
+> **If items fail with** `Model not ready yet` **or** `Failed to get data object from index .plugins-ml-model`**:** the model is not fully deployed on every ML node. Check `GET _plugins/_ml/models/YOUR_SPARSE_MODEL_ID` and confirm `model_state` is `DEPLOYED` (not `PARTIALLY_DEPLOYED` or `DEPLOY_FAILED`). If it isn't, re-run the deploy from Step 3, wait for the task to reach `COMPLETED`, then delete and recreate the index (Steps 5–6 ordering) and retry the bulk. This is standard ML Commons behavior, not a problem with your request.
 
 Refresh so hits are immediately searchable:
 
@@ -844,6 +857,7 @@ POST my-sparse-neural-index/_refresh
 **Fast mode** `bruno/03-hybrid-search/10-bulk-sparse-index.bru` → `bruno/03-hybrid-search/11-refresh-sparse-index.bru`
 
 ### Step 7: Lexical-only baseline (BM25)
+
 The experiment begins here. Over the next three steps you'll run the *same* query three different ways and keep score, and this first run is the control group: a plain `match` query, pure term overlap, no model anywhere in the path. Keep a notepad handy, because the top-5 list you record here is the baseline everything else in this chapter gets measured against.
 
 Since you'll be comparing ranked lists all chapter, the query trims the response to just what you need to record: `"_source": ["title"]` keeps only the title field, and the `filter_path` URL parameter strips the response envelope (`took`, `_shards`, totals), leaving a clean list of id, score, and title per hit. Every comparison query in this chapter uses the same trick. This one adds one more tool: a `highlight` block, which returns a short fragment from each matching summary with the matched terms wrapped in `<em>` tags — so you can see exactly which words BM25 rewarded without wading through full summaries.
@@ -867,6 +881,7 @@ GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hi
 ```
 
 **Expected** - Five hits ordered by BM25 `_score`, and the top of the list is sea-adventure keyword bait: *Kidnapped*, *Twenty Thousand Leagues under the Sea*, *Robinson Crusoe*, *Treasure Island*. Now read the `highlight` fragments — the `<em>` tags mark exactly which query words each summary matched (*voyage*, *sea*), because term overlap is all BM25 can reward. The most revealing hit is *Don Quijote*: check its highlight and you'll see it matched almost nothing but the word "a". It climbed to #4 despite having nothing to do with the sea. There are other thematically perfect books that don't surface at all because they use different words. This is the weakness of BM25 that we'll address in the next steps. (Hold onto this list)
+
 ```json
 {
   "hits": {
@@ -902,6 +917,7 @@ GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hi
 **Fast mode** `bruno/03-hybrid-search/12-lexical-search.bru`
 
 ### Step 8: Sparse-only (`neural_sparse`)
+
 Now run the identical text through the sparse model and watch the ranking change. `neural_sparse` encodes your query with the `sparse_model_id` and matches it against the `rank_features` field, so books *about* perilous journeys can surface even when they never use your exact words. Note the `nested` wrapper with `score_mode: max`: since each book was split into chunks at ingest, this scores every chunk and lets the single best one speak for the whole book.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
@@ -936,13 +952,15 @@ GET my-sparse-neural-index/_search?filter_path=hits.hits._id,hits.hits._score,hi
 
 **Expected** - Five hits. Put them next to your Step 7 baseline and read the two lists as one experiment:
 
-| Rank | Step 7: lexical (BM25) | Step 8: sparse (neural) |
-|------|------------------------|-------------------------|
-| 1 | Kidnapped | Twenty Thousand Leagues under the Sea |
-| 2 | Twenty Thousand Leagues under the Sea | Treasure Island |
-| 3 | Robinson Crusoe | **Gulliver's Travels** |
-| 4 | Don Quijote | **Four Arthurian Romances** |
-| 5 | Treasure Island | Kidnapped |
+
+| Rank | Step 7: lexical (BM25)                | Step 8: sparse (neural)               |
+| ---- | ------------------------------------- | ------------------------------------- |
+| 1    | Kidnapped                             | Twenty Thousand Leagues under the Sea |
+| 2    | Twenty Thousand Leagues under the Sea | Treasure Island                       |
+| 3    | Robinson Crusoe                       | **Gulliver's Travels**                |
+| 4    | Don Quijote                           | **Four Arthurian Romances**           |
+| 5    | Treasure Island                       | Kidnapped                             |
+
 
 Three books appear on both lists; genuinely relevant sea stories satisfy both methods, and that agreement is what makes fusing them later worthwhile. The differences are where the lesson lives:
 
@@ -985,13 +1003,12 @@ A note on the scores. You might notice the sparse scores (7 to 12) are much bigg
 }
 ```
 
-
 **Save** the **top-5 order** for the fusion comparisons in Lessons 3-2 and 3-3. The books each method finds that the other misses are exactly the gap hybrid search closes.
 
 **Fast mode** `bruno/03-hybrid-search/13-sparse-search.bru`
 
-
 ### Step 9: Dense-only comparison (optional — reuses Chapter 2)
+
 One more data point completes the picture. Your Chapter 2 index and dense model are still standing, so point the same query at them and you'll have all three retrieval styles (lexical, sparse, dense) ranked side by side on identical text. That three-way comparison is the clearest way to see what each method is good at. **Skip this step if you already tore Chapter 2 down.**
 
 Replace `YOUR_DENSE_MODEL_ID` with your **Chapter 2** model id (not the sparse one):
@@ -1021,13 +1038,15 @@ GET vector-search-index/_search?filter_path=hits.hits._id,hits.hits._score,hits.
 
 **Expected** - Five hits: *Gulliver's Travels*, *Life on the Mississippi*, *Robinson Crusoe*, *Treasure Island*, *Undine*. You now have all three retrieval styles ranked on the same query, so line them up:
 
-| Rank | Step 7: lexical (BM25) | Step 8: sparse | Step 9: dense |
-|------|------------------------|----------------|---------------|
-| 1 | Kidnapped | Twenty Thousand Leagues under the Sea | Gulliver's Travels |
-| 2 | Twenty Thousand Leagues under the Sea | Treasure Island | Life on the Mississippi |
-| 3 | Robinson Crusoe | Gulliver's Travels | Robinson Crusoe |
-| 4 | Don Quijote | Four Arthurian Romances | Treasure Island |
-| 5 | Treasure Island | Kidnapped | Undine |
+
+| Rank | Step 7: lexical (BM25)                | Step 8: sparse                        | Step 9: dense           |
+| ---- | ------------------------------------- | ------------------------------------- | ----------------------- |
+| 1    | Kidnapped                             | Twenty Thousand Leagues under the Sea | Gulliver's Travels      |
+| 2    | Twenty Thousand Leagues under the Sea | Treasure Island                       | Life on the Mississippi |
+| 3    | Robinson Crusoe                       | Gulliver's Travels                    | Robinson Crusoe         |
+| 4    | Don Quijote                           | Four Arthurian Romances               | Treasure Island         |
+| 5    | Treasure Island                       | Kidnapped                             | Undine                  |
+
 
 ![Three retrieval methods, one query: the ranking bump chart](../../assets/03-hybrid-search/diagram-04-three-rankings-bump-chart.png)
 
@@ -1045,6 +1064,8 @@ The takeaway for the rest of the chapter: no single method got this query "right
 
 ---
 
+
+
 ## Lesson 3-2 — Creating your own hybrid search in OpenSearch
 
 **Goal:** run BM25 and sparse retrieval **together** in one `hybrid` query, and merge their scores with a `normalization-processor` search pipeline. Compare the blended ranking against the single-method lists from Lesson 3-1.
@@ -1053,13 +1074,14 @@ The takeaway for the rest of the chapter: no single method got this query "right
 
 BM25 scores (~0–20) and sparse scores (~0–10) live on different scales. Add them directly and whichever branch produces larger numbers dominates. A **search pipeline** with a `normalization-processor` fixes this: its `phase_results_processors` run **after** each sub-query gathers its own hits but **before** OpenSearch merges them.
 
-- **`normalization.technique`** — `min_max` rescales each branch to [0, 1].
-- **`combination.technique`** — `arithmetic_mean` = weighted average.
-- **`weights`** — one per sub-query, must sum to **1.0**. Here `[0.3, 0.7]` trusts the sparse branch more than keyword.
+- `normalization.technique` — `min_max` rescales each branch to [0, 1].
+- `combination.technique` — `arithmetic_mean` = weighted average.
+- `weights` — one per sub-query, must sum to **1.0**. Here `[0.3, 0.7]` trusts the sparse branch more than keyword.
 
 ![How the hybrid query and normalization pipeline fit together](../../assets/03-hybrid-search/diagram-05-hybrid-normalization-pipeline.png)
 
 ### Step 10: Create the normalization search pipeline
+
 Time to turn the theory above into a reusable cluster object. The pipeline lives on the cluster rather than inside any one query, which is a bigger deal than it sounds: every hybrid search that references it by name gets the same min-max rescaling and 30/70 weighting, so when relevance tuning changes the weights later, you change them once here and every caller picks the change up instantly, with no application deploy. And creating it **before** running a `hybrid` query genuinely matters: without it, the two branches' raw scores just get summed and whichever scale is larger silently wins.
 
 **Request** - Create the normalization search piepline by pasting into Dev Tools:
@@ -1096,8 +1118,8 @@ PUT _search/pipeline/nlp-search-normalization-pipeline
 
 **Fast mode** `bruno/03-hybrid-search/15-create-normalization-pipeline.bru`
 
-
 ### Step 11: Run the hybrid query (normalized)
+
 Here's the payoff of the whole lesson: both retrieval methods in one request. Look at the query body and you'll recognize each piece, since the `match` clause is your Step 7 baseline and the `neural_sparse` clause is your Step 8 query, now stacked inside a `hybrid` wrapper. OpenSearch runs each sub-query independently, then the pipeline named in `?search_pipeline=` normalizes and combines their scores. A `hybrid` query supports **up to 5** sub-queries; here we use two. One detail worth mentioning: the `weights` order matches the `queries` order, so index 0 is the `match` and index 1 is the `neural_sparse`. Swap the clauses without swapping the weights and you'll silently invert your tuning.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
@@ -1166,6 +1188,8 @@ Hold this against your Step 7 and Step 8 lists and the fusion logic becomes visi
 
 ---
 
+
+
 ## Lesson 3-3 — Enhance search accuracy with Reciprocal Rank Fusion (RRF)
 
 Lesson 3-2's normalization approach worked, but notice what it quietly demanded of you: a weighting decision. You told the pipeline 30/70, and that number came from nowhere; tuning it *properly* requires labeled relevance data and evaluation runs that most teams don't have on day one. Normalization also inherits every quirk of the underlying scores, so one branch with a weird score distribution can still tilt the blend.
@@ -1182,11 +1206,14 @@ Reciprocal Rank Fusion ignores raw scores entirely and fuses results by **where*
 
 ![RRF math, worked on the chapter's own results](../../assets/03-hybrid-search/diagram-07-rrf-worked-math.png)
 
-- **`rank_constant`** (default **60**) softens the advantage of top ranks. **Larger** `k` → scores more uniform, top hits matter less; **smaller** `k` → bigger gaps between ranks. We use `40`.
+- `rank_constant` (default **60**) softens the advantage of top ranks. **Larger** `k` → scores more uniform, top hits matter less; **smaller** `k` → bigger gaps between ranks. We use `40`.
 - **Trade-off:** RRF trades a little peak precision for simplicity and robustness. If you have the resources to tune weights with labeled data, score-based normalization can edge it out; for most workloads RRF delivers strong results with minimal config.
 - `weights` are still supported (one per sub-query, summing to 1.0) if you want to bias one branch.
 
+
+
 ### Step 12: Create the RRF search pipeline
+
 Now build the alternative fusion strategy so you can compare the two head-to-head. Structurally this pipeline is a sibling of the one from Lesson 3-2: same `phase_results_processors` slot, same position in the request flow, and the same 30/70 weighting, so the only variable in the comparison is the fusion strategy itself. The difference is the processor inside it.
 
 **Request** - Create the RRF search pipeline by pasting into Dev Tools:
@@ -1222,6 +1249,7 @@ PUT _search/pipeline/rrf-search-pipeline
 **Fast mode** `bruno/03-hybrid-search/17-create-rrf-pipeline.bru`
 
 ### Step 13: Run the hybrid query through RRF
+
 Run your final experiment, and notice what you're *not* changing: the query body is character-for-character identical to Step 11. Only the `search_pipeline` parameter differs. That separation is the architectural lesson of this whole chapter: fusion strategy lives entirely in the pipeline, so you can A/B test score-based against rank-based fusion in production without touching a single query or reindexing a single document.
 
 Replace `YOUR_SPARSE_MODEL_ID`:
@@ -1281,13 +1309,15 @@ What *does* differ is the shape of the scores, and RRF's are fully auditable in 
 
 **Now line up all five saved lists** — the side-by-side this chapter has been building toward:
 
-| Rank | Lexical (Step 7) | Sparse (Step 8) | Dense (Step 9) | Hybrid (Step 11) | Hybrid RRF (Step 13) |
-|------|------------------|-----------------|----------------|--------------------------|--------------------------|
-| 1 | Kidnapped | Twenty Thousand Leagues | Gulliver's Travels | Twenty Thousand Leagues | Twenty Thousand Leagues |
-| 2 | Twenty Thousand Leagues | Treasure Island | Life on the Mississippi | Treasure Island | Treasure Island |
-| 3 | Robinson Crusoe | Gulliver's Travels | Robinson Crusoe | Kidnapped | Kidnapped |
-| 4 | Don Quijote | Four Arthurian Romances | Treasure Island | Robinson Crusoe | Robinson Crusoe |
-| 5 | Treasure Island | Kidnapped | Undine | Gulliver's Travels | Gulliver's Travels |
+
+| Rank | Lexical (Step 7)        | Sparse (Step 8)         | Dense (Step 9)          | Hybrid (Step 11)        | Hybrid RRF (Step 13)    |
+| ---- | ----------------------- | ----------------------- | ----------------------- | ----------------------- | ----------------------- |
+| 1    | Kidnapped               | Twenty Thousand Leagues | Gulliver's Travels      | Twenty Thousand Leagues | Twenty Thousand Leagues |
+| 2    | Twenty Thousand Leagues | Treasure Island         | Life on the Mississippi | Treasure Island         | Treasure Island         |
+| 3    | Robinson Crusoe         | Gulliver's Travels      | Robinson Crusoe         | Kidnapped               | Kidnapped               |
+| 4    | Don Quijote             | Four Arthurian Romances | Treasure Island         | Robinson Crusoe         | Robinson Crusoe         |
+| 5    | Treasure Island         | Kidnapped               | Undine                  | Gulliver's Travels      | Gulliver's Travels      |
+
 
 ![The chapter finale: five rankings side by side](../../assets/03-hybrid-search/diagram-08-five-rankings-side-by-side.png)
 
@@ -1307,6 +1337,8 @@ Take a second to appreciate what your five-column table represents. You ran one 
 - **Rank-based fusion** with `score-ranker-processor` — RRF merges by rank position with a single `rank_constant`, no weight tuning required.
 - A `hybrid` query runs **up to 5** sub-queries; the merge behavior lives entirely in the **search pipeline**, so you can swap fusion strategies without touching the query or the index.
 
+
+
 ## Cleanup
 
 Run when you are done to free cluster resources.
@@ -1314,12 +1346,15 @@ Run when you are done to free cluster resources.
 ```http
 DELETE _search/pipeline/nlp-search-normalization-pipeline
 ```
+
 ```http
 DELETE _search/pipeline/rrf-search-pipeline
 ```
+
 ```http
 DELETE my-sparse-neural-index
 ```
+
 ```http
 DELETE _ingest/pipeline/nlp-ingest-pipeline
 ```
@@ -1329,6 +1364,7 @@ Optionally undeploy and delete the sparse model (frees ML-node memory):
 ```http
 POST _plugins/_ml/models/YOUR_SPARSE_MODEL_ID/_undeploy
 ```
+
 ```http
 DELETE _plugins/_ml/models/YOUR_SPARSE_MODEL_ID
 ```
@@ -1342,9 +1378,11 @@ Delete Chapter 2's search pipeline, index, and ingest pipeline:
 ```http
 DELETE _search/pipeline/default-model-pipeline
 ```
+
 ```http
 DELETE vector-search-index
 ```
+
 ```http
 DELETE _ingest/pipeline/vector-search-embeddings-pipeline
 ```
@@ -1360,6 +1398,8 @@ Then delete it:
 ```http
 DELETE _plugins/_ml/models/YOUR_DENSE_MODEL_ID
 ```
+
+
 
 ## 🚀 Next chapter
 

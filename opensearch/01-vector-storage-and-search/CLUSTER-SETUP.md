@@ -2,7 +2,7 @@
 
 # Set up your OpenSearch cluster
 
-⏱ About 15 minutes · 💰 Free 30-day trial, no credit card · 🔧 Instaclustr console
+⏱ About 15 minutes · 🔧 Instaclustr console
 
 Everything in this course runs against a real OpenSearch cluster, so this page gets you one. You'll create a free NetApp Instaclustr trial account, launch a cluster with the plugins the course needs, open the firewall to your own machine, and collect the connection details every chapter asks for. **No credit card, and the trial runs for 30 days.**
 

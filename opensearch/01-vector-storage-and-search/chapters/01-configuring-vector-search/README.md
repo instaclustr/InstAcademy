@@ -2,7 +2,7 @@
 
 # Chapter 1 — Configuring and optimizing vector search
 
-🎯 Chapter 1 of 5 · 🧪 **16 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/01-configuring-vector-search/) · 💰 Cluster must be `RUNNING`
+🎯 Chapter 1 of 5 · 🧪 **16 steps** · 🔧 Dev Tools console or [Bruno fast mode](../../bruno/01-configuring-vector-search/)
 
 This is the hands-on companion to Chapter 1 of the video course. Everything the
 videos demonstrate (index settings, HNSW/IVF method parameters, exact k-NN,
