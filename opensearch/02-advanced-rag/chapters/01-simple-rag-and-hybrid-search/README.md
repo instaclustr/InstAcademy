@@ -2,7 +2,7 @@
 
 # Chapter 1 — Simple RAG and hybrid search
 
-🎯 Chapter 1 of 4 · 🧪 **11 steps** · 🔧 Dev Tools console, plus your terminal for Steps 9 and 11 · 💰 Cluster must be `RUNNING`
+🎯 Chapter 1 of 4 · 🧪 **11 steps** · 🔧 Dev Tools console, plus your terminal for Steps 9 and 11 
 
 By the end of this chapter the internal AI support tool will have a knowledge base: an embedding model deployed inside your own cluster, an ingest pipeline that vectorizes every document as it lands, an index mapped for both k-NN vector search and metadata filtering, and Example Corp's five data assets loaded as 5,139 searchable chunks. Then you retrieve from it and measure how good that retrieval actually is, which is the number every later chapter has to beat.
 

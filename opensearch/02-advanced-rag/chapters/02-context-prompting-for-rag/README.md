@@ -2,7 +2,7 @@
 
 # Chapter 2 — Context prompting for RAG
 
-🎯 Chapter 2 of 4 · 🧪 **9 steps** · 🔧 Dev Tools console, plus your terminal for the generation steps and the [chat form](../../example-corp-kit/rag-runner/) · 💰 Cluster must be `RUNNING`
+🎯 Chapter 2 of 4 · 🧪 **9 steps** · 🔧 Dev Tools console, plus your terminal for the generation steps and the [chat form](../../example-corp-kit/rag-runner/) 
 
 Chapter 1 gave the internal AI support tool its retrieval layer and you measured it with a hit rate of ~0.653 on the golden set. Finding the evidence is half of a working answer. The other half is the prompt, the instructions you send the language model along with that evidence.
 
