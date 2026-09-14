@@ -1,0 +1,45 @@
+---
+source_id: "DOC-00821"
+title: "Connector Credential Rotation settings reference"
+doc_type: "product-docs"
+section_path: "Data Connectors > Connector Credential Rotation > Connector Credential Rotation settings reference"
+product_area: "connectors"
+product_version: "4.9"
+acl: "enterprise"
+updated_at: "2026-03-02"
+related_error_codes: ["ERR-2288"]
+---
+
+# Connector Credential Rotation settings reference
+
+Connector Credential Rotation is available on version 4.9 and later. This guide covers setup, limits, and common failure modes.
+
+## Configuration
+
+Performance tip: connector credential rotation performs best when the underlying dataset uses incremental refresh. Full refreshes invalidate the associated cache.
+
+If your organization uses SAML SSO, connector credential rotation inherits group membership from your identity provider on each login.
+
+By default, connector credential rotation is limited to 5 per workspace on the professional tier. Administrators can raise this limit from the admin console.
+
+To enable connector credential rotation, open the workspace settings panel and select the Data Connectors tab. Changes apply within one refresh cycle and do not require a restart.
+
+When connector credential rotation is combined with row-level security, evaluation happens before aggregation. Plan calculated fields accordingly.
+
+## Settings
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| enabled | boolean | true | Turns the feature on for the workspace |
+| notify_on_failure | boolean | true | Sends an email to workspace admins on failure |
+| max_concurrency | integer | 8 | Upper bound on parallel executions |
+
+## Common errors
+
+### ERR-2288: Schema discovery timed out
+
+Cause: Warehouse information_schema query exceeded 120 seconds on very large catalogs.
+
+Resolution: Scope the connection to specific schemas instead of the full catalog.
+
+This issue is fixed in version 5.1. Affected versions: 4.8, 4.9, 5.0.

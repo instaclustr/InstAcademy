@@ -1,0 +1,20 @@
+meta {
+  name: Bulk search events via write alias
+  type: http
+  seq: 38
+}
+
+post {
+  url: {{baseUrl}}/_bulk?refresh=true
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+  file: @file(05-production-optimizations/chapter-5-searches-events.ndjson) @contentType(application/x-ndjson)
+}

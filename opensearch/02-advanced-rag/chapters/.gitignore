@@ -1,0 +1,3 @@
+# Local lab credentials — never commit
+lab-credentials.env
+*.local.env

@@ -1,0 +1,20 @@
+meta {
+  name: Bulk index product vectors
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/_bulk
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+  file: @file(01-configuring-vector-search/chapter-1-lesson-2-vectors.ndjson) @contentType(application/x-ndjson)
+}

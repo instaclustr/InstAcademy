@@ -1,0 +1,58 @@
+name: "Request your badge"
+description: "Confirm you finished both the video series and the hands-on labs, so we can issue your badge."
+title: "Badge request: <First Name Last Name>"
+labels:
+  - badge-request
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Badges are issued from the **InstAcademy library**. This request is the public half. It records that you finished both the video series and the hands-on labs.
+
+        ### You must also submit the badge form
+
+        We deliberately **do not collect email addresses here**, because issues in this repository are readable by anyone. Your name and delivery address go to the badge form instead:
+
+        **→ [Submit the InstAcademy badge form](https://REPLACE-WITH-BADGE-FORM-URL)**
+
+        Both steps are required. We can't issue a badge from the issue alone.
+
+        > ⚠️ Don't paste anything you wouldn't want public: no email addresses, cluster hostnames, usernames, passwords, or API keys.
+
+  - type: dropdown
+    id: course
+    attributes:
+      label: Course
+      options:
+        - "OpenSearch · Optimizing Vector Storage and Search for Faster AI Applications"
+    validations:
+      required: true
+
+  - type: input
+    id: full_name
+    attributes:
+      label: Full name
+      description: "As you'd like it to appear on the badge. Must match the name you put on the badge form, so we can pair the two."
+      placeholder: "Jane Smith"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirm you've finished
+      options:
+        - label: I have completed the video series for this course.
+          required: true
+        - label: I have completed the hands-on labs in full, running them against my own OpenSearch cluster.
+          required: true
+        - label: I have submitted the badge form linked above, using the email I registered for the video series with.
+          required: true
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Anything that blocked you, or a step that needs clearer wording
+      description: "Optional, and genuinely useful. This is how the course improves."
+    validations:
+      required: false
