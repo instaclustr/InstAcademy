@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question about a course
+    url: https://github.com/instaclustr/instacademy/discussions
+    about: Stuck on a step, or unsure how something works? Ask in Discussions rather than opening an issue.
+  - name: Instaclustr platform or cluster support
+    url: https://www.instaclustr.com/support/
+    about: Problems with the platform itself, billing, or a cluster that will not start. Not a course issue.
+  - name: OpenSearch project
+    url: https://opensearch.org/
+    about: Bugs or questions about OpenSearch itself, rather than this course material.

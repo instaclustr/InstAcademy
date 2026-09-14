@@ -1,29 +1,19 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
-title: "[FEATURE]"
+name: Suggest a course or a change
+about: Propose a new course or chapter, or a change to existing material
+title: "[FEATURE] "
 labels: feature
-assignees: smiklosovic
-
 ---
 
----
-name: Feature request
-about: Suggest an idea for this project
-title: "[FEATURE]"
-labels: feature
-assignees: smiklosovic
+**What's missing**
+The thing you wanted to learn or do and couldn't, or the place the material fell short.
 
----
+**Where it belongs**
+An existing course and chapter, or a new course in a track (OpenSearch, Cassandra, Kafka, PostgreSQL, Valkey, ClickHouse, Cadence).
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**What the learner would build**
+Courses are judged on the working artifact at the end of each chapter, not the topics covered. What would someone have running when they finished?
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Alternatives you've considered**
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
-
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**Anything else**

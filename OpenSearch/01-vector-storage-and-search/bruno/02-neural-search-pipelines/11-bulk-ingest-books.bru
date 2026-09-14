@@ -1,0 +1,24 @@
+meta {
+  name: Bulk ingest sample books
+  type: http
+  seq: 11
+}
+
+docs {
+Embedding runs in the ingest pipeline - may take several minutes.
+}
+
+post {
+  url: {{baseUrl}}/_bulk?timeout=600s
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+  file: @file(02-neural-search-pipelines/chapter-2-lesson-2-vector-search-index.ndjson) @contentType(application/x-ndjson)
+}

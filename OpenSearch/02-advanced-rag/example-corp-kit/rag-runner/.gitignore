@@ -1,0 +1,5 @@
+# never commit secrets or run artifacts
+.env
+model_id.txt
+__pycache__/
+*.pyc

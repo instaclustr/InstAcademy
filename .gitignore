@@ -6,3 +6,12 @@ venv/
 .idea/
 .vscode/
 site/
+_migration/
+bin/
+target/
+*.log
+node_modules/
+example-corp-corpus-v2.1.0.tar.gz
+
+# Local working documents — never ship
+*.docx

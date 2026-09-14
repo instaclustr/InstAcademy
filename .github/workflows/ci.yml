@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: Markdown links and anchors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check every relative link and #anchor resolves
+        run: python3 .github/scripts/check_links.py
+
+  courses:
+    name: Course consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run every course validator
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r script; do
+            found=1
+            course="$(dirname "$(dirname "$script")")"
+            echo "::group::$course"
+            ( cd "$course" && bash scripts/validate.sh )
+            echo "::endgroup::"
+          done < <(find . -path ./.git -prune -o -path '*/scripts/validate.sh' -print | sort)
+          if [ "$found" -eq 0 ]; then
+            echo "No course validators found. Expected at least one */scripts/validate.sh"
+            exit 1
+          fi

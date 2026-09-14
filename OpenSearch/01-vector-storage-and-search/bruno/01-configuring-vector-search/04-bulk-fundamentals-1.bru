@@ -1,0 +1,24 @@
+meta {
+  name: Bulk index vectors 1-31
+  type: http
+  seq: 4
+}
+
+docs {
+First batch (ids 1-31) of the 50 sample vectors. Run 05 to refresh, then 06 for the second batch.
+}
+
+post {
+  url: {{baseUrl}}/_bulk
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+  file: @file(01-configuring-vector-search/chapter-1-lesson-1-vectors.ndjson) @contentType(application/x-ndjson)
+}

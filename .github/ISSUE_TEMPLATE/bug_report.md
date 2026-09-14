@@ -1,32 +1,35 @@
 ---
-name: Bug report
-about: Create a report to help us improve this project
-title: "[BUG]"
+name: A step doesn't work
+about: A lab step failed, or the response didn't match what the page said to expect
+title: "[BUG] Course · Chapter N, Step N: "
 labels: bug
-assignees: smiklosovic
-
 ---
 
----
-name: Bug report
-about: Create a report to help us improve this project
-title: "[BUG]"
-labels: bug
-assignees: smiklosovic
+**Course**
+Which course and track, e.g. `opensearch/01-vector-storage-and-search`.
 
----
+**Chapter and step**
+e.g. Chapter 4, Step 8.
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**The request you sent**
+Copied from Dev Tools or Bruno. Redact hostnames, usernames, passwords, and API keys.
 
-**To Reproduce**
-Steps to reproduce the behavior:
+```json
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+```
 
-**System and versions (please complete the following information):**
- - OS, Cassandra version, Java version, project version
+**The response you got**
+In full, including the error body.
 
-**Additional context**
-Add any other context about the problem here.
+```json
+
+```
+
+**What the page said to expect**
+
+**Your environment**
+- Engine and version (for OpenSearch, `GET /` returns it):
+- Cluster: Instaclustr-managed / self-hosted / Docker:
+- How you ran the step: Dev Tools console / Bruno fast mode / Python script:
+
+**Anything else**

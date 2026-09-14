@@ -1,0 +1,20 @@
+meta {
+  name: Bulk sample docs into my-index
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/_bulk
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+  file: @file(05-production-optimizations/chapter-5-my-index-sample.ndjson) @contentType(application/x-ndjson)
+}

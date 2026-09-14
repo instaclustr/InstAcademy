@@ -1,0 +1,24 @@
+meta {
+  name: Bulk ingest sparse index data
+  type: http
+  seq: 10
+}
+
+docs {
+Chunking + sparse encoding per document — may take several minutes.
+}
+
+post {
+  url: {{baseUrl}}/_bulk?timeout=600s
+  body: file
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:file {
+  file: @file(03-hybrid-search/chapter-3-lesson-1-sparse-index.ndjson) @contentType(application/x-ndjson)
+}
