@@ -25,6 +25,7 @@ body:
       label: Course
       options:
         - "OpenSearch · Optimizing Vector Storage and Search for Faster AI Applications"
+        - "OpenSearch · Advanced RAG"
     validations:
       required: true
 

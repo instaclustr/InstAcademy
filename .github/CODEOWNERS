@@ -1,14 +1,13 @@
 # Review ownership. See MAINTAINERS.md for what each area covers.
-# TODO: replace the placeholder handles before this repository goes public.
 
 # Everything, by default
-*                               @TBD
+*                               @TheBrianGraf
 
 # Repo-level policy and CI
-/.github/                       @TBD
-/CONTRIBUTING.md                @TBD
-/SECURITY.md                    @TBD
-/MAINTAINERS.md                 @TBD
+/.github/                       @TheBrianGraf
+/CONTRIBUTING.md                @TheBrianGraf
+/SECURITY.md                    @TheBrianGraf
+/MAINTAINERS.md                 @TheBrianGraf
 
 # Course content, which is paired with recorded video and needs track review
-/opensearch/                    @TBD
+/opensearch/                    @TheBrianGraf
