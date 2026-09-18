@@ -19,13 +19,13 @@ InstAcademy closes that gap. Every video lesson pairs with a hands-on lab you ru
 
 ## Who these are for
 
-Builders and machine learning engineers past the introductory stage. You know what RAG is but haven't tuned a retrieval pipeline under real constraints, or you need to design a vector search system for a production workload and want to defend the decisions. Some coding comfort helps, but every lab gives you the exact commands to run alongside the output to expect.
+Builders and machine learning engineers beyond the introductory stage. You know what RAG is but haven't tuned a retrieval pipeline under real constraints, or you need to design a vector search system for a production workload and want to defend the decisions. Some coding comfort helps, but every lab gives you the exact commands to run alongside the output to expect.
 
 **Neither course is a prerequisite for the other.** Start with whichever problem is in front of you.
 
 ## How a course works
 
-Watch the video. Run the lab. See exactly what your cluster does with the concept just explained. Most learners have a cluster answering real queries inside the first hour.
+Watch the video. Run the lab. See exactly what your cluster does with the concept you just learned. Most learners have a cluster answering real queries inside the first hour.
 
 | | |
 |---|---|
@@ -35,7 +35,7 @@ Watch the video. Run the lab. See exactly what your cluster does with the concep
 | **`assets/`** | The diagrams and console captures the chapters use |
 
 > [!IMPORTANT]
-> **Every `Expected` response printed in these labs is real output** from a live cluster on the version named in the course changelog, not an idealised example. If a step doesn't behave the way the page says, that's a bug worth reporting.
+> **Every `Expected` response printed in these labs is real output** from a live cluster on the version named in the course changelog, not an idealized example. If a step doesn't behave the way the page says, that's a bug worth reporting.
 
 ## 🏅 What you get when you finish
 
@@ -55,7 +55,7 @@ Finished all five chapters of the video course and the hands-on labs?
 1. Complete the course in the [InstAcademy library](https://www.instaclustr.com/instacademy-courses/)
 1. Run every chapter's labs on your own cluster
 1. [Request your badge](https://github.com/instaclustr/instacademy/issues/new?template=course-completion.yml)
-1. Fill in the badge form it links to, which is where your email goes
+1. Fill in the badge form it links to
 
 <br clear="left" />
 
@@ -68,7 +68,7 @@ Finished all four chapters of the video course and the hands-on labs?
 1. Complete the course in the [InstAcademy library](https://www.instaclustr.com/instacademy-courses/)
 1. Run every chapter's labs on your own cluster
 1. [Request your badge](https://github.com/instaclustr/instacademy/issues/new?template=course-completion.yml)
-1. Fill in the badge form it links to, which is where your email goes
+1. Fill in the badge form it links to
 
 <br clear="left" />
 
